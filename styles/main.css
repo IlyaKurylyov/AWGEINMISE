@@ -436,4 +436,96 @@ body::after {
     100% {
         text-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
     }
+}
+
+.switches-container {
+    display: flex;
+    gap: 50px; /* Увеличили расстояние между переключателями */
+    justify-content: center;
+    margin-top: 40px;
+}
+
+.switch {
+    width: 60px;
+    height: 90px;
+    background: linear-gradient(to bottom,
+        #000000,
+        #1a1a1a 5%,
+        #000000 10%,
+        #1a1a1a 15%,
+        #000000 20%
+    );
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.15s ease-out;
+    box-shadow: 
+        0 0 10px rgba(255, 255, 255, 0.1),
+        inset 0 2px 5px rgba(255, 255, 255, 0.1),
+        inset 0 -2px 5px rgba(0, 0, 0, 0.5);
+    transform-style: preserve-3d;
+    transform: translateZ(0);
+}
+
+.switch:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 
+        0 0 15px rgba(255, 255, 255, 0.2),
+        inset 0 2px 5px rgba(255, 255, 255, 0.2),
+        inset 0 -2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.switch.pressed {
+    transform: translateY(2px);
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 
+        0 0 5px rgba(255, 255, 255, 0.1),
+        inset 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.switch-lines {
+    position: absolute;
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70%;
+    height: 80%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.15s ease-out;
+}
+
+.switch.pressed .switch-lines {
+    transform: translate(-50%, 2px);
+}
+
+.switch-lines::before,
+.switch-lines::after,
+.switch-lines {
+    content: '';
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.4) 0px,
+        rgba(255, 255, 255, 0.4) 2px,
+        transparent 2px,
+        transparent 8px
+    );
+}
+
+.switch::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        135deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 100%
+    );
+    pointer-events: none;
 } 

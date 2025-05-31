@@ -122,4 +122,71 @@ function createTVNoise() {
     }, 1000);
 }
 
-createTVNoise(); 
+createTVNoise();
+
+// Интерактивность переключателей
+document.querySelectorAll('.switch').forEach(switch_ => {
+    let isPressed = false;
+    let clickSound;
+
+    // Создаем звук щелчка
+    function createClickSound() {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(100, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+        
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.1);
+    }
+
+    function pressSwitch() {
+        if (!isPressed) {
+            isPressed = true;
+            switch_.classList.add('pressed');
+            createClickSound();
+
+            // Добавляем эффект помех при нажатии
+            const noise = document.querySelector('.noise-overlay');
+            noise.style.opacity = '0.8';
+            
+            // Случайное искажение экрана
+            document.body.style.transform = `scale(${1 + Math.random() * 0.005}) skew(${Math.random() * 1}deg)`;
+            
+            setTimeout(() => {
+                noise.style.opacity = '0.2';
+                document.body.style.transform = 'none';
+            }, 150);
+        }
+    }
+
+    function releaseSwitch() {
+        if (isPressed) {
+            isPressed = false;
+            switch_.classList.remove('pressed');
+            createClickSound();
+        }
+    }
+
+    // Обработка кликов мышью
+    switch_.addEventListener('mousedown', pressSwitch);
+    switch_.addEventListener('mouseup', releaseSwitch);
+    switch_.addEventListener('mouseleave', releaseSwitch);
+
+    // Обработка касаний
+    switch_.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        pressSwitch();
+    });
+    switch_.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        releaseSwitch();
+    });
+}); 
