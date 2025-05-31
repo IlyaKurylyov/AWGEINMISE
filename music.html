@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INMISE - Музыка</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/music.css">
+</head>
+<body>
+    <nav class="main-nav">
+        <a href="index.html" class="nav-logo">INMISE</a>
+        <div class="nav-links">
+            <a href="music.html" class="nav-link active">МУЗЫКА</a>
+            <a href="video.html" class="nav-link">ВИДЕО</a>
+            <a href="merch.html" class="nav-link">МЕРЧ</a>
+            <a href="tours.html" class="nav-link">ТУРЫ</a>
+        </div>
+    </nav>
+
+    <main class="content music-content">
+        <div class="music-grid">
+            <div class="music-item">
+                <div class="album-cover">
+                    <img src="assets/images/album1.jpg" alt="Альбом 1">
+                    <div class="play-overlay">
+                        <div class="play-button">▶</div>
+                    </div>
+                </div>
+                <div class="album-info">
+                    <h3>НАЗВАНИЕ АЛЬБОМА</h3>
+                    <p>2024</p>
+                </div>
+            </div>
+            <!-- Здесь будут другие альбомы -->
+        </div>
+
+        <div class="music-player">
+            <div class="now-playing">
+                <img src="assets/images/album1.jpg" alt="Текущий трек" class="current-track-image">
+                <div class="track-info">
+                    <h4>НАЗВАНИЕ ТРЕКА</h4>
+                    <p>INMISE</p>
+                </div>
+            </div>
+            <div class="player-controls">
+                <button class="prev-track">◀◀</button>
+                <button class="play-pause">▶</button>
+                <button class="next-track">▶▶</button>
+            </div>
+            <div class="progress-bar">
+                <div class="progress"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="scripts/app.js"></script>
+    <script src="scripts/music.js"></script>
+</body>
+</html> 

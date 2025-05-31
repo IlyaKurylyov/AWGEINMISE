@@ -1,0 +1,439 @@
+/* Reset и базовые стили */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    cursor: crosshair;
+}
+
+body {
+    font-family: 'Courier New', monospace;
+    background-color: #000;
+    color: #fff;
+    overflow: hidden;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    position: relative;
+    min-height: 100vh;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+    animation: flicker 0.15s infinite;
+    z-index: 2;
+}
+
+/* Рамка телевизора */
+.tv-frame {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 20px solid #111;
+    border-radius: 20px;
+    box-shadow: 
+        inset 0 0 100px rgba(0,0,0,0.9),
+        0 0 50px rgba(0,0,0,0.9);
+    pointer-events: none;
+    z-index: 9999;
+    animation: tvFlicker 8s infinite;
+}
+
+.tv-frame::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: -20px;
+    right: -20px;
+    bottom: -20px;
+    background: 
+        radial-gradient(circle at 50% 50%, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.8) 100%),
+        repeating-linear-gradient(0deg, rgba(0,0,0,0.2) 0px, rgba(0,0,0,0.2) 1px, transparent 1px, transparent 2px);
+    border-radius: 40px;
+    z-index: -1;
+}
+
+/* Шум и помехи */
+.noise {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyBAMAAADsEZWCAAAAGFBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANxM8mAAAACHRSTlMzABEiM0Qid4dJv+8AAACOSURBVHjaZcwxDgIxDAXRf4UbmHtwo6XlBLkB9z+CiQ0IZGVHfgW1M1+zc2bLzN5m5m3mPTN/M+eZOc/Mz8x5Zs4z85s5z8x5Zn4z55k5z8x5Zn4z55k5z8x5Zn4z55k5z8x5Zn4zB5aESPwHr8LhAAAAAElFTkSuQmCC');
+    opacity: 0.05;
+    pointer-events: none;
+    animation: noise 0.2s infinite;
+    z-index: 3;
+}
+
+/* Эффект мерцания экрана */
+@keyframes tvFlicker {
+    0% { opacity: 1; }
+    2% { opacity: 0.8; }
+    4% { opacity: 1; }
+    19% { opacity: 1; }
+    20% { opacity: 0.6; }
+    21% { opacity: 1; }
+    60% { opacity: 1; }
+    61% { opacity: 0.9; }
+    62% { opacity: 1; }
+    85% { opacity: 1; }
+    86% { opacity: 0.7; }
+    87% { opacity: 1; }
+}
+
+@keyframes noise {
+    0% { transform: translate(0,0); }
+    10% { transform: translate(-1%,-1%); }
+    20% { transform: translate(1%,1%); }
+    30% { transform: translate(-2%,-2%); }
+    40% { transform: translate(2%,2%); }
+    50% { transform: translate(-1%,-1%); }
+    60% { transform: translate(1%,1%); }
+    70% { transform: translate(-2%,-2%); }
+    80% { transform: translate(2%,2%); }
+    90% { transform: translate(-1%,-1%); }
+    100% { transform: translate(0,0); }
+}
+
+@keyframes flicker {
+    0% { opacity: 0.9; }
+    50% { opacity: 1; }
+    100% { opacity: 0.9; }
+}
+
+/* Загрузочный экран */
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.loading-text {
+    font-size: 10vw;
+    font-weight: bold;
+    letter-spacing: -0.05em;
+    animation: glitchText 0.5s infinite;
+    text-transform: uppercase;
+}
+
+/* Навигация */
+.main-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 100;
+    mix-blend-mode: difference;
+}
+
+.nav-logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-decoration: none;
+    color: #fff;
+    letter-spacing: -0.05em;
+}
+
+.nav-links {
+    display: flex;
+    gap: 1rem;
+}
+
+/* Базовые стили для ссылок навигации */
+.nav-link {
+    position: fixed;
+    top: 20px;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 5px;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+}
+
+.nav-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(2px);
+}
+
+/* Позиционирование каждой ссылки */
+.nav-link:nth-child(1) { left: 20%; }
+.nav-link:nth-child(2) { left: 40%; }
+.nav-link:nth-child(3) { left: 60%; }
+.nav-link:nth-child(4) { left: 80%; }
+
+/* Эффект удара */
+.impact-effect {
+    position: absolute;
+    bottom: 0; /* Изменено: эффект удара в самом низу */
+    width: 200px;
+    height: 200px;
+    pointer-events: none;
+}
+
+.impact-particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    transform-origin: center;
+    animation: particleExplode var(--speed) ease-out forwards;
+}
+
+@keyframes particleExplode {
+    0% {
+        transform: rotate(var(--angle)) translateX(0) scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: rotate(var(--angle)) translateX(100px) scale(0.5);
+        opacity: 0.5;
+    }
+    100% {
+        transform: rotate(var(--angle)) translateX(150px) scale(0);
+        opacity: 0;
+    }
+}
+
+/* Стили для упавшего элемента */
+.nav-link.fallen {
+    position: fixed;
+    top: 20px; /* Отступ сверху в финальной позиции */
+    transition: all 0.3s ease;
+}
+
+/* Стили для активного состояния ссылки */
+.nav-link.fallen {
+    cursor: pointer;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 5px;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+}
+
+.nav-link.fallen:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(2px);
+}
+
+/* Главный контент */
+.content {
+    min-height: 100vh;
+    padding: 0 1rem;
+}
+
+.hero {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.hero-content {
+    text-align: center;
+    position: relative;
+}
+
+/* Эффект глитча */
+.glitch-text {
+    font-size: 15vw;
+    font-weight: bold;
+    text-transform: uppercase;
+    position: relative;
+    animation: glitchLoop 2s infinite;
+    letter-spacing: -0.1em;
+}
+
+.glitch-text::before,
+.glitch-text::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.glitch-text::before {
+    left: 2px;
+    text-shadow: -2px 0 #ff00ff;
+    clip: rect(24px, 550px, 90px, 0);
+    animation: glitch-anim 3s infinite linear alternate-reverse;
+}
+
+.glitch-text::after {
+    left: -2px;
+    text-shadow: 2px 0 #00ffff;
+    clip: rect(85px, 550px, 140px, 0);
+    animation: glitch-anim 2s infinite linear alternate-reverse;
+}
+
+/* Анимации */
+@keyframes glitchText {
+    0% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+    100% { transform: translate(0); }
+}
+
+@keyframes glitchLoop {
+    0% { transform: none; }
+    25% { transform: skew(-0.5deg, -0.9deg); }
+    50% { transform: skew(0.8deg, -0.1deg); }
+    75% { transform: skew(0.5deg, 1deg); }
+    100% { transform: none; }
+}
+
+@keyframes glitch-anim {
+    0% {
+        clip: rect(14px, 550px, 59px, 0);
+    }
+    20% {
+        clip: rect(37px, 550px, 128px, 0);
+    }
+    40% {
+        clip: rect(89px, 550px, 14px, 0);
+    }
+    60% {
+        clip: rect(56px, 550px, 137px, 0);
+    }
+    80% {
+        clip: rect(24px, 550px, 34px, 0);
+    }
+    100% {
+        clip: rect(67px, 550px, 145px, 0);
+    }
+}
+
+/* Эффект шума */
+.noise-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.05;
+    z-index: 1000;
+}
+
+/* Дополнительные эффекты глитча */
+.glitching {
+    animation: microGlitch 0.2s infinite;
+}
+
+.glitch-burst {
+    animation: glitchBurst 0.2s ease-out;
+}
+
+@keyframes microGlitch {
+    0% { transform: translate(0); }
+    25% { transform: translate(-1px, 1px); }
+    50% { transform: translate(1px, -1px); }
+    75% { transform: translate(-1px, -1px); }
+    100% { transform: translate(1px, 1px); }
+}
+
+@keyframes glitchBurst {
+    0% {
+        transform: scale(1);
+        filter: none;
+    }
+    20% {
+        transform: scale(1.1) skew(-10deg);
+        filter: url(#glitchFilter);
+    }
+    40% {
+        transform: scale(0.9) skew(10deg);
+        filter: none;
+    }
+    60% {
+        transform: scale(1.05) skew(-5deg);
+        filter: url(#glitchFilter);
+    }
+    80% {
+        transform: scale(0.95) skew(5deg);
+        filter: none;
+    }
+    100% {
+        transform: scale(1);
+        filter: none;
+    }
+}
+
+/* SVG фильтр для глитч-эффекта */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+    background-size: 2px 2px;
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.1;
+}
+
+/* Контейнер для падающих элементов */
+.falling-items-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 100;
+}
+
+/* Анимация свечения */
+@keyframes glow {
+    0% {
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+    }
+    50% {
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.9),
+                     0 0 30px rgba(255, 255, 255, 0.7);
+    }
+    100% {
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+    }
+} 

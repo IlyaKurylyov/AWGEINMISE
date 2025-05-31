@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INMISE - Видео</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/video.css">
+</head>
+<body>
+    <nav class="main-nav">
+        <a href="index.html" class="nav-logo">INMISE</a>
+        <div class="nav-links">
+            <a href="music.html" class="nav-link">МУЗЫКА</a>
+            <a href="video.html" class="nav-link active">ВИДЕО</a>
+            <a href="merch.html" class="nav-link">МЕРЧ</a>
+            <a href="tours.html" class="nav-link">ТУРЫ</a>
+        </div>
+    </nav>
+
+    <main class="content video-content">
+        <div class="video-grid">
+            <div class="video-item">
+                <div class="video-thumbnail">
+                    <img src="assets/images/video1.jpg" alt="Видео 1">
+                    <div class="play-overlay">
+                        <div class="play-button">▶</div>
+                    </div>
+                </div>
+                <div class="video-info">
+                    <h3>НАЗВАНИЕ ВИДЕО</h3>
+                    <p>2024 • Официальный клип</p>
+                </div>
+            </div>
+            <!-- Здесь будут другие видео -->
+        </div>
+
+        <div class="video-modal">
+            <div class="modal-content">
+                <button class="close-modal">×</button>
+                <div class="video-container">
+                    <video controls>
+                        <source src="" type="video/mp4">
+                    </video>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="scripts/app.js"></script>
+    <script src="scripts/video.js"></script>
+</body>
+</html> 
