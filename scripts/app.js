@@ -2,6 +2,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     const loadingScreen = document.querySelector('.loading-screen');
     loadingScreen.style.display = 'none';
+
+    // Предзагрузка видео
+    const video = document.getElementById('bgVideo');
+    video.load(); // Явно вызываем загрузку видео
 });
 
 // Эффект наведения на навигацию
@@ -125,9 +129,10 @@ function createTVNoise() {
 createTVNoise();
 
 // Интерактивность переключателей
-document.querySelectorAll('.switch').forEach(switch_ => {
+document.querySelectorAll('.switch').forEach((switch_, index) => {
     let isPressed = false;
-    let clickSound;
+    const video = document.getElementById('bgVideo');
+    let isPlaying = false;
 
     // Создаем звук щелчка
     function createClickSound() {
@@ -160,6 +165,51 @@ document.querySelectorAll('.switch').forEach(switch_ => {
             // Случайное искажение экрана
             document.body.style.transform = `scale(${1 + Math.random() * 0.005}) skew(${Math.random() * 1}deg)`;
             
+            // Управление видео для среднего переключателя
+            if (index === 1 && video) {
+                const videoContainer = document.querySelector('.video-background');
+                
+                if (!isPlaying) {
+                    // Проверяем готовность видео
+                    if (video.readyState >= 2) {
+                        try {
+                            video.currentTime = 3; // Начинаем с 3 секунды
+                            const playPromise = video.play();
+                            
+                            if (playPromise !== undefined) {
+                                playPromise
+                                    .then(() => {
+                                        videoContainer.classList.add('active');
+                                        isPlaying = true;
+                                    })
+                                    .catch(error => {
+                                        console.error("Ошибка воспроизведения:", error);
+                                    });
+                            }
+                        } catch (error) {
+                            console.error("Ошибка при работе с видео:", error);
+                        }
+                    } else {
+                        console.log("Видео не готово к воспроизведению");
+                        // Ждем загрузки видео
+                        video.addEventListener('canplay', () => {
+                            video.currentTime = 3;
+                            video.play();
+                            videoContainer.classList.add('active');
+                            isPlaying = true;
+                        }, { once: true });
+                    }
+                } else {
+                    try {
+                        video.pause();
+                        videoContainer.classList.remove('active');
+                        isPlaying = false;
+                    } catch (error) {
+                        console.error("Ошибка при остановке видео:", error);
+                    }
+                }
+            }
+
             setTimeout(() => {
                 noise.style.opacity = '0.2';
                 document.body.style.transform = 'none';
