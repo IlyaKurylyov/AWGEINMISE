@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>INMISE - Артисты</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/video.css">
+    <link rel="stylesheet" href="styles/artists.css">
 </head>
 <body>
     <nav class="main-nav">
@@ -18,34 +18,70 @@
         </div>
     </nav>
 
-    <main class="content video-content">
-        <div class="video-grid">
-            <div class="video-item">
-                <div class="video-thumbnail">
-                    <img src="assets/images/video1.jpg" alt="Артист 1">
-                    <div class="play-overlay">
-                        <div class="play-button">▶</div>
-                    </div>
+    <main class="content">
+        <div class="artists-grid">
+            <div class="artist-card">
+                <div class="artist-image-container">
+                    <img src="assets/images/artists/artist1.jpg" alt="INMISE - Участник 1" class="artist-image">
                 </div>
-                <div class="video-info">
-                    <h3>ИМЯ АРТИСТА</h3>
-                    <p>Описание</p>
+                <div class="artist-info">
+                    <div class="artist-name">ARTIST NAME</div>
+                    <div class="artist-description">Краткое описание артиста, его роль в группе</div>
+                </div>
+            </div>
+
+            <div class="artist-card">
+                <div class="artist-image-container">
+                    <img src="assets/images/artists/artist2.jpg" alt="INMISE - Участник 2" class="artist-image">
+                </div>
+                <div class="artist-info">
+                    <div class="artist-name">ARTIST NAME</div>
+                    <div class="artist-description">Краткое описание артиста, его роль в группе</div>
+                </div>
+            </div>
+
+            <div class="artist-card">
+                <div class="artist-image-container">
+                    <img src="assets/images/artists/artist3.jpg" alt="INMISE - Участник 3" class="artist-image">
+                </div>
+                <div class="artist-info">
+                    <div class="artist-name">ARTIST NAME</div>
+                    <div class="artist-description">Краткое описание артиста, его роль в группе</div>
+                </div>
+            </div>
+
+            <div class="artist-card">
+                <div class="artist-image-container">
+                    <img src="assets/images/artists/artist4.jpg" alt="INMISE - Участник 4" class="artist-image">
+                </div>
+                <div class="artist-info">
+                    <div class="artist-name">ARTIST NAME</div>
+                    <div class="artist-description">Краткое описание артиста, его роль в группе</div>
+                </div>
+            </div>
+
+            <div class="artist-card">
+                <div class="artist-image-container">
+                    <img src="assets/images/artists/artist5.jpg" alt="INMISE - Участник 5" class="artist-image">
+                </div>
+                <div class="artist-info">
+                    <div class="artist-name">ARTIST NAME</div>
+                    <div class="artist-description">Краткое описание артиста, его роль в группе</div>
+                </div>
+            </div>
+
+            <div class="artist-card">
+                <div class="artist-image-container">
+                    <img src="assets/images/artists/artist6.jpg" alt="INMISE - Участник 6" class="artist-image">
+                </div>
+                <div class="artist-info">
+                    <div class="artist-name">ARTIST NAME</div>
+                    <div class="artist-description">Краткое описание артиста, его роль в группе</div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- Модальное окно для видео -->
-    <div class="video-modal">
-        <div class="modal-content">
-            <button class="close-modal">×</button>
-            <div class="video-container">
-                <video controls></video>
-            </div>
-        </div>
-    </div>
-
     <script src="scripts/app.js"></script>
-    <script src="scripts/video.js"></script>
 </body>
 </html> 
