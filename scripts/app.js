@@ -130,9 +130,12 @@ createTVNoise();
 
 // Интерактивность переключателей
 document.querySelectorAll('.switch').forEach((switch_, index) => {
-    let isPressed = false;
+    // Обрабатываем только центральную кнопку
+    if (index !== 1) return;
+
     const video = document.getElementById('bgVideo');
-    let isPlaying = false;
+    const videoContainer = document.querySelector('.video-background');
+    let isPressed = false;
 
     // Создаем звук щелчка
     function createClickSound() {
@@ -152,91 +155,59 @@ document.querySelectorAll('.switch').forEach((switch_, index) => {
         oscillator.stop(audioContext.currentTime + 0.1);
     }
 
-    function pressSwitch() {
+    async function handleVideoPlayback() {
         if (!isPressed) {
-            isPressed = true;
-            switch_.classList.add('pressed');
-            createClickSound();
-
-            // Добавляем эффект помех при нажатии
-            const noise = document.querySelector('.noise-overlay');
-            noise.style.opacity = '0.8';
-            
-            // Случайное искажение экрана
-            document.body.style.transform = `scale(${1 + Math.random() * 0.005}) skew(${Math.random() * 1}deg)`;
-            
-            // Управление видео для среднего переключателя
-            if (index === 1 && video) {
-                const videoContainer = document.querySelector('.video-background');
-                
-                if (!isPlaying) {
-                    // Проверяем готовность видео
-                    if (video.readyState >= 2) {
-                        try {
-                            video.currentTime = 3; // Начинаем с 3 секунды
-                            const playPromise = video.play();
-                            
-                            if (playPromise !== undefined) {
-                                playPromise
-                                    .then(() => {
-                                        videoContainer.classList.add('active');
-                                        isPlaying = true;
-                                    })
-                                    .catch(error => {
-                                        console.error("Ошибка воспроизведения:", error);
-                                    });
-                            }
-                        } catch (error) {
-                            console.error("Ошибка при работе с видео:", error);
-                        }
-                    } else {
-                        console.log("Видео не готово к воспроизведению");
-                        // Ждем загрузки видео
-                        video.addEventListener('canplay', () => {
-                            video.currentTime = 3;
-                            video.play();
-                            videoContainer.classList.add('active');
-                            isPlaying = true;
-                        }, { once: true });
-                    }
-                } else {
-                    try {
-                        video.pause();
-                        videoContainer.classList.remove('active');
-                        isPlaying = false;
-                    } catch (error) {
-                        console.error("Ошибка при остановке видео:", error);
-                    }
-                }
+            // Включаем видео
+            try {
+                video.currentTime = 3;
+                await video.play();
+                videoContainer.classList.add('active');
+                switch_.classList.add('pressed');
+                isPressed = true;
+            } catch (error) {
+                console.error("Ошибка воспроизведения:", error);
+                switch_.classList.remove('pressed');
+                isPressed = false;
             }
-
-            setTimeout(() => {
-                noise.style.opacity = '0.2';
-                document.body.style.transform = 'none';
-            }, 150);
-        }
-    }
-
-    function releaseSwitch() {
-        if (isPressed) {
-            isPressed = false;
+        } else {
+            // Выключаем видео
+            video.pause();
+            videoContainer.classList.remove('active');
             switch_.classList.remove('pressed');
-            createClickSound();
+            isPressed = false;
         }
     }
 
-    // Обработка кликов мышью
-    switch_.addEventListener('mousedown', pressSwitch);
-    switch_.addEventListener('mouseup', releaseSwitch);
-    switch_.addEventListener('mouseleave', releaseSwitch);
+    function handleClick() {
+        createClickSound();
+
+        // Эффекты при нажатии
+        const noise = document.querySelector('.noise-overlay');
+        noise.style.opacity = '0.8';
+        document.body.style.transform = `scale(${1 + Math.random() * 0.005}) skew(${Math.random() * 1}deg)`;
+
+        handleVideoPlayback();
+
+        // Сброс эффектов
+        setTimeout(() => {
+            noise.style.opacity = '0.2';
+            document.body.style.transform = 'none';
+        }, 150);
+    }
+
+    // Обработка кликов
+    switch_.addEventListener('click', handleClick);
 
     // Обработка касаний
-    switch_.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        pressSwitch();
-    });
     switch_.addEventListener('touchend', (e) => {
         e.preventDefault();
-        releaseSwitch();
+        handleClick();
+    });
+
+    // Сброс состояния при ошибках видео
+    video.addEventListener('error', () => {
+        isPressed = false;
+        switch_.classList.remove('pressed');
+        videoContainer.classList.remove('active');
     });
 }); 
