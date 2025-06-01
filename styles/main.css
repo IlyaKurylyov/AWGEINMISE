@@ -166,14 +166,14 @@ body::before {
 /* Базовые стили для ссылок навигации */
 .nav-link {
     position: fixed;
-    top: 15px;
-    padding: 15px 25px;
+    top: 25px;
+    padding: 13px 22px;
     background: rgba(0, 0, 0, 0.9);
     border: 3px solid rgba(255, 255, 255, 1);
-    border-radius: 8px;
+    border-radius: 7px;
     color: #fff;
     text-decoration: none;
-    font-size: 1.5rem;
+    font-size: 1.35rem;
     font-weight: 900;
     text-transform: uppercase;
     transition: all 0.2s ease;
@@ -182,15 +182,12 @@ body::before {
         1px -1px 0 #000,
         -1px 1px 0 #000,
         1px 1px 0 #000,
-        0 0 20px rgba(255, 255, 255, 1),
-        0 0 40px rgba(255, 255, 255, 0.8);
+        0 0 8px rgba(255, 255, 255, 0.8);
     box-shadow: 
-        inset 0 0 30px rgba(255, 255, 255, 0.5),
-        0 0 30px rgba(255, 255, 255, 0.5),
-        0 0 60px rgba(255, 255, 255, 0.4),
-        0 0 90px rgba(255, 255, 255, 0.3),
-        0 0 120px rgba(255, 255, 255, 0.2);
-    z-index: 1000;
+        inset 0 0 15px rgba(255, 255, 255, 0.5),
+        0 0 15px rgba(255, 255, 255, 0.5),
+        0 0 20px rgba(255, 255, 255, 0.3);
+    z-index: 100;
     min-width: max-content;
 }
 
@@ -203,33 +200,30 @@ body::before {
         1px -1px 0 #000,
         -1px 1px 0 #000,
         1px 1px 0 #000,
-        0 0 30px rgba(255, 255, 255, 1),
-        0 0 50px rgba(255, 255, 255, 0.8);
+        0 0 12px rgba(255, 255, 255, 1);
     box-shadow: 
-        inset 0 0 40px rgba(255, 255, 255, 0.6),
-        0 0 40px rgba(255, 255, 255, 0.6),
-        0 0 80px rgba(255, 255, 255, 0.5),
-        0 0 120px rgba(255, 255, 255, 0.4),
-        0 0 160px rgba(255, 255, 255, 0.3);
+        inset 0 0 20px rgba(255, 255, 255, 0.6),
+        0 0 20px rgba(255, 255, 255, 0.6),
+        0 0 25px rgba(255, 255, 255, 0.4);
 }
 
-/* Добавляем подложку под текст для лучшей читаемости */
+/* Подложка под текст */
 .nav-link::before {
     content: '';
     position: absolute;
-    top: -15px;
-    left: -15px;
-    right: -15px;
-    bottom: -15px;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
     background: radial-gradient(
         circle at center,
-        rgba(255, 255, 255, 0.3) 0%,
-        rgba(255, 255, 255, 0.2) 30%,
-        rgba(255, 255, 255, 0.1) 60%,
+        rgba(255, 255, 255, 0.15) 0%,
+        rgba(255, 255, 255, 0.1) 30%,
+        rgba(255, 255, 255, 0.05) 60%,
         transparent 100%
     );
     z-index: -1;
-    border-radius: 15px;
+    border-radius: 10px;
 }
 
 /* Позиционирование каждой ссылки */
@@ -642,4 +636,120 @@ body::after {
     height: 100%;
     background: black;
     z-index: -1;
+}
+
+/* Глитч-лампа */
+.halogen-lamp {
+    position: fixed;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: 9999;
+    box-shadow: 
+        0 0 7px 1px rgba(255, 255, 255, 0.7),
+        0 0 14px 3px rgba(255, 255, 255, 0.5),
+        0 0 21px 4px rgba(255, 255, 255, 0.4),
+        0 0 28px 6px rgba(255, 255, 255, 0.3);
+    animation: lampFlicker 0.1s infinite alternate-reverse;
+}
+
+.halogen-lamp::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: -5%;
+    right: -5%;
+    height: 70px;
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.21) 0%,
+        rgba(255, 255, 255, 0.14) 10%,
+        rgba(255, 255, 255, 0.07) 20%,
+        rgba(255, 255, 255, 0.035) 40%,
+        transparent 100%
+    );
+    filter: blur(5px);
+    z-index: 9998;
+}
+
+@keyframes lampFlicker {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 0.665; }
+    60% { opacity: 0.658; }
+    70% { opacity: 0.651; }
+    80% { opacity: 0.665; }
+    90% { opacity: 0.658; }
+}
+
+/* Убираем старый top-light, так как теперь у нас есть лампа */
+.top-light {
+    display: none;
+}
+
+/* Световой конус от лампы */
+.halogen-lamp::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: -10%;
+    right: -10%;
+    height: 150px;
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.15) 0%,
+        rgba(255, 255, 255, 0.1) 15%,
+        rgba(255, 255, 255, 0.05) 30%,
+        rgba(255, 255, 255, 0.02) 50%,
+        transparent 100%
+    );
+    filter: blur(8px);
+    clip-path: polygon(0 0, 100% 0, 120% 100%, -20% 100%);
+    transform-origin: top;
+    animation: lightCone 8s infinite alternate;
+    opacity: 0.7;
+}
+
+/* Блики и искажения */
+.halogen-lamp::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 0;
+    right: 0;
+    height: 15px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.2) 20%,
+        rgba(255, 255, 255, 0.8) 50%,
+        rgba(255, 255, 255, 0.2) 80%,
+        transparent 100%
+    );
+    filter: blur(2px);
+    animation: lightMove 10s infinite linear;
+}
+
+@keyframes lightCone {
+    0% { transform: scaleY(1); opacity: 0.7; }
+    50% { transform: scaleY(1.1); opacity: 0.8; }
+    100% { transform: scaleY(1); opacity: 0.7; }
+}
+
+@keyframes lightMove {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+}
+
+/* Добавляем глитч-эффекты к свету */
+.halogen-lamp.glitch {
+    animation: 
+        lampFlicker 0.1s infinite alternate-reverse,
+        glitchOffset 0.2s infinite steps(2);
+}
+
+@keyframes glitchOffset {
+    0% { transform: translate(0); }
+    25% { transform: translate(-2px, 2px); }
+    50% { transform: translate(2px, -2px); }
+    75% { transform: translate(-1px, -1px); }
+    100% { transform: translate(1px, 1px); }
 } 
