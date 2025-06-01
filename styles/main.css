@@ -647,6 +647,7 @@ body::after {
     height: 2px;
     background: rgba(255, 255, 255, 0.7);
     z-index: 9999;
+    pointer-events: none;
     box-shadow: 
         0 0 7px 1px rgba(255, 255, 255, 0.7),
         0 0 14px 3px rgba(255, 255, 255, 0.5),
@@ -671,6 +672,7 @@ body::after {
     );
     filter: blur(5px);
     z-index: 9998;
+    pointer-events: none;
 }
 
 @keyframes lampFlicker {
@@ -680,11 +682,6 @@ body::after {
     70% { opacity: 0.651; }
     80% { opacity: 0.665; }
     90% { opacity: 0.658; }
-}
-
-/* Убираем старый top-light, так как теперь у нас есть лампа */
-.top-light {
-    display: none;
 }
 
 /* Световой конус от лампы */
@@ -707,6 +704,7 @@ body::after {
     transform-origin: top;
     animation: lightCone 8s infinite alternate;
     opacity: 0.7;
+    pointer-events: none;
 }
 
 /* Блики и искажения */
@@ -752,4 +750,9 @@ body::after {
     50% { transform: translate(2px, -2px); }
     75% { transform: translate(-1px, -1px); }
     100% { transform: translate(1px, 1px); }
+}
+
+/* Убираем старый top-light, так как теперь у нас есть лампа */
+.top-light {
+    display: none;
 } 
