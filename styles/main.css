@@ -166,31 +166,77 @@ body::before {
 /* Базовые стили для ссылок навигации */
 .nav-link {
     position: fixed;
-    top: 20px;
-    padding: 10px 20px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 5px;
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    top: 15px;
+    padding: 15px 25px;
+    background: rgba(0, 0, 0, 0.9);
+    border: 3px solid rgba(255, 255, 255, 1);
+    border-radius: 8px;
     color: #fff;
     text-decoration: none;
-    font-size: 1.2rem;
+    font-size: 1.5rem;
+    font-weight: 900;
     text-transform: uppercase;
     transition: all 0.2s ease;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+    text-shadow: 
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000,
+        0 0 20px rgba(255, 255, 255, 1),
+        0 0 40px rgba(255, 255, 255, 0.8);
+    box-shadow: 
+        inset 0 0 30px rgba(255, 255, 255, 0.5),
+        0 0 30px rgba(255, 255, 255, 0.5),
+        0 0 60px rgba(255, 255, 255, 0.4),
+        0 0 90px rgba(255, 255, 255, 0.3),
+        0 0 120px rgba(255, 255, 255, 0.2);
+    z-index: 1000;
+    min-width: max-content;
 }
 
 .nav-link:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.5);
-    transform: translateY(2px);
+    background: rgba(0, 0, 0, 0.95);
+    border-color: rgba(255, 255, 255, 1);
+    transform: translateY(-2px);
+    text-shadow: 
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000,
+        0 0 30px rgba(255, 255, 255, 1),
+        0 0 50px rgba(255, 255, 255, 0.8);
+    box-shadow: 
+        inset 0 0 40px rgba(255, 255, 255, 0.6),
+        0 0 40px rgba(255, 255, 255, 0.6),
+        0 0 80px rgba(255, 255, 255, 0.5),
+        0 0 120px rgba(255, 255, 255, 0.4),
+        0 0 160px rgba(255, 255, 255, 0.3);
+}
+
+/* Добавляем подложку под текст для лучшей читаемости */
+.nav-link::before {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: -15px;
+    right: -15px;
+    bottom: -15px;
+    background: radial-gradient(
+        circle at center,
+        rgba(255, 255, 255, 0.3) 0%,
+        rgba(255, 255, 255, 0.2) 30%,
+        rgba(255, 255, 255, 0.1) 60%,
+        transparent 100%
+    );
+    z-index: -1;
+    border-radius: 15px;
 }
 
 /* Позиционирование каждой ссылки */
-.nav-link:nth-child(1) { left: 20%; }
-.nav-link:nth-child(2) { left: 40%; }
-.nav-link:nth-child(3) { left: 60%; }
-.nav-link:nth-child(4) { left: 80%; }
+.nav-link:nth-child(1) { left: 20%; }  /* РЕЛИЗЫ */
+.nav-link:nth-child(2) { left: 38%; }  /* АРТИСТЫ */
+.nav-link:nth-child(3) { left: 56%; }  /* О НАС */
+.nav-link:nth-child(4) { left: 74%; }  /* КОНТАКТЫ */
 
 /* Эффект удара */
 .impact-effect {
