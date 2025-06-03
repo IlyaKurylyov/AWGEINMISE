@@ -1,7 +1,7 @@
 /* Сетка артистов */
 .artists-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: 3rem;
     padding: 100px 5% 100px;
     max-width: 1400px;
@@ -100,12 +100,24 @@ body {
     font-size: 0.9rem;
     color: rgba(255, 255, 255, 0.6);
     line-height: 1.4;
-    max-height: 2.8em;
+    max-height: 2.8em; /* ~2 строки */
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 2; 
     -webkit-box-orient: vertical;
+    transition: max-height 0.3s ease; /* Плавный переход для высоты */
+    position: relative; /* Для z-index, если понадобится */
+    z-index: 1;
+}
+
+.artist-card:hover .artist-description {
+    max-height: 10em; /* Достаточно для ~7 строк, можно настроить */
+    -webkit-line-clamp: unset; /* Снимаем ограничение на количество строк */
+    overflow: visible; /* Показываем весь текст */
+    text-overflow: clip;
+    background-color: rgba(255, 255, 255, 0.05); /* Слегка меняем фон при раскрытии */
+    z-index: 2; /* Чтобы быть поверх других элементов карточки при раскрытии, если есть пересечения */
 }
 
 /* Эффект помех на изображении */
@@ -187,6 +199,81 @@ body {
             0 0 10px rgba(255, 255, 255, 0.5),
             0 0 20px rgba(255, 255, 255, 0.3);
     }
+}
+
+/* Стили для черной карточки-заглушки */
+.artist-card-placeholder {
+    background-color: #000000; /* Черный фон для карточки */
+    position: relative;      /* Для позиционирования псевдоэлемента ::after */
+    overflow: hidden;        /* Чтобы эффект не вылезал за пределы */
+    padding: 0 !important;   /* Убираем padding от .artist-card */
+    border-radius: 15px;     /* Сохраняем скругление как у других карточек */
+    /* Убираем тестовые border, width, height, z-index, margin */
+}
+
+/* Скрываем стандартные внутренние блоки, если они еще есть в HTML (мы их не удаляли) */
+.artist-card-placeholder .artist-info {
+    display: flex; /* Делаем видимым */
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative; /* Чтобы z-index работал */
+    z-index: 2;         /* Чтобы текст был поверх ::after с помехами */
+    width: 100%;
+    height: 100%;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    /* display: none !important; /* Старое правило */
+}
+
+.artist-card-placeholder .artist-image-container { 
+    display: none !important;
+}
+
+/* Эффект помех с помощью псевдоэлемента ::after на самой карточке-заглушке */
+.artist-card-placeholder::after { 
+    content: ""; 
+    display: block; 
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background-image: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><filter id="plh_noise_filter" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".55" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100" height="100" filter="url(%23plh_noise_filter)" opacity=".70"/></svg>'); /* Уменьшена baseFrequency и opacity для более мягкого эффекта */
+    animation: placeholderNoiseAnimation 0.25s infinite linear; /* Слегка замедлена анимация */
+    will-change: transform; 
+    pointer-events: none;
+    z-index: 1; /* Помехи будут под текстом (z-index: 2 у .artist-info) */
+    opacity: 1; 
+}
+
+/* Анимация для телевизионных помех */
+@keyframes placeholderNoiseAnimation {
+    0% { transform: translate(0,0); }
+    10% { transform: translate(-1%,-1%); } /* Уменьшены смещения */
+    20% { transform: translate(-2%,1%); }  /* Уменьшены смещения */
+    30% { transform: translate(1%,-2%); }  /* Уменьшены смещения */
+    40% { transform: translate(2%,2%); }   /* Уменьшены смещения */
+    50% { transform: translate(-1%,2%); }  /* Уменьшены смещения */
+    60% { transform: translate(-2%,-1%); } /* Уменьшены смещения */
+    70% { transform: translate(2%,-2%); }  /* Уменьшены смещения */
+    80% { transform: translate(-1%,1%); }  /* Уменьшены смещения */
+    90% { transform: translate(1%,2%); }   /* Уменьшены смещения */
+    100% { transform: translate(0,0); }
+}
+
+/* Отключаем основные эффекты наведения для самой карточки-заглушки */
+.artist-card-placeholder:hover {
+    transform: none;
+    border-color: #111111; /* Сохраняем темную рамку */
+    background-color: #000000; /* Сохраняем черный фон */
+}
+
+/* Отключаем эффект свечения при наведении для карточки-заглушки */
+.artist-card-placeholder:hover::before { /* Это относится к .artist-card::before */
+    display: none;
 }
 
 /* Медиа-запросы для адаптивности */

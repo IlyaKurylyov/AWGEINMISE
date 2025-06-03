@@ -1,11 +1,48 @@
 // Загрузочный экран
 document.addEventListener('DOMContentLoaded', () => {
     const loadingScreen = document.querySelector('.loading-screen');
-    loadingScreen.style.display = 'none';
+    if (loadingScreen) {
+        loadingScreen.style.display = 'none';
+    }
 
     // Предзагрузка видео
     const video = document.getElementById('bgVideo');
-    video.load(); // Явно вызываем загрузку видео
+    if (video) {
+        video.load();
+    }
+
+    // Функция для перемешивания карточек артистов
+    const shuffleArtistCards = () => {
+        const gridContainer = document.querySelector('.artists-grid');
+        if (!gridContainer) {
+            return; // Выходим, если это не страница артистов
+        }
+
+        const allCards = Array.from(gridContainer.children);
+        const placeholderCard = allCards.find(card => card.classList.contains('artist-card-placeholder'));
+        let artistCards = allCards.filter(card => card !== placeholderCard); // Отфильтровываем плейсхолдер
+
+        // Алгоритм тасования Фишера-Йейтса
+        for (let i = artistCards.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [artistCards[i], artistCards[j]] = [artistCards[j], artistCards[i]]; // Меняем местами
+        }
+
+        // Очищаем грид от текущих карточек
+        while (gridContainer.firstChild) {
+            gridContainer.removeChild(gridContainer.firstChild);
+        }
+
+        // Добавляем перемешанные карточки артистов
+        artistCards.forEach(card => gridContainer.appendChild(card));
+
+        // Добавляем карточку-плейсхолдер в конец, если она существует
+        if (placeholderCard) {
+            gridContainer.appendChild(placeholderCard);
+        }
+    };
+
+    shuffleArtistCards(); // Вызываем функцию перемешивания
 });
 
 // Эффект наведения на навигацию
@@ -55,12 +92,14 @@ document.addEventListener('mousemove', (e) => {
 // Случайные глитч-эффекты
 setInterval(() => {
     const elements = document.querySelectorAll('[data-text]');
-    const randomElement = elements[Math.floor(Math.random() * elements.length)];
-    
-    randomElement.classList.add('glitch-burst');
-    setTimeout(() => {
-        randomElement.classList.remove('glitch-burst');
-    }, 200);
+    if (elements.length > 0) {
+        const randomElement = elements[Math.floor(Math.random() * elements.length)];
+        
+        randomElement.classList.add('glitch-burst');
+        setTimeout(() => {
+            randomElement.classList.remove('glitch-burst');
+        }, 200);
+    }
 }, 3000);
 
 // Эффект шума
