@@ -1,0 +1,243 @@
+/* Стили для страницы контактов */
+body, html {
+    overflow-y: auto !important; /* Убедимся, что прокрутка возможна, если контента много */
+}
+
+.content.contacts-page-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 80px);
+    padding: 40px 5%;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.contacts-container {
+    text-align: center;
+    width: 100%;
+    max-width: 1200px;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.contacts-container h1 {
+    font-size: 3.2rem;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    margin-bottom: 4rem;
+    text-shadow: 
+        3px 3px 0 #ff00ff,
+        -3px -3px 0 #00ffff,
+        0 0 20px rgba(255, 255, 255, 0.5);
+    animation: titleGlow 2s infinite alternate;
+}
+
+.social-links-grid {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    width: 100%;
+    padding: 0 2rem;
+}
+
+.social-card {
+    flex: 0 1 280px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 3px solid #fff;
+    border-radius: 20px;
+    padding: 4rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 
+        0 0 20px rgba(255, 255, 255, 0.2),
+        inset 0 0 30px rgba(255, 255, 255, 0.1);
+    min-height: 400px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(5px);
+}
+
+.social-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        45deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 100%
+    );
+    transform: rotate(45deg);
+    animation: shine 3s infinite;
+}
+
+.social-card:hover {
+    transform: translateY(-10px) scale(1.03);
+    border-color: #fff;
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 
+        0 15px 30px rgba(0, 0, 0, 0.2),
+        0 0 40px rgba(255, 255, 255, 0.3),
+        inset 0 0 40px rgba(255, 255, 255, 0.2);
+}
+
+.social-card h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 3rem;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    transition: all 0.3s ease;
+}
+
+.social-card:hover h2 {
+    transform: scale(1.05);
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+}
+
+.social-link {
+    display: inline-block;
+    padding: 15px 35px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid #fff;
+    border-radius: 25px;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.social-link::before {
+    content: '';
+    position: absolute;
+    top: -100%;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.8),
+        rgba(255, 255, 255, 0)
+    );
+    transition: all 0.3s ease;
+}
+
+.social-link:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.1);
+    box-shadow: 
+        0 0 20px rgba(255, 255, 255, 0.4),
+        0 0 40px rgba(255, 255, 255, 0.2);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+}
+
+.social-link:hover::before {
+    top: 0;
+    opacity: 0;
+}
+
+/* Y2K-специфичные анимации */
+@keyframes titleGlow {
+    0% {
+        text-shadow: 
+            3px 3px 0 #ff00ff,
+            -3px -3px 0 #00ffff,
+            0 0 20px rgba(255, 255, 255, 0.5);
+    }
+    100% {
+        text-shadow: 
+            5px 5px 0 #ff00ff,
+            -5px -5px 0 #00ffff,
+            0 0 30px rgba(255, 255, 255, 0.8);
+    }
+}
+
+@keyframes shine {
+    0% {
+        transform: translateX(-200%) rotate(45deg);
+    }
+    100% {
+        transform: translateX(200%) rotate(45deg);
+    }
+}
+
+/* Специфичные стили для каждой карточки */
+.vk-card {
+    background: linear-gradient(135deg, rgba(74, 118, 168, 0.3), rgba(0, 0, 0, 0.4));
+    border-color: #4A76A8;
+}
+
+.tg-card {
+    background: linear-gradient(135deg, rgba(0, 136, 204, 0.3), rgba(0, 0, 0, 0.4));
+    border-color: #0088CC;
+}
+
+.youtube-card {
+    background: linear-gradient(135deg, rgba(255, 0, 0, 0.3), rgba(0, 0, 0, 0.4));
+    border-color: #FF0000;
+}
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+    .social-links-grid {
+        flex-wrap: wrap;
+        gap: 3rem;
+    }
+    
+    .social-card {
+        flex: 1 1 250px;
+        min-height: 380px;
+    }
+}
+
+@media (max-width: 768px) {
+    .social-links-grid {
+        flex-direction: column;
+        align-items: center;
+        padding: 0 1rem;
+    }
+    
+    .social-card {
+        width: 100%;
+        max-width: 300px;
+        min-height: 350px;
+    }
+}
+
+@media (max-width: 480px) {
+    .contacts-container h1 {
+        font-size: 2rem;
+    }
+    .social-card {
+        padding: 3rem 1rem;
+        min-height: 300px;
+    }
+    .social-card h2 {
+        font-size: 2rem;
+        margin-bottom: 2rem;
+    }
+    .social-link {
+        padding: 10px 20px;
+        font-size: 1rem;
+    }
+} 
