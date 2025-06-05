@@ -299,12 +299,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // ID артистов в Яндекс.Музыке
     const artistIds = {
         'hahahap': '23224451',
-        'kodik': '',
-        'shibvri': '',
+        'kodik': '13773076',
+        'shibvri': '22394975',
         'dope': '',
         'xan': '',
-        'namusorill': '',
-        'febb': ''
+        'namusorill': '11123653',
+        'febb': '22838316'
     };
 
     function createYandexMusicWidget(artistId) {
@@ -315,21 +315,56 @@ document.addEventListener('DOMContentLoaded', function() {
         widget.frameBorder = '0';
         widget.allow = 'autoplay';
         widget.className = 'yandex-music-widget';
+        
+        // Добавляем эффект глитча при загрузке
+        widget.addEventListener('load', () => {
+            const display = document.querySelector('.vhs-display');
+            display.style.animation = 'glitch 0.5s';
+            setTimeout(() => {
+                display.style.animation = 'none';
+            }, 500);
+        });
+        
         return widget;
     }
 
     artistSelector.addEventListener('change', function() {
         const selectedArtist = this.value;
         const artistId = artistIds[selectedArtist];
+        const display = document.querySelector('.vhs-display');
         
-        if (artistId) {
-            trackDisplay.innerHTML = '';
-            const widget = createYandexMusicWidget(artistId);
-            trackDisplay.appendChild(widget);
+        // Проверяем, находимся ли мы на странице релизов
+        if (window.location.pathname.includes('music.html')) {
+            if (artistId) {
+                // Эффект загрузки
+                display.innerHTML = `
+                    <div class="loading-message">
+                        ЗАГРУЗКА РЕЛИЗОВ
+                        <div class="blink-cursor">_</div>
+                    </div>
+                `;
+                
+                // Добавляем эффект глитча
+                display.style.animation = 'glitch 0.2s infinite';
+                
+                setTimeout(() => {
+                    display.innerHTML = '';
+                    const widget = createYandexMusicWidget(artistId);
+                    display.appendChild(widget);
+                    display.style.animation = 'none';
+                }, 1000);
+            } else {
+                display.innerHTML = `
+                    <div class="no-selection-message">
+                        РЕЛИЗЫ НЕДОСТУПНЫ
+                        <div class="blink-cursor">_</div>
+                    </div>
+                `;
+            }
         } else {
-            trackDisplay.innerHTML = `
+            display.innerHTML = `
                 <div class="no-selection-message">
-                    РЕЛИЗЫ НЕДОСТУПНЫ
+                    ПЕРЕЙДИТЕ НА СТРАНИЦУ РЕЛИЗОВ
                     <div class="blink-cursor">_</div>
                 </div>
             `;
