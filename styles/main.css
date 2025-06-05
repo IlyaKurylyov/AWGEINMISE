@@ -755,4 +755,73 @@ body::after {
 /* Убираем старый top-light, так как теперь у нас есть лампа */
 .top-light {
     display: none;
+}
+
+/* Стили для страницы контактов */
+.contacts-section {
+    padding: 2rem;
+    text-align: center;
+}
+
+.contacts-section h1 {
+    font-size: 3rem;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+    letter-spacing: -0.05em;
+}
+
+.social-links {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: center;
+    margin-top: 2rem;
+}
+
+.social-link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 2rem;
+    background: rgba(0, 0, 0, 0.9);
+    border: 3px solid rgba(255, 255, 255, 1);
+    border-radius: 7px;
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.5rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    text-shadow: 
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000,
+        0 0 8px rgba(255, 255, 255, 0.8);
+    box-shadow: 
+        inset 0 0 15px rgba(255, 255, 255, 0.5),
+        0 0 15px rgba(255, 255, 255, 0.5),
+        0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.social-link:hover {
+    background: rgba(0, 0, 0, 0.95);
+    border-color: rgba(255, 255, 255, 1);
+    transform: translateY(-2px);
+    text-shadow: 
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000,
+        0 0 12px rgba(255, 255, 255, 1);
+    box-shadow: 
+        inset 0 0 20px rgba(255, 255, 255, 0.6),
+        0 0 20px rgba(255, 255, 255, 0.6),
+        0 0 25px rgba(255, 255, 255, 0.4);
+}
+
+.social-link img {
+    width: 32px;
+    height: 32px;
+    filter: brightness(0) invert(1);
 } 
