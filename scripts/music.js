@@ -286,4 +286,62 @@ setInterval(() => {
 }, 2000);
 
 // Инициализация
-updateDisplay(); 
+updateDisplay();
+
+document.addEventListener('DOMContentLoaded', function() {
+    const artistSelector = document.getElementById('artist-selector');
+    const trackDisplay = document.getElementById('track-display');
+    const playBtn = document.getElementById('play-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    
+    // ID артистов в Яндекс.Музыке
+    const artistIds = {
+        'hahahap': '23224451',
+        'kodik': '',
+        'shibvri': '',
+        'dope': '',
+        'xan': '',
+        'namusorill': '',
+        'febb': ''
+    };
+
+    function createYandexMusicWidget(artistId) {
+        const widget = document.createElement('iframe');
+        widget.src = `https://music.yandex.ru/iframe/#artist/${artistId}`;
+        widget.width = '100%';
+        widget.height = '400';
+        widget.frameBorder = '0';
+        widget.allow = 'autoplay';
+        widget.className = 'yandex-music-widget';
+        return widget;
+    }
+
+    artistSelector.addEventListener('change', function() {
+        const selectedArtist = this.value;
+        const artistId = artistIds[selectedArtist];
+        
+        if (artistId) {
+            trackDisplay.innerHTML = '';
+            const widget = createYandexMusicWidget(artistId);
+            trackDisplay.appendChild(widget);
+        } else {
+            trackDisplay.innerHTML = `
+                <div class="no-selection-message">
+                    РЕЛИЗЫ НЕДОСТУПНЫ
+                    <div class="blink-cursor">_</div>
+                </div>
+            `;
+        }
+    });
+
+    // Обновляем индикаторы при взаимодействии
+    playBtn.addEventListener('click', function() {
+        document.querySelector('.indicator:nth-child(2) .indicator-light').classList.add('active');
+    });
+
+    stopBtn.addEventListener('click', function() {
+        document.querySelector('.indicator:nth-child(2) .indicator-light').classList.remove('active');
+    });
+}); 
