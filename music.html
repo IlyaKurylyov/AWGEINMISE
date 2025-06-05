@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INMISE - Музыка</title>
+    <title>INMISE - Релизы</title>
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/music.css">
 </head>
@@ -12,49 +12,73 @@
         <a href="index.html" class="nav-logo">INMISE</a>
         <div class="nav-links">
             <a href="music.html" class="nav-link active">РЕЛИЗЫ</a>
-            <a href="video.html" class="nav-link">АРТИСТЫ</a>
+            <a href="artists.html" class="nav-link">АРТИСТЫ</a>
             <a href="about.html" class="nav-link">О НАС</a>
             <a href="contacts.html" class="nav-link">КОНТАКТЫ</a>
         </div>
     </nav>
 
     <main class="content music-content">
-        <div class="music-grid">
-            <div class="music-item">
-                <div class="album-cover">
-                    <img src="assets/images/album1.jpg" alt="Альбом 1">
-                    <div class="play-overlay">
-                        <div class="play-button">▶</div>
+        <div class="vhs-player">
+            <div class="vhs-top">
+                <div class="vhs-brand">INMISE AUDIO</div>
+                <div class="vhs-model">MODEL VHS-2024</div>
+            </div>
+            
+            <div class="vhs-screen">
+                <div class="vhs-select-wrapper">
+                    <select id="artist-selector" class="vhs-select">
+                        <option value="" disabled selected>ВЫБЕРИТЕ АРТИСТА</option>
+                        <option value="hahahap">HAHAHAP</option>
+                        <option value="kodik">KODIK</option>
+                        <option value="shibvri">SHIBVRI</option>
+                        <option value="dope">DOPE THE PRODUCER</option>
+                        <option value="xan">XAN</option>
+                        <option value="namusorill">NAMUSORILL</option>
+                        <option value="febb">FEBB TUFOE</option>
+                    </select>
+                </div>
+                
+                <div class="vhs-display">
+                    <div class="vhs-status">
+                        <div class="status-light"></div>
+                        <span class="status-text">READY</span>
+                    </div>
+                    
+                    <div id="track-display" class="track-display">
+                        <div class="no-selection-message">
+                            ВСТАВЬТЕ КАССЕТУ
+                            <div class="blink-cursor">_</div>
+                        </div>
                     </div>
                 </div>
-                <div class="album-info">
-                    <h3>НАЗВАНИЕ АЛЬБОМА</h3>
-                    <p>2024</p>
+            </div>
+            
+            <div class="vhs-controls">
+                <div class="control-buttons">
+                    <button class="vhs-btn" id="prev-btn">◄◄</button>
+                    <button class="vhs-btn" id="play-btn">►</button>
+                    <button class="vhs-btn" id="stop-btn">■</button>
+                    <button class="vhs-btn" id="next-btn">►►</button>
                 </div>
-            </div>
-            <!-- Здесь будут другие альбомы -->
-        </div>
-
-        <div class="music-player">
-            <div class="now-playing">
-                <img src="assets/images/album1.jpg" alt="Текущий трек" class="current-track-image">
-                <div class="track-info">
-                    <h4>НАЗВАНИЕ ТРЕКА</h4>
-                    <p>INMISE</p>
+                <div class="vhs-indicators">
+                    <div class="indicator">
+                        <div class="indicator-light"></div>
+                        <span>POWER</span>
+                    </div>
+                    <div class="indicator">
+                        <div class="indicator-light"></div>
+                        <span>PLAY</span>
+                    </div>
+                    <div class="indicator">
+                        <div class="indicator-light"></div>
+                        <span>REC</span>
+                    </div>
                 </div>
-            </div>
-            <div class="player-controls">
-                <button class="prev-track">◀◀</button>
-                <button class="play-pause">▶</button>
-                <button class="next-track">▶▶</button>
-            </div>
-            <div class="progress-bar">
-                <div class="progress"></div>
             </div>
         </div>
     </main>
 
-    <script src="scripts/app.js"></script>
     <script src="scripts/music.js"></script>
 </body>
 </html> 
