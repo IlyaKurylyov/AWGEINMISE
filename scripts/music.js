@@ -186,7 +186,6 @@ const artistData = {
 };
 
 let currentArtist = null;
-let currentTrackIndex = 0;
 let isPlaying = false;
 
 const artistSelector = document.getElementById('artist-selector');
@@ -288,28 +287,104 @@ artistSelector.addEventListener('change', (e) => {
     }, 500);
 });
 
-// Создаем аудио плеер
+// Список MP3 файлов
+const playlist = [
+    {
+        title: "Febb Tufoe - Hyena",
+        file: "assets/audio/Febb Tufoe - Hyena.mp3"
+    },
+    {
+        title: "Febb Tufoe - Novocaine",
+        file: "assets/audio/Febb Tufoe - Novocaine.mp3"
+    },
+    {
+        title: "xxvnx - Огнем",
+        file: "assets/audio/xxvnx - Огнем.mp3"
+    },
+    {
+        title: "uwannadope - Не верю",
+        file: "assets/audio/uwannadope - Не верю.mp3"
+    },
+    {
+        title: "uwannadope - Она хочет",
+        file: "assets/audio/uwannadope - Она хочет.mp3"
+    },
+    {
+        title: "SHIBVRI - Помнит меня",
+        file: "assets/audio/SHIBVRI - Помнит меня (prod.shibvri).mp3"
+    },
+    {
+        title: "SHIBVRI - За стеной",
+        file: "assets/audio/SHIBVRI - За стеной.mp3"
+    },
+    {
+        title: "Kodik - ДРОП",
+        file: "assets/audio/Kodik - ДРОП.mp3"
+    },
+    {
+        title: "Kodik - Пустые карманы",
+        file: "assets/audio/Kodik - Пустые карманы.mp3"
+    },
+    {
+        title: "namusorill - Принятие питие",
+        file: "assets/audio/namusorill - Принятие питие.mp3"
+    },
+    {
+        title: "namusorill - Мягкая Посадка",
+        file: "assets/audio/namusorill - Мягкая Посадка.mp3"
+    },
+    {
+        title: "Hahahap - Disney",
+        file: "assets/audio/Hahahap - Disney (Prod by dope, the producer).mp3"
+    },
+    {
+        title: "Hahahap - Black Mercedes",
+        file: "assets/audio/Hahahap - Black Mercedes.mp3"
+    }
+];
+
+let currentTrackIndex = 0;
 const audioPlayer = new Audio();
-let currentTrack = null;
+
+// Перемешивание плейлиста
+function shufflePlaylist() {
+    for (let i = playlist.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [playlist[i], playlist[j]] = [playlist[j], playlist[i]];
+    }
+}
+
+// Воспроизведение текущего трека
+function playCurrentTrack() {
+    const track = playlist[currentTrackIndex];
+    audioPlayer.src = track.file;
+    audioPlayer.play()
+        .then(() => {
+            playBtn.textContent = '❚❚';
+            statusText.textContent = 'PLAYING';
+            playIndicator.classList.add('active');
+            updateDisplay();
+        })
+        .catch(error => {
+            console.error('Ошибка воспроизведения:', error);
+            statusText.textContent = 'ERROR';
+        });
+}
 
 // Обработчик для кнопки play
 playBtn.addEventListener('click', () => {
-    if (!currentTrack) {
-        // Выбираем случайного артиста и трек
-        const artists = Object.keys(artistTracks);
-        const randomArtist = artists[Math.floor(Math.random() * artists.length)];
-        const tracks = artistTracks[randomArtist].tracks;
-        currentTrack = tracks[Math.floor(Math.random() * tracks.length)];
-        
-        // Загружаем трек
-        audioPlayer.src = currentTrack.audioSrc;
-    }
-    
     if (audioPlayer.paused) {
-        audioPlayer.play();
-        playBtn.textContent = '❚❚';
-        statusText.textContent = 'PLAYING';
-        playIndicator.classList.add('active');
+        if (!audioPlayer.src || audioPlayer.src === '') {
+            // Перемешиваем плейлист при первом запуске
+            shufflePlaylist();
+            currentTrackIndex = 0;
+            playCurrentTrack();
+        } else {
+            audioPlayer.play();
+            playBtn.textContent = '❚❚';
+            statusText.textContent = 'PLAYING';
+            playIndicator.classList.add('active');
+        }
     } else {
         audioPlayer.pause();
         playBtn.textContent = '►';
@@ -318,71 +393,76 @@ playBtn.addEventListener('click', () => {
     }
 });
 
-// Обработчик для кнопки stop
-stopBtn.addEventListener('click', () => {
+// Следующий трек
+function nextTrack() {
+    currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+    playCurrentTrack();
+}
+
+// Предыдущий трек
+function prevTrack() {
+    currentTrackIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length;
+    playCurrentTrack();
+}
+
+// Остановка воспроизведения
+function stopTrack() {
     audioPlayer.pause();
     audioPlayer.currentTime = 0;
-    currentTrack = null;
     playBtn.textContent = '►';
     statusText.textContent = 'STOPPED';
     playIndicator.classList.remove('active');
-});
+}
 
-// Добавляем эффекты глитча при воспроизведении
-audioPlayer.addEventListener('playing', () => {
-    const display = document.querySelector('.vhs-display');
-    display.style.animation = 'glitch 0.2s infinite';
-});
-
-audioPlayer.addEventListener('pause', () => {
-    const display = document.querySelector('.vhs-display');
-    display.style.animation = 'none';
-});
-
-// Показываем информацию о треке
-audioPlayer.addEventListener('play', () => {
-    if (!currentTrack) return;
-    
-    const display = document.querySelector('.vhs-display');
-    display.innerHTML = `
+// Обновление дисплея
+function updateDisplay() {
+    const currentTrack = playlist[currentTrackIndex];
+    trackDisplay.innerHTML = `
         <div class="track-info">
-            <img src="${currentTrack.cover}" alt="${currentTrack.title}" class="track-cover">
-            <div class="track-details">
-                <h2>${currentTrack.title}</h2>
-                <p>${currentTrack.year}</p>
+            <div class="track-title">${currentTrack.title}</div>
+            <div class="track-progress">
+                <div class="time-current">${formatTime(audioPlayer.currentTime)}</div>
+                <div class="progress-bar">
+                    <div class="progress" style="width: ${(audioPlayer.currentTime / audioPlayer.duration) * 100}%"></div>
+                </div>
+                <div class="time-total">${formatTime(audioPlayer.duration)}</div>
             </div>
         </div>
     `;
-});
+}
 
-// Добавляем скрипт Яндекс.Музыки в head
-const script = document.createElement('script');
-script.src = 'https://music.yandex.ru/api/widget/loader.js';
-document.head.appendChild(script);
+// Форматирование времени
+function formatTime(seconds) {
+    if (isNaN(seconds)) return '0:00';
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+}
 
-// Инициализируем API после загрузки скрипта
-script.onload = () => {
-    window.YandexMusicPlayer = window.Ya.Music.Player;
-};
-
+// Обработчики кнопок
 stopBtn.addEventListener('click', stopTrack);
 nextBtn.addEventListener('click', nextTrack);
 prevBtn.addEventListener('click', prevTrack);
 
-// Добавляем немного случайных глитчей
-setInterval(() => {
-    if (isPlaying && Math.random() < 0.1) {
-        trackDisplay.style.animation = 'glitch 0.2s';
-        setTimeout(() => {
-            if (isPlaying) {
-                trackDisplay.style.animation = 'glitch 0.2s infinite';
-            }
-        }, 200);
-    }
-}, 2000);
+// Обновление прогресса воспроизведения
+audioPlayer.addEventListener('timeupdate', updateDisplay);
 
-// Инициализация
-updateDisplay();
+// Автоматическое переключение на следующий трек
+audioPlayer.addEventListener('ended', nextTrack);
+
+// Эффекты глитча
+audioPlayer.addEventListener('playing', () => {
+    trackDisplay.style.animation = 'glitch 0.2s infinite';
+});
+
+audioPlayer.addEventListener('pause', () => {
+    trackDisplay.style.animation = 'none';
+});
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+    updateDisplay();
+});
 
 // ID артистов в Яндекс.Музыке
 const artistIds = {
