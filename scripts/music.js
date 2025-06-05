@@ -19,6 +19,27 @@ const artistTracks = {
         tracks: []
         // Добавьте треки
     },
+    'DOPE THE PRODUCER': {
+        tracks: [
+            {
+                title: 'DOPE THE PRODUCER',
+                year: '2024',
+                cover: 'assets/images/releases/dope.jpg',
+                yandexMusicId: '11748604',
+                audioSrc: 'assets/audio/dope.mp3'  // Путь к MP3 файлу
+            }
+        ]
+    },
+    'XAN': {
+        tracks: [
+            {
+                title: 'XAN',
+                year: '2024',
+                cover: 'assets/images/releases/xan.jpg',
+                audioSrc: 'assets/audio/xan.mp3'  // Путь к MP3 файлу
+            }
+        ]
+    },
     // Добавьте остальных артистов
 };
 
@@ -260,7 +281,6 @@ artistSelector.addEventListener('change', (e) => {
     currentTrackIndex = 0;
     stopTrack();
     updateDisplay();
-    
     // Эффект вставки кассеты
     trackDisplay.style.animation = 'glitch 0.5s';
     setTimeout(() => {
@@ -268,7 +288,83 @@ artistSelector.addEventListener('change', (e) => {
     }, 500);
 });
 
-playBtn.addEventListener('click', playTrack);
+// Создаем аудио плеер
+const audioPlayer = new Audio();
+let currentTrack = null;
+
+// Обработчик для кнопки play
+playBtn.addEventListener('click', () => {
+    if (!currentTrack) {
+        // Выбираем случайного артиста и трек
+        const artists = Object.keys(artistTracks);
+        const randomArtist = artists[Math.floor(Math.random() * artists.length)];
+        const tracks = artistTracks[randomArtist].tracks;
+        currentTrack = tracks[Math.floor(Math.random() * tracks.length)];
+        
+        // Загружаем трек
+        audioPlayer.src = currentTrack.audioSrc;
+    }
+    
+    if (audioPlayer.paused) {
+        audioPlayer.play();
+        playBtn.textContent = '❚❚';
+        statusText.textContent = 'PLAYING';
+        playIndicator.classList.add('active');
+    } else {
+        audioPlayer.pause();
+        playBtn.textContent = '►';
+        statusText.textContent = 'PAUSED';
+        playIndicator.classList.remove('active');
+    }
+});
+
+// Обработчик для кнопки stop
+stopBtn.addEventListener('click', () => {
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
+    currentTrack = null;
+    playBtn.textContent = '►';
+    statusText.textContent = 'STOPPED';
+    playIndicator.classList.remove('active');
+});
+
+// Добавляем эффекты глитча при воспроизведении
+audioPlayer.addEventListener('playing', () => {
+    const display = document.querySelector('.vhs-display');
+    display.style.animation = 'glitch 0.2s infinite';
+});
+
+audioPlayer.addEventListener('pause', () => {
+    const display = document.querySelector('.vhs-display');
+    display.style.animation = 'none';
+});
+
+// Показываем информацию о треке
+audioPlayer.addEventListener('play', () => {
+    if (!currentTrack) return;
+    
+    const display = document.querySelector('.vhs-display');
+    display.innerHTML = `
+        <div class="track-info">
+            <img src="${currentTrack.cover}" alt="${currentTrack.title}" class="track-cover">
+            <div class="track-details">
+                <h2>${currentTrack.title}</h2>
+                <p>${currentTrack.year}</p>
+            </div>
+        </div>
+    `;
+});
+
+// Добавляем скрипт Яндекс.Музыки в head
+const script = document.createElement('script');
+script.src = 'https://music.yandex.ru/api/widget/loader.js';
+document.head.appendChild(script);
+
+// Инициализируем API после загрузки скрипта
+script.onload = () => {
+    window.YandexMusicPlayer = window.Ya.Music.Player;
+};
+
 stopBtn.addEventListener('click', stopTrack);
 nextBtn.addEventListener('click', nextTrack);
 prevBtn.addEventListener('click', prevTrack);
@@ -288,6 +384,17 @@ setInterval(() => {
 // Инициализация
 updateDisplay();
 
+// ID артистов в Яндекс.Музыке
+const artistIds = {
+    'hahahap': '23224451',
+    'kodik': '13773076',
+    'shibvri': '22394975',
+    'dope': '11748604',
+    'xan': '22931926',
+    'namusorill': '11123653',
+    'febb': '22838316'
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     const artistSelector = document.getElementById('artist-selector');
     const trackDisplay = document.getElementById('track-display');
@@ -296,22 +403,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
     
-    // ID артистов в Яндекс.Музыке
-    const artistIds = {
-        'hahahap': '23224451',
-        'kodik': '13773076',
-        'shibvri': '22394975',
-        'dope': '',
-        'xan': '',
-        'namusorill': '11123653',
-        'febb': '22838316'
-    };
-
     function createYandexMusicWidget(artistId) {
         const widget = document.createElement('iframe');
-        widget.src = `https://music.yandex.ru/iframe/#artist/${artistId}`;
+        widget.src = `https://music.yandex.ru/iframe/#artist/${artistId}/tracks?visual-style=headerCompact`;
         widget.width = '100%';
-        widget.height = '400';
+        widget.height = '350px';
         widget.frameBorder = '0';
         widget.allow = 'autoplay';
         widget.className = 'yandex-music-widget';
@@ -333,38 +429,42 @@ document.addEventListener('DOMContentLoaded', function() {
         const artistId = artistIds[selectedArtist];
         const display = document.querySelector('.vhs-display');
         
-        // Проверяем, находимся ли мы на странице релизов
-        if (window.location.pathname.includes('music.html')) {
-            if (artistId) {
-                // Эффект загрузки
-                display.innerHTML = `
-                    <div class="loading-message">
-                        ЗАГРУЗКА РЕЛИЗОВ
-                        <div class="blink-cursor">_</div>
-                    </div>
-                `;
+        if (artistId) {
+            // Эффект загрузки
+            display.innerHTML = `
+                <div class="loading-message">
+                    ЗАГРУЗКА РЕЛИЗОВ
+                    <div class="blink-cursor">_</div>
+                </div>
+            `;
+            
+            // Добавляем эффект глитча
+            display.style.animation = 'glitch 0.2s infinite';
+            
+            const widget = document.createElement('iframe');
+            widget.src = `https://music.yandex.ru/iframe/#artist/${artistId}/tracks?visual-style=headerCompact`;
+            widget.width = '100%';
+            widget.height = '350px';
+            widget.frameBorder = '0';
+            widget.allow = 'autoplay';
+            widget.className = 'yandex-music-widget';
+            
+            // Заменяем сообщение загрузки на виджет
+            setTimeout(() => {
+                display.innerHTML = '';
+                display.appendChild(widget);
+                display.style.animation = 'none';
                 
-                // Добавляем эффект глитча
-                display.style.animation = 'glitch 0.2s infinite';
-                
+                // Добавляем тряску виджету при появлении
+                widget.style.animation = 'glitch 0.3s';
                 setTimeout(() => {
-                    display.innerHTML = '';
-                    const widget = createYandexMusicWidget(artistId);
-                    display.appendChild(widget);
-                    display.style.animation = 'none';
-                }, 1000);
-            } else {
-                display.innerHTML = `
-                    <div class="no-selection-message">
-                        РЕЛИЗЫ НЕДОСТУПНЫ
-                        <div class="blink-cursor">_</div>
-                    </div>
-                `;
-            }
+                    widget.style.animation = 'none';
+                }, 300);
+            }, 1000);
         } else {
             display.innerHTML = `
                 <div class="no-selection-message">
-                    ПЕРЕЙДИТЕ НА СТРАНИЦУ РЕЛИЗОВ
+                    РЕЛИЗЫ НЕДОСТУПНЫ
                     <div class="blink-cursor">_</div>
                 </div>
             `;
@@ -379,4 +479,4 @@ document.addEventListener('DOMContentLoaded', function() {
     stopBtn.addEventListener('click', function() {
         document.querySelector('.indicator:nth-child(2) .indicator-light').classList.remove('active');
     });
-}); 
+});
