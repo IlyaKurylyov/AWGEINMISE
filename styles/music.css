@@ -324,6 +324,14 @@
     padding: 0.5rem;
 }
 
+/* Специальные стили для пункта "Слушать на сайте" */
+.vhs-select option[value="website"] {
+    background: #1a1a1a;
+    color: #ff0;
+    font-weight: bold;
+    border-bottom: 1px solid #333;
+}
+
 .vhs-display {
     flex: 1;
     min-height: 350px;
@@ -400,29 +408,31 @@
 .vhs-btn {
     background: #333;
     border: none;
-    color: #fff;
-    padding: 0.8rem 1.5rem;
-    font-family: 'VT323', monospace;
+    color: #0f0;
+    padding: 10px 20px;
     font-size: 1.2rem;
     cursor: pointer;
     transition: all 0.3s ease;
-    border-radius: 5px;
-    box-shadow: 
-        0 2px 0 #222,
-        0 3px 3px rgba(0,0,0,0.2);
+    text-shadow: 0 0 5px #0f0;
+    position: relative;
+    overflow: hidden;
 }
 
 .vhs-btn:hover {
     background: #444;
-    transform: translateY(1px);
-    box-shadow: 
-        0 1px 0 #222,
-        0 2px 2px rgba(0,0,0,0.2);
+    text-shadow: 0 0 10px #0f0;
 }
 
-.vhs-btn:active {
-    transform: translateY(2px);
-    box-shadow: none;
+.vhs-btn.disabled {
+    background: #222;
+    color: #444;
+    cursor: not-allowed;
+    text-shadow: none;
+}
+
+.vhs-btn.disabled:hover {
+    background: #222;
+    text-shadow: none;
 }
 
 .vhs-indicators {

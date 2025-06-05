@@ -187,6 +187,7 @@ const artistData = {
 
 let currentArtist = null;
 let isPlaying = false;
+let isWebsitePlayback = false;  // Новая переменная для отслеживания режима воспроизведения
 
 const artistSelector = document.getElementById('artist-selector');
 const trackDisplay = document.getElementById('track-display');
@@ -227,26 +228,36 @@ function updateDisplay() {
 }
 
 function playTrack() {
-    if (!currentArtist) return;
+    if (!isWebsitePlayback) return;  // Проверяем режим воспроизведения
     
-    isPlaying = !isPlaying;
-    playBtn.textContent = isPlaying ? '❚❚' : '►';
-    statusText.textContent = isPlaying ? 'PLAYING' : 'READY';
-    playIndicator.classList.toggle('active', isPlaying);
-    
-    // Добавляем эффект глитча при воспроизведении
-    if (isPlaying) {
-        trackDisplay.style.animation = 'glitch 0.2s infinite';
-    } else {
-        trackDisplay.style.animation = 'none';
+    if (!currentArtist) {
+        statusText.textContent = 'ВЫБЕРИТЕ АРТИСТА';
+        return;
     }
+    
+    isPlaying = true;
+    playIndicator.classList.add('active');
+    statusText.textContent = 'PLAYING';
+    
+    if (currentArtist === 'website') {
+        const artist = artistData[Object.keys(artistData)[Math.floor(Math.random() * Object.keys(artistData).length)]];
+        trackDisplay.innerHTML = `
+            <div class="now-playing">
+                <div class="artist-name">${artist.name}</div>
+                <div class="track-name">${artist.tracks[0]}</div>
+            </div>
+        `;
+    }
+    
+    trackDisplay.style.animation = 'glitch 0.2s infinite';
 }
 
 function stopTrack() {
+    if (!isWebsitePlayback) return;  // Проверяем режим воспроизведения
+    
     isPlaying = false;
-    playBtn.textContent = '►';
-    statusText.textContent = 'READY';
     playIndicator.classList.remove('active');
+    statusText.textContent = 'STOPPED';
     trackDisplay.style.animation = 'none';
 }
 
@@ -274,17 +285,41 @@ function prevTrack() {
     }
 }
 
-// События
+// Обработчик изменения выбранного артиста
 artistSelector.addEventListener('change', (e) => {
     currentArtist = e.target.value;
+    isWebsitePlayback = currentArtist === 'website';
     currentTrackIndex = 0;
     stopTrack();
     updateDisplay();
+    
+    // Обновляем состояние кнопок
+    updateButtonStates();
+    
     // Эффект вставки кассеты
     trackDisplay.style.animation = 'glitch 0.5s';
     setTimeout(() => {
         trackDisplay.style.animation = 'none';
     }, 500);
+});
+
+// Функция обновления состояния кнопок
+function updateButtonStates() {
+    const buttonsEnabled = isWebsitePlayback;
+    playBtn.disabled = !buttonsEnabled;
+    stopBtn.disabled = !buttonsEnabled;
+    prevBtn.disabled = !buttonsEnabled;
+    nextBtn.disabled = !buttonsEnabled;
+    
+    // Добавляем/убираем класс для визуального отображения состояния
+    [playBtn, stopBtn, prevBtn, nextBtn].forEach(btn => {
+        btn.classList.toggle('disabled', !buttonsEnabled);
+    });
+}
+
+// Вызываем updateButtonStates при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+    updateButtonStates();
 });
 
 // Список MP3 файлов
@@ -509,7 +544,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const artistId = artistIds[selectedArtist];
         const display = document.querySelector('.vhs-display');
         
-        if (artistId) {
+        if (selectedArtist === 'website') {
+            display.innerHTML = `
+                <div class="no-selection-message">
+                    НАЖМИТЕ PLAY ДЛЯ СЛУЧАЙНОГО ТРЕКА
+                    <div class="blink-cursor">_</div>
+                </div>
+            `;
+        } else if (artistId) {
             // Эффект загрузки
             display.innerHTML = `
                 <div class="loading-message">
