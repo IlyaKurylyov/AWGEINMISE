@@ -1,11 +1,12 @@
 /* Основной контейнер */
 .music-content {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     min-height: calc(100vh - 80px);
     background: linear-gradient(to bottom, #1a1a1a, #000);
     padding: 2rem;
+    padding-top: 80px;
 }
 
 .music-grid {
@@ -240,9 +241,11 @@
 .vhs-player {
     background: #2a2a2a;
     border-radius: 15px;
-    padding: 2rem;
+    padding: 1.2rem;
     width: 100%;
     max-width: 800px;
+    display: flex;
+    flex-direction: column;
     box-shadow: 
         0 0 0 2px #333,
         0 0 0 4px #222,
@@ -275,10 +278,14 @@
 .vhs-screen {
     background: #000;
     border-radius: 10px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
     border: 2px solid #333;
     position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 450px;
 }
 
 .vhs-select-wrapper {
@@ -318,11 +325,20 @@
 }
 
 .vhs-display {
+    flex: 1;
+    min-height: 350px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
     background: #000;
-    padding: 1rem;
-    border: 1px solid #333;
+    border-radius: 5px;
     position: relative;
-    min-height: 200px;
+    border: 2px solid #0f0;
+    box-shadow: 
+        0 0 10px rgba(0, 255, 0, 0.2),
+        inset 0 0 20px rgba(0, 255, 0, 0.1);
 }
 
 .vhs-status {
@@ -372,6 +388,7 @@
     background: #222;
     border-radius: 10px;
     border: 1px solid #333;
+    margin-top: auto;
 }
 
 .control-buttons {
@@ -508,15 +525,32 @@
 
 .yandex-music-widget {
     width: 100%;
-    height: 400px;
+    height: 350px;
     border: none;
     background: #000;
     backdrop-filter: blur(10px);
     border-radius: 5px;
-    margin-top: 20px;
     position: relative;
     overflow: hidden;
     opacity: 0.95;
+    margin: 0;
+    padding: 0;
+}
+
+/* Скрываем хедер rdmtp */
+.yandex-music-widget iframe {
+    margin-top: -110px;
+    height: calc(100% + 110px);
+}
+
+/* Добавляем эффект глитча для виджета */
+@keyframes glitch {
+    0% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+    100% { transform: translate(0); }
 }
 
 .yandex-music-widget::before {
@@ -551,40 +585,6 @@
         transparent 40%,
         transparent 60%,
         rgba(0, 0, 0, 0.95)
-    );
-    pointer-events: none;
-    z-index: 1;
-}
-
-.vhs-display {
-    min-height: 400px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    background: #000;
-    border-radius: 5px;
-    margin: 20px 0;
-    position: relative;
-    border: 2px solid #0f0;
-    box-shadow: 
-        0 0 10px rgba(0, 255, 0, 0.2),
-        inset 0 0 20px rgba(0, 255, 0, 0.1);
-}
-
-.vhs-display::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-        to bottom,
-        transparent 0%,
-        rgba(0, 255, 0, 0.05) 50%,
-        transparent 100%
     );
     pointer-events: none;
     z-index: 1;
