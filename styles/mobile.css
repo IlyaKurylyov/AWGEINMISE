@@ -1,0 +1,243 @@
+/* Медиа-запросы для адаптивной верстки */
+@media screen and (max-width: 1024px) {
+    .nav-link {
+        position: static !important;
+        font-size: 1.1rem;
+        padding: 10px 15px;
+        left: auto !important;
+        top: auto !important;
+        min-width: auto;
+        flex: 1;
+        text-align: center;
+        z-index: 200 !important;
+    }
+
+    .nav-link::before {
+        z-index: -1 !important;
+        pointer-events: none !important;
+    }
+
+    .nav-links {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 8px;
+        width: 95%;
+        max-width: 800px;
+        justify-content: center;
+        flex-wrap: nowrap;
+        z-index: 100;
+    }
+
+    /* Переопределяем позиционирование для всех кнопок */
+    .nav-link:nth-child(1),
+    .nav-link:nth-child(2),
+    .nav-link:nth-child(3),
+    .nav-link:nth-child(4) {
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+        z-index: 200 !important;
+    }
+
+    .content {
+        padding-top: 100px;
+    }
+
+    .hero-content {
+        padding: 0 20px;
+    }
+
+    .glitch-text {
+        font-size: 2rem;
+    }
+
+    .artists-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        padding: 20px;
+    }
+
+    .artist-card {
+        height: auto;
+    }
+
+    .artist-info {
+        padding: 15px;
+    }
+
+    .artist-name {
+        font-size: 1.2rem;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    body {
+        overflow-y: auto;
+    }
+
+    .nav-links {
+        flex-direction: column;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.9);
+        padding: 10px;
+        border-radius: 10px;
+        width: 90%;
+        gap: 10px;
+        z-index: 200;
+    }
+
+    .nav-link {
+        width: 100%;
+        text-align: center;
+        margin: 0;
+        font-size: 1.1rem;
+        padding: 12px 15px;
+        z-index: 201 !important;
+        pointer-events: auto !important;
+    }
+
+    .nav-link::before {
+        z-index: -1 !important;
+        pointer-events: none !important;
+    }
+
+    .content {
+        padding-top: 250px;
+    }
+
+    .video-wrapper video {
+        width: auto;
+        height: 100%;
+    }
+
+    .social-links {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .social-link {
+        width: 80%;
+        max-width: 300px;
+    }
+
+    .artists-grid {
+        grid-template-columns: 1fr;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    .artist-card {
+        margin-bottom: 20px;
+    }
+
+    .artist-image {
+        height: 300px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .nav-links {
+        width: 95%;
+        padding: 8px;
+        z-index: 200;
+    }
+
+    .nav-link {
+        font-size: 0.9rem;
+        padding: 10px 8px;
+        z-index: 201 !important;
+    }
+
+    .nav-link::before {
+        z-index: -1 !important;
+        pointer-events: none !important;
+    }
+
+    .glitch-text {
+        font-size: 1.5rem;
+    }
+
+    .content {
+        padding-top: 220px;
+    }
+
+    .tv-frame {
+        border-width: 10px;
+    }
+}
+
+@media screen and (max-width: 380px) {
+    .nav-link {
+        font-size: 0.8rem;
+        padding: 8px 6px;
+        z-index: 201 !important;
+    }
+
+    .nav-link::before {
+        z-index: -1 !important;
+        pointer-events: none !important;
+    }
+    
+    .content {
+        padding-top: 200px;
+    }
+}
+
+/* Стили для страницы релизов */
+@media screen and (max-width: 1024px) {
+    .music-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        padding: 20px;
+    }
+
+    .music-player {
+        width: 100%;
+        margin: 10px 0;
+    }
+
+    .track-info {
+        padding: 10px;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .music-grid {
+        grid-template-columns: 1fr;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    .music-player {
+        margin-bottom: 20px;
+    }
+
+    .controls {
+        padding: 10px;
+    }
+}
+
+/* Стили для страницы контактов */
+@media screen and (max-width: 768px) {
+    .contacts-section {
+        padding: 20px;
+        margin-top: 150px;
+    }
+
+    .contacts-section h1 {
+        font-size: 2rem;
+        margin-bottom: 30px;
+    }
+
+    .social-links {
+        gap: 20px;
+    }
+
+    .social-link {
+        padding: 15px;
+    }
+} 

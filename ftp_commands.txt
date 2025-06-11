@@ -1,0 +1,24 @@
+open 31.31.197.45
+u3157398
+6S8ee4LbmaBRXhJ9
+passive
+binary
+mkdir www
+cd www
+prompt
+mput *.html
+mkdir assets
+cd assets
+lcd assets
+mput *.*
+cd ..
+mkdir scripts
+cd scripts
+lcd ..\scripts
+mput *.*
+cd ..
+mkdir styles
+cd styles
+lcd ..\styles
+mput *.*
+quit 

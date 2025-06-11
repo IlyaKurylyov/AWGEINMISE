@@ -7,9 +7,9 @@ body, html {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    min-height: calc(100vh - 80px);
-    padding: 40px 5%;
+    justify-content: flex-start;
+    min-height: calc(100vh - 120px);
+    padding: 120px 5% 60px 5%;
     width: 100%;
     box-sizing: border-box;
 }
@@ -20,9 +20,10 @@ body, html {
     max-width: 1200px;
     margin: auto;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
+    padding: 40px 0;
 }
 
 .contacts-container h1 {
@@ -199,45 +200,212 @@ body, html {
 
 /* Адаптивность */
 @media (max-width: 1024px) {
+    .content.contacts-page-content {
+        padding: 120px 5% 40px 5%;
+        min-height: calc(100vh - 160px);
+    }
+    
     .social-links-grid {
         flex-wrap: wrap;
-        gap: 3rem;
+        gap: 1.5rem;
     }
     
     .social-card {
         flex: 1 1 250px;
-        min-height: 380px;
+        min-height: 320px;
+        padding: 2.5rem 1.5rem;
     }
 }
 
 @media (max-width: 768px) {
+    body, html {
+        overflow-y: hidden !important;
+    }
+    
+    .content.contacts-page-content {
+        padding: 270px 3% 2vh 3%;
+        min-height: calc(100vh - 272px);
+        justify-content: flex-start;
+        height: 100vh;
+        box-sizing: border-box;
+    }
+    
+    .contacts-container {
+        padding: 0;
+        height: calc(100vh - 272px);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    
+    .contacts-container h1 {
+        font-size: clamp(1.2rem, 4vw, 2rem);
+        margin-bottom: 1vh;
+        letter-spacing: 2px;
+        animation: none !important;
+        flex-shrink: 0;
+    }
+    
     .social-links-grid {
         flex-direction: column;
         align-items: center;
-        padding: 0 1rem;
+        padding: 0;
+        gap: 1vh;
+        height: calc(100vh - 320px);
+        display: flex;
+        justify-content: space-between;
     }
     
     .social-card {
         width: 100%;
-        max-width: 300px;
-        min-height: 350px;
+        max-width: min(280px, 90vw);
+        height: calc((100vh - 320px) / 3 - 1vh);
+        min-height: calc((100vh - 320px) / 3 - 1vh) !important;
+        max-height: calc((100vh - 320px) / 3 - 1vh) !important;
+        padding: 2vh 4vw !important;
+        border-radius: 15px;
+        transform: none !important;
+        transition: none !important;
+        animation: none !important;
+        position: static !important;
+        justify-content: space-between !important;
+        flex-shrink: 0;
+        box-sizing: border-box;
+    }
+    
+    .social-card::before {
+        display: none !important;
+        animation: none !important;
+    }
+    
+    .social-card:hover {
+        transform: none !important;
+        height: calc((100vh - 320px) / 3 - 1vh) !important;
+        min-height: calc((100vh - 320px) / 3 - 1vh) !important;
+        max-height: calc((100vh - 320px) / 3 - 1vh) !important;
+    }
+    
+    .social-card h2 {
+        font-size: clamp(1rem, 3vw, 1.8rem);
+        margin-bottom: 1vh;
+        letter-spacing: 2px;
+        transform: none !important;
+        transition: none !important;
+        animation: none !important;
+    }
+    
+    .social-card:hover h2 {
+        transform: none !important;
+    }
+    
+    .social-link {
+        padding: clamp(8px, 2vh, 12px) clamp(12px, 4vw, 20px);
+        font-size: clamp(0.8rem, 2.5vw, 1rem);
+        border-radius: 15px;
+        letter-spacing: 2px;
+        transform: none !important;
+        transition: none !important;
+        animation: none !important;
+    }
+    
+    .social-link:hover {
+        transform: none !important;
+    }
+    
+    .social-link::before {
+        display: none !important;
     }
 }
 
 @media (max-width: 480px) {
+    .content.contacts-page-content {
+        padding: 250px 2% 1vh 2%;
+        min-height: calc(100vh - 251px);
+        height: 100vh;
+    }
+    
+    .contacts-container {
+        height: calc(100vh - 251px);
+    }
+    
     .contacts-container h1 {
-        font-size: 2rem;
+        font-size: clamp(1rem, 3.5vw, 1.6rem);
+        margin-bottom: 0.8vh;
     }
+    
+    .social-links-grid {
+        gap: 0.8vh;
+        height: calc(100vh - 290px);
+    }
+    
     .social-card {
-        padding: 3rem 1rem;
-        min-height: 300px;
+        max-width: min(260px, 95vw);
+        height: calc((100vh - 290px) / 3 - 0.8vh);
+        min-height: calc((100vh - 290px) / 3 - 0.8vh) !important;
+        max-height: calc((100vh - 290px) / 3 - 0.8vh) !important;
+        padding: 1.8vh 3vw !important;
     }
+    
+    .social-card:hover {
+        height: calc((100vh - 290px) / 3 - 0.8vh) !important;
+        min-height: calc((100vh - 290px) / 3 - 0.8vh) !important;
+        max-height: calc((100vh - 290px) / 3 - 0.8vh) !important;
+    }
+    
     .social-card h2 {
-        font-size: 2rem;
-        margin-bottom: 2rem;
+        font-size: clamp(0.9rem, 2.8vw, 1.5rem);
+        margin-bottom: 0.8vh;
     }
+    
     .social-link {
-        padding: 10px 20px;
-        font-size: 1rem;
+        padding: clamp(6px, 1.5vh, 10px) clamp(10px, 3vw, 16px);
+        font-size: clamp(0.7rem, 2.2vw, 0.9rem);
+    }
+}
+
+@media (max-width: 380px) {
+    .content.contacts-page-content {
+        padding: 230px 1% 0.5vh 1%;
+        min-height: calc(100vh - 230.5px);
+        height: 100vh;
+    }
+    
+    .contacts-container {
+        height: calc(100vh - 230.5px);
+    }
+    
+    .contacts-container h1 {
+        font-size: clamp(0.9rem, 3vw, 1.4rem);
+        margin-bottom: 0.6vh;
+    }
+    
+    .social-links-grid {
+        gap: 0.6vh;
+        height: calc(100vh - 270px);
+    }
+    
+    .social-card {
+        max-width: min(240px, 98vw);
+        height: calc((100vh - 270px) / 3 - 0.6vh);
+        min-height: calc((100vh - 270px) / 3 - 0.6vh) !important;
+        max-height: calc((100vh - 270px) / 3 - 0.6vh) !important;
+        padding: 1.5vh 2.5vw !important;
+        border-radius: 12px;
+    }
+    
+    .social-card:hover {
+        height: calc((100vh - 270px) / 3 - 0.6vh) !important;
+        min-height: calc((100vh - 270px) / 3 - 0.6vh) !important;
+        max-height: calc((100vh - 270px) / 3 - 0.6vh) !important;
+    }
+    
+    .social-card h2 {
+        font-size: clamp(0.8rem, 2.5vw, 1.3rem);
+        margin-bottom: 0.6vh;
+    }
+    
+    .social-link {
+        padding: clamp(4px, 1vh, 8px) clamp(8px, 2.5vw, 12px);
+        font-size: clamp(0.6rem, 2vw, 0.8rem);
     }
 } 
