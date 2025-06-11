@@ -147,7 +147,6 @@ body::before {
     justify-content: space-between;
     align-items: center;
     z-index: 100;
-    mix-blend-mode: difference;
 }
 
 .nav-logo {
@@ -168,7 +167,7 @@ body::before {
     position: fixed;
     top: 25px;
     padding: 13px 22px;
-    background: rgba(0, 0, 0, 0.9);
+    background: transparent;
     border: 3px solid rgba(255, 255, 255, 1);
     border-radius: 7px;
     color: #fff;
@@ -188,7 +187,7 @@ body::before {
         inset 0 0 30px rgba(255, 255, 255, 0.8),
         0 0 30px rgba(255, 255, 255, 0.8),
         0 0 40px rgba(255, 255, 255, 0.6);
-    z-index: 100;
+    z-index: 1000;
     min-width: max-content;
 }
 
