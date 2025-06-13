@@ -25,9 +25,7 @@ body::before {
     right: 0;
     bottom: 0;
     background: 
-        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
         linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-    background-size: 100% 2px, 3px 100%;
     pointer-events: none;
     animation: flicker 0.15s infinite;
     z-index: 2;
@@ -449,7 +447,7 @@ body::before {
     }
 }
 
-/* SVG фильтр для глитч-эффекта */
+/* Убираем сетку с фона */
 body::after {
     content: '';
     position: fixed;
@@ -457,9 +455,6 @@ body::after {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
-    background-size: 2px 2px;
     pointer-events: none;
     z-index: 999;
     opacity: 0.1;
@@ -1001,9 +996,9 @@ body::after {
     background: linear-gradient(
         to bottom,
         rgba(255, 255, 255, 0.8) 0%,
-        rgba(255, 220, 100, 1) 20%,
-        rgba(255, 160, 20, 0.8) 60%,
-        rgba(255, 120, 0, 0.4) 100%
+        rgba(255, 255, 255, 0.8) 20%,
+        rgba(255, 220, 100, 1) 60%,
+        rgba(255, 160, 20, 0.8) 100%
     );
     border-radius: 1px;
     transform-origin: center bottom;
@@ -1188,4 +1183,187 @@ body::after {
 /* Убираем конфликтующие стили */
 .switch:nth-child(2)::after {
     display: none;
+}
+
+/* --- WORK PAGE --- */
+.work-section {
+    margin-top: 200px;
+    padding: 40px 5% 100px;
+    color: #fff;
+}
+
+.work-section h1 {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 20px #fff, 0 0 40px #fff2;
+}
+
+.work-filter {
+    position: fixed;
+    top: 100px;
+    left: 0;
+    right: 0;
+    z-index: 90;
+    display: flex;
+    justify-content: center;
+    padding: 0 5%;
+}
+
+.filter-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4rem;
+    width: 100%;
+    max-width: 800px;
+    padding: 1.5rem;
+}
+
+.producer-switch {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.btn-indicator {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    background: #000;
+    border-radius: 50%;
+    border: 2px solid #333;
+    overflow: hidden;
+    box-shadow:
+        inset 0 2px 4px rgba(0, 0, 0, 0.8),
+        0 1px 2px rgba(255, 255, 255, 0.1);
+}
+
+.indicator-light {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    background: #1a1a1a;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.indicator-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle at center,
+        rgba(255, 255, 0, 0) 0%,
+        rgba(255, 255, 0, 0) 50%,
+        rgba(255, 255, 0, 0) 100%
+    );
+    transition: all 0.3s ease;
+    opacity: 0;
+}
+
+.filter-checkbox {
+    position: absolute;
+    opacity: 0;
+    cursor: crosshair;
+}
+
+.filter-checkbox:checked ~ .btn-indicator .indicator-light {
+    background: #9fff00;
+    box-shadow: 
+        0 0 10px #9fff00,
+        0 0 20px #9fff00,
+        0 0 30px #9fff00;
+}
+
+.filter-checkbox:checked ~ .btn-indicator .indicator-glow {
+    opacity: 0.5;
+    background: radial-gradient(
+        circle at center,
+        rgba(159, 255, 0, 0.8) 0%,
+        rgba(159, 255, 0, 0.3) 50%,
+        rgba(159, 255, 0, 0) 100%
+    );
+}
+
+.producer-name {
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+    cursor: crosshair;
+}
+
+.beat-card {
+    display: flex;
+    align-items: center;
+    background: rgba(20,20,20,0.95);
+    border: 2px solid #333;
+    border-radius: 12px;
+    padding: 1rem;
+    color: #fff;
+    transition: transform 0.2s, box-shadow 0.2s;
+    gap: 1.5rem;
+}
+
+.beat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px #fff3, 0 2px 12px #000c;
+    border-color: #fff5;
+}
+
+.beat-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.beat-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+}
+
+.beat-seller {
+    font-size: 1rem;
+    color: #aaa;
+}
+
+.beat-price {
+    font-size: 1.1rem;
+    color: #fffa;
+}
+
+.beat-audio {
+    flex: 2;
+    margin: 0;
+}
+
+.beat-buy {
+    display: inline-block;
+    background: #fff;
+    color: #111;
+    border-radius: 6px;
+    padding: 8px 18px;
+    font-weight: bold;
+    text-decoration: none;
+    box-shadow: 0 0 10px #fff5;
+    transition: background 0.2s, color 0.2s;
+    white-space: nowrap;
+}
+
+.beat-buy:hover {
+    background: #111;
+    color: #fff;
+    box-shadow: 0 0 20px #fff8;
 } 

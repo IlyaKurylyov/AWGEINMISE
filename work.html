@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INMISE - Биты</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/mobile.css">
+</head>
+<body>
+    <nav class="main-nav">
+        <a href="index.html" class="nav-logo">INMISE</a>
+        <div class="nav-links">
+            <a href="music.html" class="nav-link">РЕЛИЗЫ</a>
+            <a href="artists.html" class="nav-link">АРТИСТЫ</a>
+            <a href="work.html" class="nav-link active">РАБОТАТЬ С НАМИ</a>
+            <a href="contacts.html" class="nav-link">КОНТАКТЫ</a>
+        </div>
+        <div class="work-filter">
+            <div class="filter-buttons">
+                <div class="producer-switch">
+                    <input type="checkbox" value="@DopeTheProduce" class="filter-checkbox" id="dope">
+                    <div class="btn-indicator">
+                        <div class="indicator-light"></div>
+                        <div class="indicator-glow"></div>
+                    </div>
+                    <label for="dope" class="producer-name">@DopeTheProduce</label>
+                </div>
+                <div class="producer-switch">
+                    <input type="checkbox" value="@prod.shibvri" class="filter-checkbox" id="shibvri">
+                    <div class="btn-indicator">
+                        <div class="indicator-light"></div>
+                        <div class="indicator-glow"></div>
+                    </div>
+                    <label for="shibvri" class="producer-name">@prod.shibvri</label>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="content">
+        <section class="work-section">
+            <div class="beats-grid">
+                <!-- Здесь будут карточки битов -->
+            </div>
+        </section>
+    </main>
+
+    <script src="scripts/beats.js"></script>
+</body>
+</html> 

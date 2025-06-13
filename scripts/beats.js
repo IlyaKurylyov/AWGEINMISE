@@ -64,16 +64,24 @@ const beats = [
     }
 ];
 
-function renderBeats(filter) {
+function renderBeats(selectedSellers) {
     const grid = document.querySelector('.beats-grid');
     grid.innerHTML = '';
-    beats.filter(b => filter === 'all' || b.seller === filter).forEach(beat => {
+    
+    // Если ни один продавец не выбран, показываем все биты
+    const beatsToShow = selectedSellers.length === 0 
+        ? beats 
+        : beats.filter(b => selectedSellers.includes(b.seller));
+    
+    beatsToShow.forEach(beat => {
         let audioPath = 'assets/beats/' + beat.audio;
         grid.innerHTML += `
             <div class="beat-card">
-                <div class="beat-title">${beat.title}</div>
-                <div class="beat-seller">Продавец: ${beat.seller}</div>
-                <div class="beat-price">${beat.price}</div>
+                <div class="beat-info">
+                    <div class="beat-title">${beat.title}</div>
+                    <div class="beat-seller">Продавец: ${beat.seller}</div>
+                    <div class="beat-price">${beat.price}</div>
+                </div>
                 <audio class="beat-audio" controls controlslist="nodownload" src="${audioPath}"></audio>
                 <a class="beat-buy" href="${beat.link}" target="_blank">Купить</a>
             </div>
@@ -82,9 +90,19 @@ function renderBeats(filter) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const filter = document.getElementById('seller-filter');
-    renderBeats('all');
-    filter.addEventListener('change', e => {
-        renderBeats(e.target.value);
+    const checkboxes = document.querySelectorAll('.filter-checkbox');
+    
+    function updateFilter() {
+        const selectedSellers = Array.from(checkboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+        renderBeats(selectedSellers);
+    }
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateFilter);
     });
+    
+    // Изначально показываем все биты
+    renderBeats([]);
 }); 
