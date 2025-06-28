@@ -157,13 +157,18 @@ body::before {
 
 .nav-links {
     display: flex;
-    gap: 1rem;
-}
-
-/* Базовые стили для ссылок навигации */
-.nav-link {
+    justify-content: center;
+    gap: 8rem;
+    width: 100%;
+    padding: 0 1rem;
     position: fixed;
     top: 25px;
+    left: 0;
+    z-index: 100;
+}
+
+.nav-link {
+    position: relative;
     padding: 13px 22px;
     background: transparent;
     border: 3px solid rgba(255, 255, 255, 1);
@@ -236,11 +241,71 @@ body::before {
     );
 }
 
+/* Удаляем старые стили позиционирования */
 /* Позиционирование каждой ссылки */
-.nav-link:nth-child(1) { left: 20%; }  /* РЕЛИЗЫ */
-.nav-link:nth-child(2) { left: 38%; }  /* АРТИСТЫ */
-.nav-link:nth-child(3) { left: 56%; }  /* О НАС */
-.nav-link:nth-child(4) { left: 74%; }  /* КОНТАКТЫ */
+.nav-link:nth-child(1),
+.nav-link:nth-child(2),
+.nav-link:nth-child(3),
+.nav-link:nth-child(4) {
+    position: relative;
+    left: auto;
+    top: auto;
+}
+
+/* Медиа-запрос для мобильных устройств */
+@media screen and (max-width: 768px) {
+    .nav-links {
+        flex-direction: column;
+        align-items: center;
+        gap: 2rem;
+        position: fixed;
+        top: 0;
+        background: rgba(0, 0, 0, 0.95);
+        padding: 15px 0;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        width: 100%;
+        z-index: 1100; /* Увеличиваем z-index для навигации */
+    }
+
+    .nav-link {
+        position: relative;
+        z-index: 1101; /* Делаем z-index ссылок навигации выше */
+    }
+
+    .work-filter {
+        position: fixed;
+        top: 220px;
+        padding: 20px 0;
+        background: linear-gradient(
+            to bottom,
+            #000 0%,
+            #000 85%,
+            transparent 100%
+        );
+        z-index: 1000; /* Устанавливаем z-index для фильтра ниже навигации */
+        width: 100%;
+    }
+
+    .producer-switch {
+        margin-top: 40px; /* Добавляем отступ сверху */
+        width: 100%;
+        justify-content: center;
+    }
+
+    .work-section {
+        margin-top: 280px;
+        position: relative;
+        z-index: 900; /* Основной контент под всеми элементами */
+    }
+
+    .filter-buttons {
+        flex-direction: column;
+        gap: 2rem;
+        padding: 1rem;
+        position: relative;
+        z-index: 1000;
+    }
+}
 
 /* Эффект удара */
 .impact-effect {
@@ -1187,9 +1252,30 @@ body::after {
 
 /* --- WORK PAGE --- */
 .work-section {
-    margin-top: 200px;
-    padding: 40px 5% 100px;
+    margin-top: 160px;
+    padding: 0 5% 100px;
     color: #fff;
+    height: calc(100vh - 160px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #333 #111;
+}
+
+.work-section::-webkit-scrollbar {
+    width: 8px;
+}
+
+.work-section::-webkit-scrollbar-track {
+    background: #111;
+}
+
+.work-section::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+
+.work-section::-webkit-scrollbar-thumb:hover {
+    background: #444;
 }
 
 .work-section h1 {
@@ -1208,6 +1294,13 @@ body::after {
     display: flex;
     justify-content: center;
     padding: 0 5%;
+    background: linear-gradient(
+        to bottom,
+        #000 0%,
+        #000 70%,
+        transparent 100%
+    );
+    padding-bottom: 2rem;
 }
 
 .filter-buttons {
@@ -1217,13 +1310,24 @@ body::after {
     gap: 4rem;
     width: 100%;
     max-width: 800px;
-    padding: 1.5rem;
+    padding: 1rem;
 }
 
 .producer-switch {
     display: flex;
     align-items: center;
     gap: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.producer-switch:hover .btn-indicator {
+    border-color: #444;
+}
+
+.producer-switch:hover .producer-name {
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
 }
 
 .btn-indicator {
@@ -1237,6 +1341,7 @@ body::after {
     box-shadow:
         inset 0 2px 4px rgba(0, 0, 0, 0.8),
         0 1px 2px rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
 }
 
 .indicator-light {
@@ -1366,4 +1471,30 @@ body::after {
     background: #111;
     color: #fff;
     box-shadow: 0 0 20px #fff8;
+}
+
+.beats-grid {
+    padding-top: 1rem;
+}
+
+/* Рассеянное свечение от центрального текста */
+.hero::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120vw;
+    height: 120vh;
+    background: radial-gradient(circle at center,
+        rgba(255, 255, 255, 0.28) 0%,
+        rgba(255, 255, 255, 0.18) 15%,
+        rgba(255, 255, 255, 0.08) 35%,
+        rgba(255, 255, 255, 0.03) 60%,
+        transparent 80%
+    );
+    pointer-events: none;
+    filter: blur(120px);
+    mix-blend-mode: screen;
+    z-index: -1;
 } 

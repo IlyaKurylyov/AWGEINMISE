@@ -252,6 +252,26 @@
         0 0 0 4px #222,
         0 5px 15px rgba(0,0,0,0.5),
         inset 0 0 20px rgba(0,0,0,0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.vhs-player::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.1),
+        rgba(0, 0, 0, 0.1) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+    pointer-events: none;
+    z-index: 10;
 }
 
 .vhs-top {
@@ -260,6 +280,8 @@
     align-items: center;
     margin-bottom: 1.5rem;
     padding: 0 1rem;
+    position: relative;
+    z-index: 11;
 }
 
 .vhs-brand {
@@ -287,12 +309,14 @@
     display: flex;
     flex-direction: column;
     min-height: 450px;
+    margin-top: 20px;
 }
 
 .vhs-select-wrapper {
     margin-bottom: 1.5rem;
     position: relative;
     width: 100%;
+    z-index: 11;
 }
 
 .vhs-select {
@@ -340,7 +364,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 0;
+    padding: 1rem;
     background: #000;
     border-radius: 5px;
     position: relative;
@@ -350,151 +374,125 @@
         inset 0 0 20px rgba(0, 255, 0, 0.1);
 }
 
-.vhs-status {
+.ready-indicator {
+    position: absolute;
+    top: 90px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
+    gap: 8px;
+    z-index: 12;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 4px 10px;
+    border-radius: 3px;
+    flex-direction: row;
 }
 
-.status-light {
-    width: 10px;
-    height: 10px;
+.ready-text {
+    font-family: 'VT323', monospace;
+    color: #0f0;
+    font-size: 16px;
+    text-shadow: 0 0 5px #0f0;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.ready-dot {
+    width: 12px;
+    height: 12px;
     background: #0f0;
     border-radius: 50%;
+    box-shadow: 0 0 5px #0f0;
     animation: blink 2s infinite;
+    margin-left: 0;
+    order: -1;
 }
 
-.status-text {
-    color: #0f0;
-    font-family: 'VT323', monospace;
-    font-size: 1rem;
-}
-
-.track-display {
-    font-family: 'VT323', monospace;
-    color: #0f0;
-    font-size: 1.2rem;
-    line-height: 1.5;
-}
-
-.no-selection-message {
-    text-align: center;
-    padding: 2rem;
-    opacity: 0.7;
-}
-
-.blink-cursor {
-    display: inline-block;
-    animation: blink 1s infinite;
-}
-
-.vhs-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    padding: 1rem;
-    background: #222;
-    border-radius: 10px;
-    border: 1px solid #333;
-    margin-top: auto;
-}
-
-.control-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-}
-
-.vhs-btn {
-    background: #333;
-    border: none;
-    color: #0f0;
-    padding: 10px 20px;
-    font-size: 1.2rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-shadow: 0 0 5px #0f0;
-    position: relative;
-    overflow: hidden;
-}
-
-.vhs-btn:hover {
-    background: #444;
-    text-shadow: 0 0 10px #0f0;
-}
-
-.vhs-btn.disabled {
-    background: #222;
-    color: #444;
-    cursor: not-allowed;
-    text-shadow: none;
-}
-
-.vhs-btn.disabled:hover {
-    background: #222;
-    text-shadow: none;
-}
-
-.vhs-indicators {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-}
-
-.indicator {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
+@keyframes blink {
+    0%, 100% { 
+        opacity: 1;
+        box-shadow: 0 0 5px #0f0, 0 0 10px #0f0;
+    }
+    50% { 
+        opacity: 0.3;
+        box-shadow: 0 0 2px #0f0;
+    }
 }
 
 .indicator-light {
-    width: 12px;
-    height: 12px;
+    width: 13px;
+    height: 13px;
     border-radius: 50%;
     background: #600;
-    box-shadow: 0 0 5px rgba(255,0,0,0.3);
+    box-shadow: inset 0 0 5px #400, 0 0 2px #f00;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
     transition: all 0.3s ease;
 }
 
-.indicator.active .indicator-light {
+.indicator-light.active {
     background: #f00;
     box-shadow: 
-        0 0 5px #f00,
+        inset 0 0 10px #f66,
         0 0 10px #f00,
-        0 0 15px rgba(255,0,0,0.5);
+        0 0 20px #f00;
+    animation: glow 1s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    from {
+        box-shadow: 
+            inset 0 0 10px #ff6666,
+            0 0 10px #ff0000,
+            0 0 20px #ff0000;
+    }
+    to {
+        box-shadow: 
+            inset 0 0 15px #ff9999,
+            0 0 15px #ff0000,
+            0 0 30px #ff0000;
+    }
+}
+
+/* Индикатор POWER всегда активен */
+.indicator[data-type="power"] .indicator-light {
+    background: #f00;
+    box-shadow: 
+        inset 0 0 10px #f66,
+        0 0 10px #f00,
+        0 0 20px #f00;
+    animation: glow 1s ease-in-out infinite alternate;
+}
+
+/* Индикатор PLAY активен при воспроизведении */
+.indicator[data-type="play"] .indicator-light.active {
+    background: #f00;
+    box-shadow: 
+        inset 0 0 10px #f66,
+        0 0 10px #f00,
+        0 0 20px #f00;
+    animation: glow 1s ease-in-out infinite alternate;
 }
 
 .indicator span {
     font-family: 'VT323', monospace;
-    font-size: 0.8rem;
+    font-size: 12px;
     color: #666;
-}
-
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
+    text-transform: uppercase;
+    text-align: center;
+    margin-top: 15px;
+    position: absolute;
+    top: 8px;
+    width: 100%;
+    letter-spacing: -0.5px;
 }
 
 /* Эффект сканлайнов */
 .vhs-screen::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: repeating-linear-gradient(
-        0deg,
-        rgba(0, 0, 0, 0.15),
-        rgba(0, 0, 0, 0.15) 1px,
-        transparent 1px,
-        transparent 2px
-    );
-    pointer-events: none;
-    opacity: 0.3;
-    z-index: 1;
+    display: none;
 }
 
 /* Эффект глитча */
@@ -520,17 +518,55 @@
         font-size: 1.5rem;
     }
 
-    .control-buttons {
-        flex-wrap: wrap;
-    }
-
     .vhs-btn {
         padding: 0.6rem 1rem;
         font-size: 1rem;
     }
 
     .vhs-indicators {
+        gap: 30px;
+        margin-top: 10px;
+    }
+    
+    .indicator span {
+        font-size: 10px;
+        margin-top: 9px;
+        top: 7px;
+    }
+
+    .vhs-controls {
+        height: auto;
+        padding: 0.8rem;
         gap: 1rem;
+    }
+
+    .control-buttons {
+        gap: 0.5rem;
+        margin-bottom: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .vhs-player {
+        padding: 0.8rem;
+    }
+
+    .vhs-brand {
+        font-size: 1.2rem;
+    }
+
+    .vhs-btn {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.9rem;
+    }
+
+    .vhs-controls {
+        padding: 0.6rem;
+        gap: 0.8rem;
+    }
+
+    .control-buttons {
+        gap: 0.3rem;
     }
 }
 
@@ -638,4 +674,135 @@
     90% { opacity: 0.9; }
     95% { opacity: 0.8; }
     100% { opacity: 0.9; }
+}
+
+/* Удаляем старые стили для центрального индикатора */
+.vhs-status, .status-light, .status-text {
+    display: none;
+}
+
+.vhs-controls button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(100%);
+}
+
+.vhs-controls button:disabled {
+    pointer-events: none;
+}
+
+.vhs-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1rem;
+    background: #222;
+    border-radius: 10px;
+    border: 1px solid #333;
+    margin-top: auto;
+    position: relative;
+    z-index: 11;
+    height: 132.8px;
+}
+
+.control-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 10px;
+    flex-wrap: nowrap;
+}
+
+.vhs-btn {
+    background: #333;
+    border: none;
+    color: #0f0;
+    padding: 10px 20px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-shadow: 0 0 5px #0f0;
+    position: relative;
+    overflow: hidden;
+}
+
+.vhs-btn:hover {
+    background: #444;
+    text-shadow: 0 0 10px #0f0;
+}
+
+.vhs-btn.disabled {
+    background: #222;
+    color: #444;
+    cursor: not-allowed;
+    text-shadow: none;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.vhs-btn.disabled:hover {
+    background: #222;
+    text-shadow: none;
+}
+
+.vhs-indicators {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    z-index: 11;
+    transform: translateY(calc(-50% + 20px));
+    height: 20px;
+}
+
+.indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 40px;
+    position: relative;
+}
+
+.error-message {
+    color: #f00;
+    font-family: 'VT323', monospace;
+    font-size: 1.5rem;
+    text-shadow: 0 0 5px #f00;
+    margin-bottom: 1rem;
+    animation: flicker 2s infinite;
+}
+
+.error-details {
+    color: #f00;
+    font-family: 'VT323', monospace;
+    font-size: 1rem;
+    opacity: 0.8;
+    max-width: 80%;
+    margin: 0 auto;
+    word-wrap: break-word;
+}
+
+.status-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 100;
+}
+
+.status-text {
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    color: #0f0;
+    text-shadow: 0 0 5px #0f0;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 4px 8px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+}
+
+.status-text:empty {
+    display: none;
 } 

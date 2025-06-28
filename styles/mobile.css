@@ -28,7 +28,7 @@
         left: 50%;
         transform: translateX(-50%);
         display: flex;
-        gap: 15px; /* Увеличиваем расстояние между кнопками */
+        gap: 30px; /* Увеличиваем расстояние между кнопками */
         width: 95%;
         max-width: 800px;
         justify-content: center;
@@ -118,7 +118,8 @@
     }
 
     .work-section {
-        margin-top: 250px;
+        margin-top: 200px;
+        height: calc(100vh - 200px);
     }
 
     .beats-grid {
@@ -188,7 +189,7 @@
         padding: 10px;
         border-radius: 10px;
         width: 90%;
-        gap: 12px; /* Увеличиваем расстояние между кнопками в вертикальном меню */
+        gap: 24px; /* Увеличиваем расстояние между кнопками в вертикальном меню */
         z-index: 200;
     }
 

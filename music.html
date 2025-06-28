@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/music.css">
     <link rel="stylesheet" href="styles/mobile.css">
+    <script src="https://music.yandex.ru/api/audio/dist/index.js"></script>
 </head>
 <body>
     <nav class="main-nav">
@@ -14,7 +15,7 @@
         <div class="nav-links">
             <a href="music.html" class="nav-link active">РЕЛИЗЫ</a>
             <a href="artists.html" class="nav-link">АРТИСТЫ</a>
-            <a href="about.html" class="nav-link">О НАС</a>
+            <a href="work.html" class="nav-link">СОТРУДНИЧЕСТВО</a>
             <a href="contacts.html" class="nav-link">КОНТАКТЫ</a>
         </div>
     </nav>
@@ -42,11 +43,10 @@
                 </div>
                 
                 <div class="vhs-display">
-                    <div class="vhs-status">
-                        <div class="status-light"></div>
-                        <span class="status-text">READY</span>
+                    <div class="ready-indicator">
+                        <span class="ready-text">READY</span>
+                        <div class="ready-dot"></div>
                     </div>
-                    
                     <div id="track-display" class="track-display">
                         <div class="no-selection-message">
                             ВСТАВЬТЕ КАССЕТУ
@@ -64,15 +64,15 @@
                     <button class="vhs-btn" id="next-btn">►►</button>
                 </div>
                 <div class="vhs-indicators">
-                    <div class="indicator">
+                    <div class="indicator" data-type="power">
                         <div class="indicator-light"></div>
                         <span>POWER</span>
                     </div>
-                    <div class="indicator">
+                    <div class="indicator" data-type="play">
                         <div class="indicator-light"></div>
                         <span>PLAY</span>
                     </div>
-                    <div class="indicator">
+                    <div class="indicator" data-type="rec">
                         <div class="indicator-light"></div>
                         <span>REC</span>
                     </div>

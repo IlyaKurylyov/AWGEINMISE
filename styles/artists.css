@@ -38,6 +38,9 @@ body {
 }
 
 .artist-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     position: relative;
     border-radius: 15px;
     overflow: hidden;
@@ -55,6 +58,7 @@ body {
 }
 
 .artist-image-container {
+    flex: 1 0 auto;
     position: relative;
     aspect-ratio: 4/5;
     overflow: hidden;
@@ -88,6 +92,7 @@ body {
 
 /* Информация об артисте */
 .artist-info {
+    margin-top: auto; /* опускаем инфо-блок к низу */
     padding: 0 15px;
     text-align: center;
 }
@@ -132,15 +137,8 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: 
-        repeating-linear-gradient(
-            0deg,
-            rgba(255, 255, 255, 0.1) 0px,
-            rgba(255, 255, 255, 0.1) 1px,
-            transparent 1px,
-            transparent 2px
-        );
-    opacity: 0.3;
+    background: none; /* Убираем помехи */
+    opacity: 0;
     pointer-events: none;
     mix-blend-mode: overlay;
 }
@@ -292,7 +290,12 @@ body {
     .artists-grid {
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         gap: 1.5rem;
-        padding: 80px 5% 80px;
+        padding: 120px 5% 80px; /* учитываем навигацию 100px + запас */
+    }
+
+    /* Чуть уменьшаем вертикальное соотношение фото, чтобы убрать пустоту */
+    .artist-image-container {
+        aspect-ratio: 1 / 1; /* квадрат на мобильных */
     }
 }
 
