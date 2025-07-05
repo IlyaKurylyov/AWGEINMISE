@@ -42,27 +42,66 @@ const beats = [
         link: '#'
     },
     {
-        title: '142 Amin Out the head',
+        title: 'Out the head (142bpm Amin)',
         seller: '@prod.shibvri',
         price: '2000₽',
-        audio: '@prod.shibvri - 142 Amin Out the head.mp3',
-        link: '#'
+        audio: '@prod.shibvri - Out the head (142bpm Amin).mp3'
     },
     {
-        title: 'Yokai_142_ Dmin',
+        title: 'Yokai (142bpm Dmin)',
         seller: '@prod.shibvri',
         price: '2000₽',
-        audio: '@prod.shibvri - Yokai_142_ Dmin.mp3',
-        link: '#'
+        audio: '@prod.shibvri - Yokai (142bpm Dmin).mp3'
     },
     {
-        title: '2XL F 110',
+        title: '2XL (110bpm F)',
         seller: '@prod.shibvri',
         price: '2000₽',
-        audio: '@prod.shibvri- 2XL F 110.mp3',
-        link: '#'
+        audio: '@prod.shibvri - 2XL (110bpm F).mp3'
+    },
+    {
+        title: 'All Girls Are The Same (164bpm, B)',
+        seller: '@Namusorill',
+        price: '2000₽',
+        audio: '@Namusorill - All Girls Are The Same (164bpm B).mp3'
+    },
+    {
+        title: 'Armed And Dangerous (130bpm, Am)',
+        seller: '@Namusorill',
+        price: '2000₽',
+        audio: '@Namusorill - Armed And Dangerous (130bpm AM).mp3'
+    },
+    {
+        title: "I'll Be Fine (160bpm, Dm)",
+        seller: '@Namusorill',
+        price: '2000₽',
+        audio: "@Namusorill - I'll Be Fine (160bpm DM).mp3"
+    },
+    {
+        title: 'Lean Wit Me (164bpm, Am)',
+        seller: '@Namusorill',
+        price: '2000₽',
+        audio: '@Namusorill - Lean Wit Me (164bpm AM).mp3'
+    },
+    {
+        title: 'Lucid Dreams (169bpm, C#m)',
+        seller: '@Namusorill',
+        price: '2000₽',
+        audio: '@Namusorill - Lucid Dreams (169bpm C♯m).mp3'
+    },
+    {
+        title: 'Wasted (146bpm, G)',
+        seller: '@Namusorill',
+        price: '2000₽',
+        audio: '@Namusorill - Wasted (146bpm G).mp3'
     }
 ];
+
+const sellerLinks = {
+    '@DopeTheProduce': 'https://band.link/uUu9g',
+    '@prod.shibvri': 'https://t.me/prod_shibvri',
+    '@Namusorill': 'https://t.me/namusorill'
+};
 
 function renderBeats(selectedSellers) {
     const grid = document.querySelector('.beats-grid');
@@ -83,7 +122,7 @@ function renderBeats(selectedSellers) {
                     <div class="beat-price">${beat.price}</div>
                 </div>
                 <audio class="beat-audio" controls controlslist="nodownload" src="${audioPath}"></audio>
-                <a class="beat-buy" href="${beat.link}" target="_blank">Купить</a>
+                <a class="beat-buy" href="${sellerLinks[beat.seller] || '#'}" target="_blank">Купить</a>
             </div>
         `;
     });

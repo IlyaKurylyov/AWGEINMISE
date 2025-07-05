@@ -101,14 +101,17 @@
         font-size: 1.2rem;
     }
 
+    /* Исправлено: фильтр битов тянется на всю ширину, липкий под навигацией */
     .work-filter {
-        position: fixed;
-        top: 200px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 90%;
-        max-width: 400px;
-        z-index: 90;
+        position: sticky;
+        top: 120px;
+        left: 0;
+        transform: none;
+        width: 100%;
+        max-width: 100%;
+        padding: 0 4%;
+        background: rgba(0,0,0,0.95);
+        z-index: 80;
     }
 
     #seller-filter {
@@ -117,9 +120,10 @@
         padding: 10px 15px;
     }
 
+    /* Основной контент ниже фильтра */
     .work-section {
-        margin-top: 200px;
-        height: calc(100vh - 200px);
+        margin-top: 20px;
+        height: auto;
     }
 
     .beats-grid {
@@ -212,6 +216,11 @@
         padding-top: 250px;
     }
 
+    /* Специально для страницы релизов — выше, чтобы VHS-плеер не лез под меню */
+    .music-content {
+        padding-top: 320px;
+    }
+
     .video-wrapper video {
         width: auto;
         height: 100%;
@@ -240,6 +249,42 @@
 
     .artist-image {
         height: 300px;
+    }
+
+    /* Кнопки фильтра */
+    .filter-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.8rem;
+    }
+
+    .producer-switch {
+        width: 48%;
+        gap: 0.6rem;
+        font-size: 0.9rem;
+        padding: 0.4rem 0.2rem;
+    }
+
+    /* Основной контент – идёт за фильтром */
+    .work-section {
+        margin-top: 20px;
+        position: static;
+        height: auto;
+        overflow: visible;
+        z-index: auto;
+    }
+
+    /* Фильтр битов под навигацией */
+    .work-filter {
+        position: sticky;
+        top: 260px; /* под нав-меню */
+        left: 0;
+        width: 100%;
+        max-width: 100%;
+        padding: 0 4%;
+        background: rgba(0,0,0,0.95);
+        z-index: 80;
     }
 }
 

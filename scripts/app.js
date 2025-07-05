@@ -1,3 +1,5 @@
+console.log('app.js загружен');
+
 // Загрузочный экран
 document.addEventListener('DOMContentLoaded', () => {
     const loadingScreen = document.querySelector('.loading-screen');
@@ -249,4 +251,24 @@ document.querySelectorAll('.switch').forEach((switch_, index) => {
         switch_.classList.remove('pressed');
         videoContainer.classList.remove('active');
     });
+});
+
+window.addEventListener('DOMContentLoaded', function() {
+  var switchBtn = document.getElementById('home-switch-btn');
+  if (!switchBtn) return;
+  switchBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    if (switchBtn.classList.contains('switch-animating')) { return; }
+    switchBtn.classList.add('switch-animating');
+    
+    // Создаем эффект ряби
+    var staticOverlay = document.createElement('div');
+    staticOverlay.className = 'screen-static';
+    document.body.appendChild(staticOverlay);
+    
+    // Задержка перед переходом на главную
+    setTimeout(function() {
+      window.location.href = 'index.html';
+    }, 800);
+  });
 }); 
