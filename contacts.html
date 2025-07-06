@@ -10,6 +10,13 @@
 </head>
 <body>
   <div class="noise-overlay"></div>
+  <div class="tv-static-overlay"></div>
+  <svg style="display:none;">
+    <filter id="tv-wave" x="0" y="0">
+      <feTurbulence id="turb" type="turbulence" baseFrequency="0.02 0.08" numOctaves="2" result="turb" seed="2"/>
+      <feDisplacementMap in2="turb" in="SourceGraphic" scale="18" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </svg>
     <a id="home-switch-btn" class="home-switch-btn" title="На главный экран">
       <svg width="80" height="100" viewBox="0 0 80 100" fill="none" xmlns="http://www.w3.org/2000/svg">
         <!-- Основной корпус кнопки -->
@@ -41,31 +48,26 @@
     </nav>
 
     <main class="content contacts-page-content">
-        <div class="contacts-container">
-            <div class="social-links-grid">
-                <div class="social-card tg-card">
-                    <h2>TELEGRAM</h2>
-                    <a href="https://t.me/inmise" target="_blank" class="social-link">
-                        <img src="assets/icons/telegram.svg" alt="Telegram">
-                        Перейти
-                    </a>
-                </div>
-                <div class="social-card vk-card">
-                    <h2>VK</h2>
-                    <a href="https://vk.com/inmise" target="_blank" class="social-link">
-                        <img src="assets/icons/vk.svg" alt="VK">
-                        Перейти
-                    </a>
-                </div>
-                <div class="social-card youtube-card">
-                    <h2>YOUTUBE</h2>
-                    <a href="https://www.youtube.com/@inmiseofficial" target="_blank" class="social-link">
-                        <img src="assets/icons/youtube.svg" alt="YouTube">
-                        Перейти
-                    </a>
-                </div>
-            </div>
+      <section class="contacts-section">
+        <h1>КОНТАКТЫ</h1>
+        <div class="vhs-socials">
+          <div class="vhs-card">
+            <div class="vhs-icon"><img src="assets/icons/telegram.svg" alt="Telegram"></div>
+            <div class="vhs-title">TELEGRAM</div>
+            <a href="https://t.me/inmise" target="_blank" class="vhs-btn">ПЕРЕЙТИ</a>
+          </div>
+          <div class="vhs-card">
+            <div class="vhs-icon"><img src="assets/icons/vk.svg" alt="VK"></div>
+            <div class="vhs-title">VK</div>
+            <a href="https://vk.com/inmise" target="_blank" class="vhs-btn">ПЕРЕЙТИ</a>
+          </div>
+          <div class="vhs-card">
+            <div class="vhs-icon"><img src="assets/icons/youtube.svg" alt="YouTube"></div>
+            <div class="vhs-title">YOUTUBE</div>
+            <a href="https://www.youtube.com/@inmiseofficial" target="_blank" class="vhs-btn">ПЕРЕЙТИ</a>
+          </div>
         </div>
+      </section>
     </main>
 
     <script src="scripts/app.js"></script>

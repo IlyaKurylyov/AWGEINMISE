@@ -125,5 +125,12 @@
     </main>
 
     <script src="scripts/app.js"></script>
+  <div class="tv-static-overlay"></div>
+  <svg style="display:none;">
+    <filter id="tv-wave" x="0" y="0">
+      <feTurbulence id="turb" type="turbulence" baseFrequency="0.02 0.08" numOctaves="2" result="turb" seed="2"/>
+      <feDisplacementMap in2="turb" in="SourceGraphic" scale="18" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </svg>
 </body>
 </html> 

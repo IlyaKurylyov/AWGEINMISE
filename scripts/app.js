@@ -272,3 +272,14 @@ window.addEventListener('DOMContentLoaded', function() {
     }, 800);
   });
 }); 
+
+const homeSwitchBtn = document.getElementById('home-switch-btn');
+const tvStaticOverlay = document.querySelector('.tv-static-overlay');
+if (homeSwitchBtn && tvStaticOverlay) {
+  homeSwitchBtn.addEventListener('click', () => {
+    tvStaticOverlay.classList.add('active');
+    setTimeout(() => {
+      tvStaticOverlay.classList.remove('active');
+    }, 1200);
+  });
+} 

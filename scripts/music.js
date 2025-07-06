@@ -7,6 +7,14 @@ const statusText = document.createElement('div');
 statusText.className = 'status-text';
 statusText.textContent = 'READY';
 
+// Глобальная функция для переключения индикатора PLAY
+function updatePlayIndicator(isPlaying) {
+    const playIndicator = document.querySelector('.indicator[data-type="play"] .indicator-light');
+    if (playIndicator) {
+        playIndicator.classList.toggle('active', isPlaying);
+    }
+}
+
 // Добавляем в начало файла
 let currentBlobUrl = null;
 
@@ -111,39 +119,6 @@ function loadTracks() {
         option.value = artistName.toLowerCase();
         option.textContent = artistName;
         artistSelector.appendChild(option);
-    });
-
-    // Обработчик выбора артиста
-    artistSelector.addEventListener('change', function() {
-        const selectedArtist = this.value;
-        const artistData = artistTracks[selectedArtist.toUpperCase()];
-        const display = document.querySelector('.vhs-display');
-
-        if (!display) return;
-
-        // Очищаем текущий контент
-        display.innerHTML = '';
-
-        if (artistData && artistData.tracks.length > 0) {
-            const track = artistData.tracks[0]; // Берем первый трек
-            
-            // Создаем виджет Яндекс.Музыки
-            const widget = document.createElement('iframe');
-            widget.src = `https://music.yandex.ru/iframe/#artist/${track.yandexMusicId}/tracks`;
-            widget.frameBorder = '0';
-            widget.width = '100%';
-            widget.height = '450';
-            widget.allow = 'autoplay';
-            widget.className = 'yandex-music-widget';
-            
-            display.appendChild(widget);
-        } else {
-            display.innerHTML = `
-                <div class="track-info">
-                    <div class="message">РЕЛИЗЫ НЕДОСТУПНЫ</div>
-                </div>
-            `;
-        }
     });
 }
 
@@ -697,7 +672,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Отключаем кнопки управления для всех режимов кроме 'website'
         [playBtn, stopBtn, prevBtn, nextBtn].forEach(btn => {
-            if (selectedArtist !== 'website') {
+            if (!selectedArtist || selectedArtist === '') {
+                btn.disabled = true;
+                btn.classList.add('disabled');
+            } else if (selectedArtist !== 'website') {
                 btn.disabled = true;
                 btn.classList.add('disabled');
             } else {
@@ -779,6 +757,14 @@ document.addEventListener('DOMContentLoaded', function() {
             display.style.animation = 'none';
         }
     });
+
+    // Дизейбл всех кнопок плеера по умолчанию при загрузке страницы, если выбран 'ВЫБЕРИТЕ АРТИСТА'
+    if (!artistSelector.value || artistSelector.value === '') {
+        [playBtn, stopBtn, prevBtn, nextBtn].forEach(btn => {
+            btn.disabled = true;
+            btn.classList.add('disabled');
+        });
+    }
 });
 
 // Список MP3 файлов
@@ -963,9 +949,11 @@ audioPlayer.addEventListener('pause', () => {
     trackDisplay.style.animation = 'none';
 });
 
-// Инициализация при загрузке страницы
+// Инициализация при загрузке страницы: обновляем дисплей только если активен режим воспроизведения сайта
 document.addEventListener('DOMContentLoaded', () => {
-    updateDisplay();
+    if (isWebsitePlayback) {
+        updateDisplay();
+    }
 });
 
 // Обновляем стили
@@ -1074,131 +1062,26 @@ audioPlayer.addEventListener('loadeddata', () => {
 // Проверяем плейлист при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Проверка плейлиста при загрузке:', playlist);
-    // Проверяем каждый трек
+    // Проверяем доступность аудиофайлов
     playlist.forEach((track, index) => {
         if (!track.file) {
-            console.error(`Отсутствует файл для трека ${index}:`, track);
-        } else {
-            // Проверяем существование файла
-            fetch(track.file)
-                .then(response => {
-                    if (!response.ok) {
-                        console.error(`Файл ${track.file} недоступен:`, response.status);
-                    } else {
-                        console.log(`Файл ${track.file} доступен`);
-                    }
-                })
-                .catch(error => {
-                    console.error(`Ошибка проверки файла ${track.file}:`, error);
-                });
+            console.error('Отсутствует файл для трека', index, track);
+            return;
         }
+
+        fetch(track.file)
+            .then(response => {
+                if (!response.ok) {
+                    console.error(`Файл ${track.file} недоступен:`, response.status);
+                }
+            })
+            .catch(error => {
+                console.error(`Ошибка проверки файла ${track.file}:`, error);
+            });
     });
 });
 
-// Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', () => {
-    // Сбрасываем флаг инициализации плейлиста
-    window.playlistInitialized = false;
-    
-    // Очищаем источник аудио
-    audioPlayer.src = '';
-    currentTrackIndex = 0;
+// Освобождаем ресурсы при закрытии страницы
+window.addEventListener('beforeunload', () => {
+    cleanupAudioResources();
 });
-
-function playTrack() {
-    if (!isWebsitePlayback) return;
-    
-    isPlaying = true;
-    vhsIndicators.classList.add('active');
-    statusText.textContent = 'PLAYING';
-    trackDisplay.style.animation = 'glitch 0.2s infinite';
-}
-
-function stopTrack() {
-    if (!isWebsitePlayback) return;
-    
-    isPlaying = false;
-    vhsIndicators.classList.remove('active');
-    statusText.textContent = 'STOPPED';
-    trackDisplay.style.animation = 'none';
-}
-
-function updatePlayerControls() {
-    const selectedValue = artistSelector.value;
-    const isDisabled = !selectedValue || selectedValue === '';
-    
-    playBtn.classList.toggle('disabled', isDisabled);
-    stopBtn.classList.toggle('disabled', isDisabled);
-    prevBtn.classList.toggle('disabled', isDisabled);
-    nextBtn.classList.toggle('disabled', isDisabled);
-    
-    playBtn.disabled = isDisabled;
-    stopBtn.disabled = isDisabled;
-    prevBtn.disabled = isDisabled;
-    nextBtn.disabled = isDisabled;
-}
-
-artistSelector.addEventListener('change', () => {
-    updatePlayerControls();
-    // ... existing code ...
-});
-
-// Вызываем при загрузке страницы
-document.addEventListener('DOMContentLoaded', () => {
-    updatePlayerControls();
-    // ... existing code ...
-});
-
-function updatePlayIndicator(isPlaying) {
-    playIndicator.classList.toggle('active', isPlaying);
-}
-
-audioPlayer.addEventListener('play', () => {
-    updatePlayIndicator(true);
-});
-
-audioPlayer.addEventListener('pause', () => {
-    updatePlayIndicator(false);
-});
-
-audioPlayer.addEventListener('ended', () => {
-    updatePlayIndicator(false);
-});
-
-// Обновляем индикатор при остановке
-function stopTrack() {
-    audioPlayer.pause();
-    audioPlayer.currentTime = 0;
-    updatePlayIndicator(false);
-    // ... existing code ...
-}
-
-// Обновляем индикатор при воспроизведении
-function togglePlay() {
-    if (audioPlayer.paused) {
-        audioPlayer.play();
-        updatePlayIndicator(true);
-    } else {
-        audioPlayer.pause();
-        updatePlayIndicator(false);
-    }
-}
-
-function showError(message) {
-    const display = document.querySelector('.vhs-display');
-    display.innerHTML = `
-        <div class="track-info">
-            <div class="error-message">ОШИБКА ВОСПРОИЗВЕДЕНИЯ</div>
-            <div class="error-details">${message}</div>
-        </div>
-    `;
-    
-    // Добавляем эффект глитча при ошибке
-    display.style.animation = 'glitch 0.2s';
-    setTimeout(() => {
-        display.style.animation = 'none';
-    }, 200);
-}
-
-// Добавляем очистку ресурсов при выгрузке страницы
-window.addEventListener('beforeunload', cleanupAudioResources);
