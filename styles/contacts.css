@@ -219,50 +219,50 @@ body, html {
 
 @media (max-width: 768px) {
     body, html {
-        overflow-y: hidden !important;
+        overflow-y: auto !important; /* Разрешаем вертикальный скролл */
     }
     
     .content.contacts-page-content {
-        padding: 270px 3% 2vh 3%;
-        min-height: calc(100vh - 272px);
+        padding: 200px 3% 40px 3%; /* Уменьшаем отступ под навигацию */
+        min-height: 100vh;
+        height: auto; /* Убираем фиксированную высоту */
         justify-content: flex-start;
-        height: 100vh;
         box-sizing: border-box;
     }
     
     .contacts-container {
         padding: 0;
-        height: calc(100vh - 272px);
+        height: auto; /* Убираем фиксированную высоту */
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
+        justify-content: flex-start; /* Изменяем с space-between */
     }
     
+    /* Скрываем заголовок "КОНТАКТЫ" */
     .contacts-container h1 {
-        font-size: clamp(1.2rem, 4vw, 2rem);
-        margin-bottom: 1vh;
-        letter-spacing: 2px;
-        animation: none !important;
-        flex-shrink: 0;
+        display: none !important;
     }
     
-    .social-links-grid {
-        flex-direction: column;
-        align-items: center;
+    /* Переопределяем .vhs-socials для мобильной версии */
+    .vhs-socials {
+        flex-direction: column !important;
+        align-items: center !important;
         padding: 0;
-        gap: 1vh;
-        height: calc(100vh - 320px);
-        display: flex;
-        justify-content: space-between;
+        gap: 2rem !important; /* Увеличиваем промежуток между карточками */
+        height: auto !important; /* Убираем фиксированную высоту */
+        display: flex !important;
+        justify-content: flex-start !important; /* Изменяем с space-between */
+        margin: 0 !important; /* Убираем верхний отступ */
+        width: 100%;
     }
     
-    .social-card {
-        width: 100%;
-        max-width: min(280px, 90vw);
-        height: calc((100vh - 320px) / 3 - 1vh);
-        min-height: calc((100vh - 320px) / 3 - 1vh) !important;
-        max-height: calc((100vh - 320px) / 3 - 1vh) !important;
-        padding: 2vh 4vw !important;
+    .vhs-card {
+        width: 100% !important;
+        max-width: min(280px, 90vw) !important;
+        height: auto !important; /* Убираем фиксированную высоту */
+        min-height: 200px !important; /* Минимальная высота */
+        max-height: none !important; /* Убираем ограничение */
+        padding: 2rem 4vw !important;
         border-radius: 15px;
         transform: none !important;
         transition: none !important;
@@ -273,139 +273,162 @@ body, html {
         box-sizing: border-box;
     }
     
-    .social-card::before {
+    .vhs-card::before {
         display: none !important;
         animation: none !important;
     }
     
-    .social-card:hover {
+    .vhs-card:hover {
         transform: none !important;
-        height: calc((100vh - 320px) / 3 - 1vh) !important;
-        min-height: calc((100vh - 320px) / 3 - 1vh) !important;
-        max-height: calc((100vh - 320px) / 3 - 1vh) !important;
+        height: auto !important; /* Убираем фиксированную высоту при ховере */
+        min-height: 200px !important;
+        max-height: none !important;
     }
     
-    .social-card h2 {
-        font-size: clamp(1rem, 3vw, 1.8rem);
-        margin-bottom: 1vh;
-        letter-spacing: 2px;
-        transform: none !important;
-        transition: none !important;
-        animation: none !important;
-    }
-    
-    .social-card:hover h2 {
-        transform: none !important;
-    }
-    
-    .social-link {
-        padding: clamp(8px, 2vh, 12px) clamp(12px, 4vw, 20px);
-        font-size: clamp(0.8rem, 2.5vw, 1rem);
-        border-radius: 15px;
-        letter-spacing: 2px;
-        transform: none !important;
-        transition: none !important;
-        animation: none !important;
-    }
-    
-    .social-link:hover {
-        transform: none !important;
-    }
-    
-    .social-link::before {
-        display: none !important;
+    /* Фиксируем навигацию поверх контента */
+    .main-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2000;
+        background: rgba(0, 0, 0, 0.95);
+        backdrop-filter: blur(10px);
     }
 }
 
 @media (max-width: 480px) {
     .content.contacts-page-content {
-        padding: 250px 2% 1vh 2%;
-        min-height: calc(100vh - 251px);
-        height: 100vh;
+        padding: 180px 2% 40px 2% !important; /* Ещё меньше отступ */
+        min-height: 100vh;
+        height: auto;
     }
     
-    .contacts-container {
-        height: calc(100vh - 251px);
-    }
-    
+    /* Скрываем заголовок */
     .contacts-container h1 {
-        font-size: clamp(1rem, 3.5vw, 1.6rem);
-        margin-bottom: 0.8vh;
+        display: none !important;
     }
     
-    .social-links-grid {
-        gap: 0.8vh;
-        height: calc(100vh - 290px);
+    .vhs-socials {
+        margin: 0 !important;
+        gap: 1.5rem !important;
     }
     
-    .social-card {
-        max-width: min(260px, 95vw);
-        height: calc((100vh - 290px) / 3 - 0.8vh);
-        min-height: calc((100vh - 290px) / 3 - 0.8vh) !important;
-        max-height: calc((100vh - 290px) / 3 - 0.8vh) !important;
-        padding: 1.8vh 3vw !important;
+    .vhs-card {
+        max-width: min(260px, 95vw) !important;
+        min-height: 180px !important;
+        padding: 1.5rem 3vw !important;
     }
     
-    .social-card:hover {
-        height: calc((100vh - 290px) / 3 - 0.8vh) !important;
-        min-height: calc((100vh - 290px) / 3 - 0.8vh) !important;
-        max-height: calc((100vh - 290px) / 3 - 0.8vh) !important;
-    }
-    
-    .social-card h2 {
-        font-size: clamp(0.9rem, 2.8vw, 1.5rem);
-        margin-bottom: 0.8vh;
-    }
-    
-    .social-link {
-        padding: clamp(6px, 1.5vh, 10px) clamp(10px, 3vw, 16px);
-        font-size: clamp(0.7rem, 2.2vw, 0.9rem);
+    /* Навигация поверх */
+    .main-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2000;
+        background: rgba(0, 0, 0, 0.95);
+        backdrop-filter: blur(10px);
     }
 }
 
 @media (max-width: 380px) {
     .content.contacts-page-content {
-        padding: 230px 1% 0.5vh 1%;
-        min-height: calc(100vh - 230.5px);
-        height: 100vh;
+        padding: 160px 1% 30px 1% !important;
+        min-height: 100vh;
+        height: auto;
     }
     
-    .contacts-container {
-        height: calc(100vh - 230.5px);
-    }
-    
+    /* Скрываем заголовок */
     .contacts-container h1 {
-        font-size: clamp(0.9rem, 3vw, 1.4rem);
-        margin-bottom: 0.6vh;
+        display: none !important;
     }
     
-    .social-links-grid {
-        gap: 0.6vh;
-        height: calc(100vh - 270px);
+    .vhs-socials {
+        margin: 0 !important;
+        gap: 1rem !important;
     }
     
-    .social-card {
-        max-width: min(240px, 98vw);
-        height: calc((100vh - 270px) / 3 - 0.6vh);
-        min-height: calc((100vh - 270px) / 3 - 0.6vh) !important;
-        max-height: calc((100vh - 270px) / 3 - 0.6vh) !important;
-        padding: 1.5vh 2.5vw !important;
+    .vhs-card {
+        max-width: min(240px, 98vw) !important;
+        min-height: 160px !important;
+        padding: 1rem 2.5vw !important;
         border-radius: 12px;
     }
-    
-    .social-card:hover {
-        height: calc((100vh - 270px) / 3 - 0.6vh) !important;
-        min-height: calc((100vh - 270px) / 3 - 0.6vh) !important;
-        max-height: calc((100vh - 270px) / 3 - 0.6vh) !important;
+} 
+
+/* Скрываем заголовок "КОНТАКТЫ" на всех разрешениях ≤1024px */
+@media (max-width: 1024px) {
+    .contacts-section h1,
+    .contacts-container h1 {
+        display: none !important;
     }
     
-    .social-card h2 {
-        font-size: clamp(0.8rem, 2.5vw, 1.3rem);
-        margin-bottom: 0.6vh;
+    .vhs-socials {
+        margin: 0 !important;
     }
     
-    .social-link {
-        padding: clamp(4px, 1vh, 8px) clamp(8px, 2.5vw, 12px);
-        font-size: clamp(0.6rem, 2vw, 0.8rem);
+    .content.contacts-page-content {
+        padding-top: 120px !important;
+    }
+}
+
+/* Промежуточная адаптация для 901-1024px */
+@media (min-width: 901px) and (max-width: 1024px) {
+    .content.contacts-page-content {
+        padding: 120px 3% 40px 3% !important;
+    }
+    
+    .vhs-socials {
+        margin: 0 !important;
+    }
+}
+
+/* Промежуточная адаптация для 769-900px */
+@media (min-width: 769px) and (max-width: 900px) {
+    body, html {
+        overflow-y: auto !important; /* Разрешаем вертикальный скролл */
+    }
+    
+    .content.contacts-page-content {
+        padding: 100px 3% 40px 3%; /* Уменьшаем отступ сверху */
+        min-height: 100vh;
+        height: auto; /* Позволяем контенту определять высоту */
+    }
+    
+    /* Скрываем заголовок "КОНТАКТЫ" */
+    .contacts-section h1 {
+        display: none !important;
+    }
+    
+    /* Переопределяем стили .vhs-socials из main.css */
+    .vhs-socials {
+        display: flex;
+        flex-direction: row !important; /* Горизонтальное размещение */
+        flex-wrap: wrap !important; /* С переносом строк */
+        align-items: flex-start !important;
+        justify-content: center !important;
+        gap: 1.5rem !important;
+        margin: 0 !important; /* Убираем весь отступ сверху */
+        width: 100%;
+    }
+    
+    .vhs-card {
+        width: calc(50% - 0.75rem) !important; /* 2 карточки в ряд */
+        max-width: 350px !important;
+        min-height: 280px !important;
+        height: auto !important;
+        flex: none !important; /* Отключаем flex-grow */
+    }
+    
+    /* Делаем навигацию зафиксированной поверх контента */
+    .main-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2000;
+        background: rgba(0, 0, 0, 0.95);
+        backdrop-filter: blur(10px);
     }
 } 

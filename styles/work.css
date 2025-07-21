@@ -1,0 +1,349 @@
+/* Страница Сотрудничество — стили, перенесённые из main.css (версия 2025-07-20) */
+
+/* --- BEGIN page-work overrides (from main.css) --- */
+.page-work .work-filter{
+    padding-bottom:0.5rem; /* минимально, только чтобы не прижималось */
+    background: rgba(0,0,0,0.9); /* без длинного градиента */
+}
+
+.page-work .filter-buttons{
+    gap:2rem; /* компактнее */
+    flex-wrap:wrap;
+    justify-content:center;
+}
+
+.page-work .producer-switch{
+    margin:0 1rem 0 0;
+}
+
+/* page-work sticky reflow */
+.page-work{
+  --glowPad: 160px; /* высота меню + свечение, подбирается один раз */
+}
+
+.page-work .work-filter{
+  position: sticky;
+  top: var(--glowPad);
+  background: rgba(0,0,0,0.9);
+  padding: 0.5rem 5% 0.5rem; /* вернули компактную высоту */
+  z-index: 90;
+}
+
+.page-work .filter-buttons{
+  gap:2rem;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+.page-work .producer-switch{margin:0 1rem 0 0;}
+
+.page-work .work-section{
+  margin-top:0;
+  height:auto;
+  padding-top:0;
+}
+
+.page-work .work-filter{
+  position: sticky;
+  top: var(--glowPad);
+  background: rgba(0,0,0,0.9);
+  padding: 1.5rem 5% 0.5rem; /* добавили 1.5rem сверху */
+  z-index: 90;
+}
+
+.page-work .filter-buttons{
+  margin-top:1.5rem;    /* опускаем чекбоксы визуально */
+  margin-bottom:-1.5rem; /* не увеличиваем высоту блока */
+}
+
+/* --- page-work sticky layout --- */
+.page-work {
+  /* desktop glow height; mobile переопределяется ниже */
+  --glowPad: 180px;
+}
+
+.page-work .work-filter {
+  position: sticky;
+  top: var(--glowPad);
+  background: rgba(0, 0, 0, 0.9);
+  /* создаём визуальный зазор между навигацией и чекбоксами */
+  padding: 1rem 5% 0.5rem;
+  z-index: 90;
+}
+
+.page-work .filter-buttons {
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  /* убрали margin-хак, высота блока = real */
+}
+
+.page-work .producer-switch {
+  margin: 0 1rem 0 0;
+}
+
+@media (max-width: 768px) {
+  .page-work {
+    --glowPad: 260px; /* высота мобильного меню + свечение */
+  }
+}
+
+/* CLEAN overrides */
+
+.page-work .work-filter, .page-work .filter-buttons, .page-work .producer-switch, .page-work .work-section { /* remove invalid duplicates */ }
+
+.page-work {
+  --glowPad: 200px;
+}
+
+.page-work .work-filter {
+  position: sticky;
+  top: var(--glowPad);
+  background: rgba(0,0,0,0.9);
+  padding: 1rem 5% 0.5rem;
+  z-index: 90;
+}
+
+.page-work .filter-buttons {
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.page-work .producer-switch { margin: 0 1rem 0 0; }
+
+.page-work .work-section { margin-top: 0 !important; padding-top: 0 !important; }
+
+@media (max-width:768px){
+  .page-work { --glowPad: 260px; }
+}
+
+/* === clean overrides for page-work === */
+.page-work .work-filter {
+  position: sticky;
+  top: 200px;            /* desktop: меню + свечение */
+  background: rgba(0,0,0,0.9);
+  padding: 1rem 5% 0.5rem; /* 1rem зазор сверху */
+  z-index: 90;
+}
+
+@media (max-width: 768px) {
+  .page-work .work-filter { top: 260px; } /* mobile */
+}
+
+.page-work .filter-buttons {
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.page-work .producer-switch { margin: 0 1rem 0 0; }
+
+.page-work .work-section {
+  margin-top: 0 !important;
+  padding-top: 72px !important; /* увеличенный отступ под фильтр */
+  height: calc(100vh - var(--navH-desktop) - 72px);
+  overflow-y: auto;
+}
+
+.page-work .filter-buttons{
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.page-work .work-section {
+  margin-top: 260px !important;      /* пространство под фильтр */
+  height: calc(100vh - 260px);       /* скроллим только список битов */
+  overflow-y: auto;
+}
+
+/* === FINAL—compact layout for page-work (filters under nav, beats right below) === */
+.page-work{
+  /* Approximate nav+glow heights, tweak if needed */
+  --navH-desktop: 110px;   /* width >768px */
+  --navH-mobile: 340px;    /* stacked menu on small screens */
+}
+
+/* sticky filter sits right under navigation */
+.page-work .work-filter{
+  position: sticky;
+  top: var(--navH-desktop);
+  padding: 0.5rem 5%;
+  background: rgba(0,0,0,0.9);
+  z-index: 90;
+}
+
+@media (max-width: 768px){
+  .page-work .work-filter{ top: var(--navH-mobile); }
+}
+
+/* checkboxes compactly arranged */
+.page-work .filter-buttons{
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* beats list starts immediately, internal scroll preserved */
+.page-work .work-section{
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  height: calc(100vh - var(--navH-desktop) - 80px); /* 80 ≈ filter own height */
+  overflow-y: auto;
+}
+@media (max-width: 768px){
+  .page-work .work-section{
+    height: calc(100vh - var(--navH-mobile) - 80px);
+  }
+}
+
+/* === refine page-work layout: ensure beats below filter === */
+.page-work{
+  --filterH-desktop: 90px;  /* высота фильтра (desktop) */
+  --filterH-mobile: 120px;  /* высота фильтра (mobile) */
+}
+.page-work .work-filter{
+  /* разместить под навигацией */
+  margin-top: var(--navH-desktop);
+}
+@media (max-width:768px){
+  .page-work .work-filter{ margin-top: var(--navH-mobile); }
+}
+/* биты начинаются после фильтра */
+.page-work .work-section{
+  margin-top: var(--filterH-desktop) !important;
+  height: calc(100vh - var(--navH-desktop) - var(--filterH-desktop));
+}
+@media (max-width:768px){
+  .page-work .work-section{
+    margin-top: var(--filterH-mobile) !important;
+    height: calc(100vh - var(--navH-mobile) - var(--filterH-mobile));
+  }
+}
+
+.page-work .work-filter {
+  position: sticky;
+  top: var(--navH-desktop);
+  background: rgba(0,0,0,0.9);
+  padding: 0.7rem 5% 0.7rem; /* нормальный паддинг сверху и снизу */
+  margin-top: 0;
+  min-height: unset;
+  height: unset;
+  z-index: 90;
+  box-shadow: none;
+}
+
+.page-work .filter-buttons {
+  gap: 1.2rem;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.page-work .producer-switch {
+  margin: 0 0.5rem 0 0;
+  padding: 0.3rem 0.7rem;
+}
+
+.page-work .work-section {
+  margin-top: 0 !important;
+  padding-top: 56px !important; /* высота фильтра, чтобы не перекрывал */
+  height: auto;
+}
+
+/* --- ЧИСТЫЙ ФИНАЛЬНЫЙ ОВЕРРАЙД ДЛЯ СТРАНИЦЫ СОТРУДНИЧЕСТВА --- */
+.page-work {
+  --navH-desktop: 110px;
+  --filterH-desktop: 90px;
+}
+
+.page-work .work-filter {
+  position: sticky;
+  top: var(--navH-desktop);
+  background: rgba(0,0,0,0.9);
+  padding: 0.7rem 5% 0.7rem;
+  margin-top: 0;
+  min-height: unset;
+  height: unset;
+  z-index: 90;
+  box-shadow: none;
+}
+
+.page-work .work-section {
+  margin-top: var(--filterH-desktop) !important;
+  padding-top: 0 !important;
+  height: calc(100vh - var(--navH-desktop) - var(--filterH-desktop));
+  overflow-y: auto;
+}
+
+@media (max-width: 950px) {
+  .page-work {
+    --navH-mobile: 340px;
+    --filterH-mobile: 110px;
+  }
+  .page-work .work-filter {
+    position: sticky;
+    top: var(--navH-mobile);
+    left: 0;
+    right: 0;
+    width: 100vw;
+    padding: 0.7rem 2vw 0.7rem;
+    margin-top: 0;
+    z-index: 90;
+    background: rgba(0,0,0,0.97);
+    min-height: unset;
+    height: auto;
+    box-shadow: none;
+    overflow: visible;
+    visibility: visible;
+  }
+  .page-work .filter-buttons {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    background: none;
+  }
+  .page-work .producer-switch {
+    display: flex;
+    align-items: center;
+    min-width: 120px;
+    max-width: 220px;
+    margin: 0.3rem 0.3rem 0 0;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.95rem;
+    background: none;
+    color: #fff;
+    border: none;
+    box-sizing: border-box;
+  }
+  .page-work .filter-checkbox {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    margin-right: 0.5rem;
+    accent-color: #9fff00;
+    background: #222;
+    border-radius: 50%;
+    border: 2px solid #333;
+  }
+  .page-work .btn-indicator {
+    width: 22px;
+    height: 22px;
+    background: #111;
+    border-radius: 50%;
+    border: 2px solid #333;
+    margin-right: 0.5rem;
+  }
+}
+
+/* --- END page-work overrides --- */ 

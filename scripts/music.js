@@ -283,7 +283,21 @@ function playWebsiteTrack() {
         isPlaying,
         currentTime: audioPlayer.currentTime
     });
-    
+
+    // --- НОВОЕ: если трек уже загружен и просто стоит на паузе, продолжаем воспроизведение без перезагрузки
+    if (audioPlayer.paused && audioPlayer.src) {
+        audioPlayer.play().then(() => {
+            playBtn.textContent = '❚❚';
+            statusText.textContent = 'PLAYING';
+            updatePlayIndicator(true);
+            isPlaying = true;
+        }).catch(err => {
+            console.error('Ошибка возобновления воспроизведения:', err);
+        });
+        return; // Выходим, чтобы не выполнять лишние операции ниже
+    }
+    // --- КОНЕЦ НОВОГО БЛОКА
+
     if (audioPlayer.paused) {
         const track = playlist[currentTrackIndex];
         console.log('Текущий трек:', track);

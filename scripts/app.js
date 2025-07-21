@@ -283,3 +283,15 @@ if (homeSwitchBtn && tvStaticOverlay) {
     }, 1200);
   });
 } 
+
+// === Dynamic layout for work page (nav + filter) ===
+function adjustWorkLayout() {
+  /* CSS sticky + --glowPad теперь управляют макетом, JS больше не нужен */
+}
+
+// Мгновенный вызов – до события load
+adjustWorkLayout();
+
+window.addEventListener('DOMContentLoaded', adjustWorkLayout);
+window.addEventListener('load', adjustWorkLayout);
+window.addEventListener('resize', adjustWorkLayout); 

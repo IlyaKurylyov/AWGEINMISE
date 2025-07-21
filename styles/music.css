@@ -3,10 +3,12 @@
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    min-height: calc(100vh - 80px);
+    height: 100vh; /* Фиксированная высота экрана */
     background: linear-gradient(to bottom, #1a1a1a, #000);
     padding: 2rem;
-    padding-top: 100px;
+    padding-top: 135px; /* Поднят на 15px для видимости плеера */
+    overflow: hidden; /* Принудительно скрываем переполнение */
+    box-sizing: border-box; /* Включаем padding в общую высоту */
 }
 
 .music-grid {
@@ -567,6 +569,40 @@
 
     .control-buttons {
         gap: 0.3rem;
+    }
+}
+
+@media (max-width: 450px) {
+    /* Убираем горизонтальный скролл, заставляем плеер ужиматься без потери пропорций */
+    .music-content {
+        padding-left: 4vw;
+        padding-right: 4vw;
+        padding-top: 400px;    /* запас под навигацию */
+    }
+
+    .vhs-player {
+        max-width: 100%;        /* не шире экрана */
+        box-sizing: border-box; /* учитываем бордеры в ширине */
+    }
+
+    .vhs-screen {
+        min-height: 60vh;       /* вместо фиксированных px – динамика по высоте */
+    }
+
+    .vhs-display {
+        min-height: 45vh;       /* гибкая высота области отображения */
+    }
+
+    /* iframe-виджет Я.Музыки: поддерживаем 16:9 без фиксированной высоты */
+    .yandex-music-widget {
+        height: auto;
+        aspect-ratio: 16 / 9;
+    }
+
+    /* немного уменьшаем элементы управления для маленьких экранов */
+    .vhs-btn {
+        padding: 0.4rem 0.7rem;
+        font-size: 0.8rem;
     }
 }
 
