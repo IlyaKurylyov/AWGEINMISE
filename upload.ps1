@@ -1,6 +1,13 @@
-$ftpUrl = "ftp://31.31.197.45:21"
-$user = "u3157398"
-$pass = "v5Hz1CblGOBZSh85"
+# Read credentials from environment variables to avoid hardcoding secrets
+$ftpUrl = $env:FTP_URL
+$user = $env:FTP_USER
+$pass = $env:FTP_PASS
+
+if (-not $ftpUrl -or -not $user -or -not $pass) {
+    Write-Error "FTP credentials are not set. Please set FTP_URL, FTP_USER, FTP_PASS environment variables."
+    Write-Error "Example: setx FTP_URL \"ftp://host:21\"; setx FTP_USER \"username\"; setx FTP_PASS \"password\""
+    exit 1
+}
 
 $webclient = New-Object System.Net.WebClient
 $webclient.Credentials = New-Object System.Net.NetworkCredential($user, $pass)

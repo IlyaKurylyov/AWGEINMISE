@@ -1,6 +1,9 @@
-open 31.31.197.45
-u3157398
-6S8ee4LbmaBRXhJ9
+# Example FTP script. Do NOT commit real credentials.
+# Usage (Windows ftp.exe): ftp -s:ftp_commands.txt
+
+open YOUR_HOST
+YOUR_USER
+YOUR_PASSWORD
 passive
 binary
 mkdir www

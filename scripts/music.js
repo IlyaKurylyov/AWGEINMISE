@@ -224,29 +224,7 @@ const playIndicator = document.querySelector('.indicator[data-type="play"] .indi
 // Включаем индикатор питания при загрузке
 vhsIndicators.classList.add('active');
 
-function updateDisplay() {
-    if (!currentArtist) {
-        trackDisplay.innerHTML = `
-            <div class="no-selection-message">
-                ВСТАВЬТЕ КАССЕТУ
-                <div class="blink-cursor">_</div>
-            </div>
-        `;
-        return;
-    }
-
-    const artist = artistData[currentArtist];
-    const trackList = artist.tracks.map((track, index) => `
-        <div class="track-item ${index === currentTrackIndex ? 'active' : ''}">
-            ${index === currentTrackIndex ? '► ' : ''}${track}
-        </div>
-    `).join('');
-
-    trackDisplay.innerHTML = `
-        <div class="artist-name">${artist.name}</div>
-        <div class="track-list">${trackList}</div>
-    `;
-}
+// Удалено: старая версия updateDisplay() на базе неизвестного currentArtist
 
 // Добавляем функцию обновления статуса
 function updateStatus(text) {
@@ -750,12 +728,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Обработчик для кнопки stop
     stopBtn.addEventListener('click', () => {
-        if (!isWebsitePlayback) return;
-        audioPlayer.pause();
-        audioPlayer.currentTime = 0;
-        updatePlayIndicator(false);
-        isPlaying = false;
-        playBtn.textContent = '►';
+        stopTrack();
     });
 
     // Автоматическое переключение на следующий трек
@@ -900,15 +873,7 @@ function playCurrentTrack() {
     isPlaying = true;
 }
 
-// Остановка воспроизведения
-function stopTrack() {
-    audioPlayer.pause();
-    audioPlayer.currentTime = 0;
-    updatePlayIndicator(false);
-    playBtn.textContent = '►';
-    statusText.textContent = 'STOPPED';
-    trackDisplay.style.animation = 'none';
-}
+// Удалено: дублирующаяся версия stopTrack()
 
 // Обновление дисплея
 function updateDisplay() {
@@ -935,10 +900,7 @@ function formatTime(seconds) {
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
 }
 
-// Обработчики кнопок
-stopBtn.addEventListener('click', stopTrack);
-nextBtn.addEventListener('click', nextTrack);
-prevBtn.addEventListener('click', prevTrack);
+// Обработчики кнопок определены внутри DOMContentLoaded блока
 
 // Обновление прогресса воспроизведения
 audioPlayer.addEventListener('timeupdate', () => {
