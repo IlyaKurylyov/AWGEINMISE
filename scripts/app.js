@@ -73,6 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const tgLink = tgText ? `<a class="artist-link" href="${tgText}" target="_blank" rel="noopener"><img src="assets/icons/telegram.svg" alt="TG"/>TG</a>` : '';
           const links = (vkLink || tgLink) ? `<div class="artist-links">${vkLink}${tgLink}</div>` : '';
           // целевая фраза для сборки дождя → текста
+          const matrixText = (info?.dataset?.matrixText && info.dataset.matrixText.trim()) || '';
           const tgHandle = (() => {
             if (!tgText) return `@${artistName || 'inmise'}`;
             const t = tgText.trim();
@@ -81,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (m && m[1]) return `@${m[1]}`;
             try { const url = new URL(t); return `@${url.pathname.replace(/^\//,'')}`; } catch(_) { return t; }
           })();
-          const finalPhrase = `Группа TG - ${tgHandle}`;
+          const finalPhrase = matrixText || `Группа TG - ${tgHandle}`;
           // контейнеры под матричную анимацию
           details.innerHTML = `${links}<div class="artist-details__desc"><span class="matrix-typing" data-full="${finalPhrase.replace(/"/g, '&quot;')}"></span></div>`;
           const canvas = document.createElement('canvas');

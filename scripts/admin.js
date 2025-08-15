@@ -15,6 +15,7 @@
     pName: () => document.getElementById('p-name'),
     pDesc: () => document.getElementById('p-desc'),
     pImage: () => document.getElementById('p-image'),
+    pMatrix: () => document.getElementById('p-matrix'),
     pVK: () => document.getElementById('p-vk'),
     pTG: () => document.getElementById('p-tg'),
     pSave: () => document.getElementById('p-save'),
@@ -101,7 +102,7 @@
   async function loadProfile(uid) {
     const { data, error } = await supabase
       .from('artists')
-      .select('id,name,description,image_url,vk_url,tg_url')
+      .select('id,name,description,image_url,vk_url,tg_url,matrix_text')
       .eq('owner_user_id', uid)
       .single();
     if (error && error.code !== 'PGRST116') throw error; // not found is ok
@@ -120,6 +121,7 @@
           image_url: profile.image_url,
           vk_url: profile.vk_url,
           tg_url: profile.tg_url,
+          matrix_text: profile.matrix_text,
           updated_at: new Date().toISOString()
         })
         .eq('id', existing.id)
@@ -135,6 +137,7 @@
           image_url: profile.image_url,
           vk_url: profile.vk_url,
           tg_url: profile.tg_url,
+          matrix_text: profile.matrix_text,
           owner_user_id: uid
         })
         .select('id')
@@ -222,6 +225,7 @@
         els.pImage().value = profile.image_url || '';
         els.pVK().value = profile.vk_url || '';
         els.pTG().value = profile.tg_url || '';
+        if (els.pMatrix()) els.pMatrix().value = profile.matrix_text || '';
       }
     } catch (e) {
       console.warn('[admin] hydrateProfile:', e.message || e);
@@ -258,7 +262,8 @@
           description: els.pDesc().value.trim(),
           image_url: els.pImage().value.trim(),
           vk_url: els.pVK().value.trim(),
-          tg_url: els.pTG().value.trim()
+          tg_url: els.pTG().value.trim(),
+          matrix_text: (els.pMatrix()?.value || '').trim()
         };
         await upsertProfile(uid, profile);
         setStatus('Профиль сохранен');

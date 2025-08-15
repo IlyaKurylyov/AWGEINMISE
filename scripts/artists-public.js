@@ -21,7 +21,10 @@
     const vk = a.vk_url ? `<a class="artist-link" href="${a.vk_url}" target="_blank" rel="noopener"><img src="assets/icons/vk.svg" alt="VK"/>VK</a>` : '';
     const tg = a.tg_url ? `<a class="artist-link" href="${a.tg_url}" target="_blank" rel="noopener"><img src="assets/icons/telegram.svg" alt="TG"/>TG</a>` : '';
     const links = (vk || tg) ? `<div class="artist-links">${vk}${tg}</div>` : '';
-    const phrase = `Группа TG - ${extractTgHandle(a.tg_url, a.name)}`;
+    // matrix_text имеет приоритет, иначе формируем по TG
+    const phrase = (a.matrix_text && String(a.matrix_text).trim())
+      ? String(a.matrix_text).trim()
+      : `Группа TG - ${extractTgHandle(a.tg_url, a.name)}`;
     const safePhrase = phrase.replace(/"/g, '&quot;');
     return `
       <div class="artist-details">
