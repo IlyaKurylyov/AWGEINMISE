@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>INMISE — Admin</title>
+  <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="styles/work.css">
+  <link rel="stylesheet" href="styles/responsive.css">
+  <link rel="stylesheet" href="styles/desktop-protection.css">
+  <style>
+    .admin-wrap { max-width: 1100px; margin: 120px auto 60px; padding: 0 24px; }
+    .admin-card { background:#0b0b0b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:16px; margin-bottom:20px; }
+    .admin-grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+    .admin-grid .admin-card { margin:0; }
+    .admin-h { margin:0 0 8px; }
+    .admin-label { display:block; margin:10px 0 6px; color:rgba(255,255,255,0.8); }
+    .admin-input, .admin-textarea { width:100%; background:#111; border:1px solid rgba(255,255,255,0.2); color:#fff; padding:8px 10px; border-radius:8px; }
+    .admin-textarea { min-height: 120px; resize: vertical; }
+    .admin-row { display:flex; gap:10px; }
+    .admin-row > * { flex: 1; }
+    .admin-actions { display:flex; gap:10px; justify-content:flex-end; margin-top: 8px; }
+    .admin-btn { padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:#151515; color:#fff; cursor:pointer; }
+    .admin-btn.primary { background:#1f1f1f; }
+    .admin-header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px; }
+
+    /* Видимый логин в шапке админки */
+    .auth-panel { position:absolute; right:20px; top:50%; transform: translateY(-50%); display:flex; align-items:center; gap:10px; }
+    .auth-btn { background:#111; color:#fff; border:1px solid rgba(255,255,255,0.2); padding:8px 12px; border-radius:8px; cursor:pointer; text-decoration:none; }
+    .auth-btn:hover { background:#1a1a1a; }
+
+    /* Простая модалка для логина по паролю */
+    .auth-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:300; }
+    .auth-modal { background:#0b0b0b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:16px; width:min(420px,92vw); color:#fff; }
+    .auth-modal h3{margin:0 0 12px;}
+    .auth-modal label{display:block; margin:8px 0 6px; color:rgba(255,255,255,0.8)}
+    .auth-modal input{width:100%; background:#111; border:1px solid rgba(255,255,255,0.2); color:#fff; padding:8px 10px; border-radius:8px;}
+    .auth-modal .row{display:flex; gap:10px}
+    .auth-modal .actions{display:flex; gap:10px; justify-content:flex-end; margin-top:12px}
+    .auth-modal .actions .auth-btn{padding:8px 12px}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="scripts/config.js"></script>
+</head>
+<body class="page-work">
+  <div class="noise-overlay"></div>
+  <nav class="main-nav">
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">ГЛАВНАЯ</a>
+      <a href="artists.html" class="nav-link">АРТИСТЫ</a>
+      <a href="work.html" class="nav-link">СОТРУДНИЧЕСТВО</a>
+    </div>
+    <div class="auth-panel">
+      <button id="auth-login-btn" class="auth-btn">Войти</button>
+      <div id="auth-user" class="auth-user" style="display:none;"></div>
+      <button id="auth-logout-btn" class="auth-btn" style="display:none;">Выйти</button>
+    </div>
+  </nav>
+
+  <main class="content">
+    <div class="auth-modal-overlay" id="auth-modal" aria-hidden="true">
+      <div class="auth-modal" role="dialog" aria-modal="true">
+        <h3>Вход</h3>
+        <label>E-mail</label>
+        <input id="auth-email" type="email" placeholder="you@example.com" />
+        <label>Пароль</label>
+        <input id="auth-password" type="password" placeholder="••••••••" />
+        <div class="actions">
+          <button class="auth-btn" id="auth-cancel">Отмена</button>
+          <button class="auth-btn" id="auth-submit">Войти</button>
+        </div>
+      </div>
+    </div>
+    <div class="admin-wrap">
+      <div class="admin-header">
+        <h2 class="admin-h">Кабинет артиста</h2>
+        <div id="admin-status" style="opacity:0.8"></div>
+      </div>
+
+      <div class="admin-grid">
+        <section class="admin-card" id="profile-card">
+          <h3 class="admin-h">Моя карточка</h3>
+          <label class="admin-label">Имя</label>
+          <input id="p-name" class="admin-input" type="text" />
+          <label class="admin-label">Описание</label>
+          <textarea id="p-desc" class="admin-textarea"></textarea>
+          <div class="admin-row">
+            <div>
+              <label class="admin-label">Ссылка VK</label>
+              <input id="p-vk" class="admin-input" type="text" placeholder="https://vk.com/your_group" />
+            </div>
+            <div>
+              <label class="admin-label">Ссылка TG или @handle</label>
+              <input id="p-tg" class="admin-input" type="text" placeholder="https://t.me/handle или @handle" />
+            </div>
+          </div>
+          <div class="admin-row">
+            <div>
+              <label class="admin-label">URL изображения</label>
+              <input id="p-image" class="admin-input" type="text" placeholder="https://..." />
+            </div>
+          </div>
+          <div class="admin-actions">
+            <button id="p-save" class="admin-btn primary">Сохранить</button>
+          </div>
+        </section>
+
+        <section class="admin-card" id="beats-card">
+          <h3 class="admin-h">Мои биты</h3>
+          <div id="beats-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+          <hr style="border-color: rgba(255,255,255,0.08);"/>
+          <h4 class="admin-h">Добавить бит</h4>
+          <label class="admin-label">Название</label>
+          <input id="b-title" class="admin-input" type="text" />
+          <div class="admin-row">
+            <div>
+              <label class="admin-label">Цена</label>
+              <input id="b-price" class="admin-input" type="text" placeholder="2000₽" />
+            </div>
+            <div>
+              <label class="admin-label">Ссылка продавца</label>
+              <input id="b-seller-link" class="admin-input" type="text" placeholder="https://..." />
+            </div>
+          </div>
+          <div class="admin-row">
+            <div>
+              <label class="admin-label">Псевдоним продавца (напр. @DopeTheProduce)</label>
+              <input id="b-seller" class="admin-input" type="text" />
+            </div>
+            <div>
+              <label class="admin-label">URL аудио</label>
+              <input id="b-audio" class="admin-input" type="text" placeholder="https://...mp3" />
+            </div>
+          </div>
+          <div class="admin-actions">
+            <button id="b-add" class="admin-btn primary">Добавить</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="scripts/admin.js"></script>
+</body>
+</html>
+

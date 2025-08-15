@@ -325,7 +325,7 @@
     .page-work .work-filter,
     .work-filter {
         position: sticky !important;
-        top: 200px !important; /* Под мобильной навигацией */
+        top: 260px !important; /* Под мобильной навигацией, чтобы верхний тумблер не уходил под меню */
         padding: 10px 3% !important;
         background: rgba(0,0,0,0.98) !important;
         width: 100% !important;
@@ -415,7 +415,7 @@
     .page-work .producer-switch .filter-checkbox:checked ~ .producer-name{ color:#eaffc5 !important; text-shadow: 0 0 10px rgba(159,255,0,.35) !important; }
     
     /* Опускаем весь main-контент ниже sticky фильтра */
-    .page-work .content { padding-top: 220px !important; }
+    .page-work .content { padding-top: 300px !important; }
     .page-work .work-section { margin-top: 0 !important; padding-top: 0 !important; }
     
     .beats-grid {
