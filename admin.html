@@ -82,28 +82,15 @@
           <h3 class="admin-h">Моя карточка</h3>
           <label class="admin-label">Имя</label>
           <input id="p-name" class="admin-input" type="text" />
-          <label class="admin-label">Описание</label>
+          <label class="admin-label">Описание (текст, который «льется дождем»)</label>
           <textarea id="p-desc" class="admin-textarea"></textarea>
+          <label class="admin-label">Заменить фото</label>
           <div class="admin-row">
             <div>
-              <label class="admin-label">Ссылка VK</label>
-              <input id="p-vk" class="admin-input" type="text" placeholder="https://vk.com/your_group" />
+              <input id="p-image-file" class="admin-input" type="file" accept="image/*" />
             </div>
-            <div>
-              <label class="admin-label">Ссылка TG или @handle</label>
-              <input id="p-tg" class="admin-input" type="text" placeholder="https://t.me/handle или @handle" />
-            </div>
-          </div>
-          <div class="admin-row">
-            <div>
-              <label class="admin-label">URL изображения</label>
-              <input id="p-image" class="admin-input" type="text" placeholder="https://..." />
-            </div>
-          </div>
-          <div class="admin-row">
-            <div>
-              <label class="admin-label">Текст для Matrix (опционально)</label>
-              <input id="p-matrix" class="admin-input" type="text" placeholder="Группа TG - @handle" />
+            <div style="max-width:120px;">
+              <img id="p-image-preview" src="" alt="preview" style="width:100%;height:100%;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.1);display:none;"/>
             </div>
           </div>
           <div class="admin-actions">
@@ -118,28 +105,10 @@
           <h4 class="admin-h">Добавить бит</h4>
           <label class="admin-label">Название</label>
           <input id="b-title" class="admin-input" type="text" />
-          <div class="admin-row">
-            <div>
-              <label class="admin-label">Цена</label>
-              <input id="b-price" class="admin-input" type="text" placeholder="2000₽" />
-            </div>
-            <div>
-              <label class="admin-label">Ссылка продавца</label>
-              <input id="b-seller-link" class="admin-input" type="text" placeholder="https://..." />
-            </div>
-          </div>
-          <div class="admin-row">
-            <div>
-              <label class="admin-label">Псевдоним продавца (напр. @DopeTheProduce)</label>
-              <input id="b-seller" class="admin-input" type="text" />
-            </div>
-            <div>
-              <label class="admin-label">URL аудио</label>
-              <input id="b-audio" class="admin-input" type="text" placeholder="https://...mp3" />
-            </div>
-          </div>
+          <label class="admin-label">Файл аудио (mp3/wav)</label>
+          <input id="b-file" class="admin-input" type="file" accept="audio/*" />
           <div class="admin-actions">
-            <button id="b-add" class="admin-btn primary">Добавить</button>
+            <button id="b-add" class="admin-btn primary">Загрузить</button>
           </div>
         </section>
       </div>

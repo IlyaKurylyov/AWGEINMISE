@@ -311,39 +311,30 @@ function playWebsiteTrack() {
                 display.style.animation = 'none';
             }, 200);
             
-            // Проверяем доступность файла перед воспроизведением
-            fetch(track.file)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Ошибка загрузки файла: ${response.status}`);
+            // Потоковое воспроизведение без промежуточного blob
+            new Promise((resolve, reject) => {
+                const handleLoadedMetadata = () => {
+                    audioPlayer.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                    audioPlayer.removeEventListener('error', handleError);
+                    const totalTimeEl = display.querySelector('.time-total');
+                    if (totalTimeEl) {
+                        totalTimeEl.textContent = formatTime(audioPlayer.duration);
                     }
-                    return response.blob();
-                })
-                .then(blob => {
-                    return new Promise((resolve, reject) => {
-                        const handleLoadedMetadata = () => {
-                            audioPlayer.removeEventListener('loadedmetadata', handleLoadedMetadata);
-                            audioPlayer.removeEventListener('error', handleError);
-                            const totalTimeEl = display.querySelector('.time-total');
-                            if (totalTimeEl) {
-                                totalTimeEl.textContent = formatTime(audioPlayer.duration);
-                            }
-                            resolve();
-                        };
-                        
-                        const handleError = (error) => {
-                            audioPlayer.removeEventListener('loadedmetadata', handleLoadedMetadata);
-                            audioPlayer.removeEventListener('error', handleError);
-                            reject(error);
-                        };
-                        
-                        audioPlayer.addEventListener('loadedmetadata', handleLoadedMetadata);
-                        audioPlayer.addEventListener('error', handleError);
-                        
-                        currentBlobUrl = URL.createObjectURL(blob);
-                        audioPlayer.src = currentBlobUrl;
-                    });
-                })
+                    resolve();
+                };
+
+                const handleError = (error) => {
+                    audioPlayer.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                    audioPlayer.removeEventListener('error', handleError);
+                    reject(error);
+                };
+
+                audioPlayer.addEventListener('loadedmetadata', handleLoadedMetadata);
+                audioPlayer.addEventListener('error', handleError);
+                audioPlayer.preload = 'auto';
+                audioPlayer.src = track.file;
+                audioPlayer.load();
+            })
                 .then(() => audioPlayer.play())
                 .then(() => {
                     playBtn.textContent = '❚❚';

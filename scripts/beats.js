@@ -1,3 +1,8 @@
+(function(){
+// Если Supabase сконфигурирован и есть динамическая загрузка, не рендерим статический список
+const hasSupabaseConfig = typeof window !== 'undefined' && window.supabase && typeof window.SUPABASE_URL === 'string' && window.SUPABASE_URL && typeof window.SUPABASE_ANON_KEY === 'string' && window.SUPABASE_ANON_KEY;
+if (hasSupabaseConfig) return; // динамический рендер возьмёт на себя
+
 const beats = [
     {
         title: 'Vetreno (134 bpm, F♯m)',
@@ -36,26 +41,26 @@ const beats = [
     },
     {
         title: 'Olivera (141 Fmin)',
-        seller: '@prod.shibvri',
+        seller: '@SHIBVRI',
         price: '2000₽',
         audio: '@prod.shibvri - Olivera (141 Fmin).mp3',
         link: '#'
     },
     {
         title: 'Out the head (142bpm Amin)',
-        seller: '@prod.shibvri',
+        seller: '@SHIBVRI',
         price: '2000₽',
         audio: '@prod.shibvri - Out the head (142bpm Amin).mp3'
     },
     {
         title: 'Yokai (142bpm Dmin)',
-        seller: '@prod.shibvri',
+        seller: '@SHIBVRI',
         price: '2000₽',
         audio: '@prod.shibvri - Yokai (142bpm Dmin).mp3'
     },
     {
         title: '2XL (110bpm F)',
-        seller: '@prod.shibvri',
+        seller: '@SHIBVRI',
         price: '2000₽',
         audio: '@prod.shibvri - 2XL (110bpm F).mp3'
     },
@@ -121,7 +126,7 @@ function renderBeats(selectedSellers) {
                     <div class="beat-seller">Продавец: ${beat.seller}</div>
                     <div class="beat-price">${beat.price}</div>
                 </div>
-                <audio class="beat-audio" controls controlslist="nodownload" src="${audioPath}"></audio>
+                <audio class="beat-audio" controls controlslist="nodownload" preload="none" src="${audioPath}"></audio>
                 <a class="beat-buy" href="${sellerLinks[beat.seller] || '#'}" target="_blank">Купить</a>
             </div>
         `;
@@ -145,3 +150,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // Изначально показываем все биты
     renderBeats([]);
 }); 
+})();
