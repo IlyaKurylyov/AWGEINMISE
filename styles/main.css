@@ -2209,6 +2209,13 @@ body::after {
   overflow-y: auto;
 }
 
+/* Lock outer scroll on Cooperation page: scroll only the list */
+.page-work { overflow: hidden; }
+.page-work .content { height: 100vh; overflow: hidden; }
+@media (max-width: 950px) {
+  .page-work .work-section { height: calc(100vh - var(--navH-mobile) - var(--filterH-mobile)); }
+}
+
 /* Удаляю все дублирующие и конфликтующие правила ниже */
 /* === УДАЛЕНО: .page-work .work-section ... === */
 /* === УДАЛЕНО: .page-work .work-filter ... === */

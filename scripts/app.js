@@ -168,6 +168,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // (удалён лишний глобальный делегат, чтобы не было двойного клика)
+  // Кликабельность всей плашки контактов: делегирование
+  const contactsGrid = document.querySelector('.vhs-socials');
+  if (contactsGrid) {
+    contactsGrid.addEventListener('click', (e) => {
+      const card = e.target.closest('.vhs-card');
+      if (!card || !contactsGrid.contains(card)) return;
+      const btn = card.querySelector('.vhs-btn[href]');
+      if (btn && btn.href) {
+        window.open(btn.href, '_blank', 'noopener');
+      }
+    });
+  }
 });
 
 // Эффект наведения на навигацию

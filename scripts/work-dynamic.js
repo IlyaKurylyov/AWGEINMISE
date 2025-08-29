@@ -11,7 +11,7 @@
     try {
       const { data, error } = await supabase
         .from('beats')
-        .select('id,title,bpm,key,price,seller, audio_url, seller_link')
+        .select('id,title,price,seller,audio_url,seller_link')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return Array.isArray(data) ? data : [];
@@ -19,6 +19,13 @@
       console.warn('[work-dynamic] Ошибка загрузки из БД:', e.message || e);
       return [];
     }
+  }
+
+  function normalizeSeller(label) {
+    if (!label) return label;
+    const v = String(label).trim();
+    if (v.toLowerCase() === '@prod.shibvri') return '@SHIBVRI';
+    return v;
   }
 
   function renderBeatsDynamic(records) {
@@ -32,7 +39,7 @@
       card.className = 'beat-card';
       const sellerLink = r.seller_link || '#';
       const title = r.title || '';
-      const seller = r.seller || '';
+      const seller = normalizeSeller(r.seller || '');
       const price = r.price || '';
       const audio = r.audio_url || '';
 
@@ -42,7 +49,7 @@
           <div class="beat-seller">Продавец: ${seller}</div>
           <div class="beat-price">${price}</div>
         </div>
-        <audio class="beat-audio" controls controlslist="nodownload" src="${audio}"></audio>
+        <audio class="beat-audio" controls controlslist="nodownload" preload="metadata" crossorigin="anonymous" src="${audio}"></audio>
         <a class="beat-buy" href="${sellerLink}" target="_blank">Купить</a>
       `;
       grid.appendChild(card);

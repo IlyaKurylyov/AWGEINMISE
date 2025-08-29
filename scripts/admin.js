@@ -14,17 +14,12 @@
     userBox: () => document.getElementById('auth-user'),
     pName: () => document.getElementById('p-name'),
     pDesc: () => document.getElementById('p-desc'),
-    pImage: () => document.getElementById('p-image'),
-    pMatrix: () => document.getElementById('p-matrix'),
-    pVK: () => document.getElementById('p-vk'),
-    pTG: () => document.getElementById('p-tg'),
+    pImageFile: () => document.getElementById('p-image-file'),
+    pImagePreview: () => document.getElementById('p-image-preview'),
     pSave: () => document.getElementById('p-save'),
     beatsList: () => document.getElementById('beats-list'),
     bTitle: () => document.getElementById('b-title'),
-    bPrice: () => document.getElementById('b-price'),
-    bSellerLink: () => document.getElementById('b-seller-link'),
-    bSeller: () => document.getElementById('b-seller'),
-    bAudio: () => document.getElementById('b-audio'),
+    bFile: () => document.getElementById('b-file'),
     bAdd: () => document.getElementById('b-add'),
   };
 
@@ -93,7 +88,7 @@
   function clearForms() {
     els.pName().value = '';
     els.pDesc().value = '';
-    els.pImage().value = '';
+    const prev = els.pImagePreview(); if (prev) { prev.src = ''; prev.style.display = 'none'; }
     const nameInput = els.pName();
     if (nameInput) nameInput.disabled = false;
     els.beatsList().innerHTML = '';
@@ -102,7 +97,7 @@
   async function loadProfile(uid) {
     const { data, error } = await supabase
       .from('artists')
-      .select('id,name,description,image_url,vk_url,tg_url,matrix_text')
+      .select('id,name,description,image_url')
       .eq('owner_user_id', uid)
       .single();
     if (error && error.code !== 'PGRST116') throw error; // not found is ok
@@ -119,9 +114,6 @@
           name: profile.name,
           description: profile.description,
           image_url: profile.image_url,
-          vk_url: profile.vk_url,
-          tg_url: profile.tg_url,
-          matrix_text: profile.matrix_text,
           updated_at: new Date().toISOString()
         })
         .eq('id', existing.id)
@@ -135,9 +127,6 @@
           name: profile.name,
           description: profile.description,
           image_url: profile.image_url,
-          vk_url: profile.vk_url,
-          tg_url: profile.tg_url,
-          matrix_text: profile.matrix_text,
           owner_user_id: uid
         })
         .select('id')
@@ -150,7 +139,7 @@
   async function loadBeats(uid) {
     const { data, error } = await supabase
       .from('beats')
-      .select('id,title,price,seller_link,seller,audio_url')
+      .select('id,title,audio_url,seller')
       .eq('owner_user_id', uid)
       .order('created_at', { ascending: false });
     if (error) throw error;
@@ -162,22 +151,36 @@
       .from('beats')
       .insert({
         title: beat.title,
-        price: beat.price,
-        seller_link: beat.seller_link,
-        seller: beat.seller,
         audio_url: beat.audio_url,
+        seller: beat.seller,
         owner_user_id: uid
       });
     if (error) throw error;
   }
 
-  async function deleteBeat(uid, beatId) {
+  function extractStoragePathFromPublicUrl(publicUrl, bucket) {
+    try {
+      const marker = `/object/public/${bucket}/`;
+      const idx = publicUrl.indexOf(marker);
+      if (idx === -1) return '';
+      return publicUrl.substring(idx + marker.length);
+    } catch(_) { return ''; }
+  }
+
+  async function deleteBeat(uid, beatId, audioUrl) {
     const { error } = await supabase
       .from('beats')
       .delete()
       .eq('id', beatId)
       .eq('owner_user_id', uid);
     if (error) throw error;
+    // Пытаемся удалить файл из стораджа (best-effort)
+    if (audioUrl) {
+      const path = extractStoragePathFromPublicUrl(audioUrl, 'beats');
+      if (path) {
+        try { await supabase.storage.from('beats').remove([path]); } catch(_) {}
+      }
+    }
   }
 
   function renderBeatsList(beats, uid) {
@@ -187,22 +190,24 @@
       const row = document.createElement('div');
       row.className = 'admin-card';
       row.innerHTML = `
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-          <div>
-            <div style="font-weight:600;">${b.title}</div>
-            <div style="opacity:0.8;">${b.price || ''} · ${b.seller || ''}</div>
-            <div style="opacity:0.7; font-size:12px;">${b.audio_url || ''}</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <div>
+              <div style="font-weight:600;">${b.title}</div>
+              <div style="opacity:0.7; font-size:12px; word-break:break-all;">${b.audio_url || ''}</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <a class="admin-btn" href="${b.audio_url || '#'}" target="_blank">Открыть</a>
+              <button class="admin-btn" data-id="${b.id}">Удалить</button>
+            </div>
           </div>
-          <div style="display:flex; gap:8px;">
-            <a class="admin-btn" href="${b.seller_link || '#'}" target="_blank">Открыть</a>
-            <button class="admin-btn" data-id="${b.id}">Удалить</button>
-          </div>
+          <audio controls controlslist="nodownload" preload="metadata" src="${b.audio_url || ''}" style="width:100%"></audio>
         </div>
       `;
       row.querySelector('button.admin-btn[data-id]')?.addEventListener('click', async () => {
         if (!confirm('Удалить бит?')) return;
         try {
-          await deleteBeat(uid, b.id);
+          await deleteBeat(uid, b.id, b.audio_url);
           await hydrateBeats(uid);
         } catch (e) {
           alert('Ошибка удаления: ' + (e.message || e));
@@ -217,15 +222,14 @@
       const profile = await loadProfile(uid);
       if (profile) {
         els.pName().value = profile.name || '';
-        // Имя делает привязку статической карточки → запрещаем менять в UI,
-        // чтобы не рождать дубликаты до полной миграции на динамический грид
-        els.pName().disabled = true;
-        window.__ARTIST_CANONICAL_NAME__ = profile.name || '';
         els.pDesc().value = profile.description || '';
-        els.pImage().value = profile.image_url || '';
-        els.pVK().value = profile.vk_url || '';
-        els.pTG().value = profile.tg_url || '';
-        if (els.pMatrix()) els.pMatrix().value = profile.matrix_text || '';
+        window.__PROFILE_IMAGE_URL__ = profile.image_url || '';
+        const prev = els.pImagePreview();
+        if (prev && window.__PROFILE_IMAGE_URL__) {
+          prev.src = window.__PROFILE_IMAGE_URL__;
+          prev.style.display = '';
+        }
+        window.__ARTIST_CANONICAL_NAME__ = profile.name || els.pName().value || '';
       }
     } catch (e) {
       console.warn('[admin] hydrateProfile:', e.message || e);
@@ -248,6 +252,18 @@
     await Promise.all([hydrateProfile(uid), hydrateBeats(uid)]);
   }
 
+  async function uploadArtistImageIfAny(uid) {
+    const fileInput = els.pImageFile();
+    const file = fileInput?.files && fileInput.files[0];
+    if (!file) return window.__PROFILE_IMAGE_URL__ || '';
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${uid}/avatar-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from('artists').upload(path, file, { upsert: true, contentType: file.type });
+    if (upErr) throw upErr;
+    const { data } = supabase.storage.from('artists').getPublicUrl(path);
+    return data.publicUrl || '';
+  }
+
   function bindProfileSave() {
     els.pSave().addEventListener('click', async () => {
       const { data: sess } = await supabase.auth.getSession();
@@ -257,13 +273,11 @@
         const canonicalName = typeof window.__ARTIST_CANONICAL_NAME__ === 'string' && window.__ARTIST_CANONICAL_NAME__
           ? window.__ARTIST_CANONICAL_NAME__
           : (els.pName().value || '').trim();
+        const imageUrl = await uploadArtistImageIfAny(uid);
         const profile = {
           name: canonicalName,
           description: els.pDesc().value.trim(),
-          image_url: els.pImage().value.trim(),
-          vk_url: els.pVK().value.trim(),
-          tg_url: els.pTG().value.trim(),
-          matrix_text: (els.pMatrix()?.value || '').trim()
+          image_url: imageUrl
         };
         await upsertProfile(uid, profile);
         setStatus('Профиль сохранен');
@@ -273,26 +287,31 @@
     });
   }
 
+  async function uploadBeatFile(uid, title) {
+    const f = els.bFile()?.files?.[0];
+    if (!f) throw new Error('Не выбран файл');
+    const safeTitle = (title || 'beat').replace(/[^a-z0-9-_]+/gi, '_');
+    const ext = (f.name.split('.').pop() || 'mp3').toLowerCase();
+    const path = `${uid}/${Date.now()}_${safeTitle}.${ext}`;
+    const { error: upErr } = await supabase.storage.from('beats').upload(path, f, { upsert: true, contentType: f.type });
+    if (upErr) throw upErr;
+    const { data } = supabase.storage.from('beats').getPublicUrl(path);
+    return data.publicUrl || '';
+  }
+
   function bindBeatAdd() {
     els.bAdd().addEventListener('click', async () => {
       const { data: sess } = await supabase.auth.getSession();
       const uid = sess?.session?.user?.id;
       if (!uid) return alert('Нет сессии');
       try {
-        const beat = {
-          title: els.bTitle().value.trim(),
-          price: els.bPrice().value.trim(),
-          seller_link: els.bSellerLink().value.trim(),
-          seller: els.bSeller().value.trim(),
-          audio_url: els.bAudio().value.trim()
-        };
-        if (!beat.title || !beat.audio_url) return alert('Нужно минимум название и URL аудио');
-        await insertBeat(uid, beat);
+        const title = els.bTitle().value.trim();
+        if (!title) return alert('Нужно название бита');
+        const audioUrl = await uploadBeatFile(uid, title);
+        const seller = (window.__ARTIST_CANONICAL_NAME__ || els.pName().value || '').trim();
+        await insertBeat(uid, { title, audio_url: audioUrl, seller });
         els.bTitle().value = '';
-        els.bPrice().value = '';
-        els.bSellerLink().value = '';
-        els.bSeller().value = '';
-        els.bAudio().value = '';
+        const bf = els.bFile(); if (bf) bf.value = '';
         await hydrateBeats(uid);
         setStatus('Бит добавлен');
       } catch (e) {
@@ -305,6 +324,19 @@
     bindAuthUI();
     bindProfileSave();
     bindBeatAdd();
+
+    // Превью аватарки при выборе файла
+    const fileInput = els.pImageFile();
+    const preview = els.pImagePreview();
+    if (fileInput && preview) {
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (file) {
+          const url = URL.createObjectURL(file);
+          preview.src = url; preview.style.display = '';
+        }
+      });
+    }
   });
 })();
 

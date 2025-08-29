@@ -5,9 +5,16 @@
   "scripts": {
     "dev": "vite --port 3000",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "import:beats": "node tools/import-beats.js"
   },
   "devDependencies": {
     "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5",
+    "fast-glob": "^3.3.2",
+    "mime": "^3.0.0"
   }
 } 
