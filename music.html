@@ -20,25 +20,26 @@
       <feTurbulence id="turb" type="turbulence" baseFrequency="0.02 0.08" numOctaves="2" result="turb" seed="2"/>
       <feDisplacementMap in2="turb" in="SourceGraphic" scale="18" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
+    <filter id="rew-worn-inset" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="0.7" result="blur"/>
+      <feOffset dx="0" dy="0.6" result="offsetBlur"/>
+      <feComposite in="offsetBlur" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="innerShadow"/>
+      <feColorMatrix in="innerShadow" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0" result="shadow"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="2" seed="3" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -0.88 0" result="grainAlpha"/>
+      <feComposite in="grainAlpha" in2="SourceAlpha" operator="in" result="grainMasked"/>
+      <feMerge>
+        <feMergeNode in="SourceGraphic"/>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="grainMasked"/>
+      </feMerge>
+    </filter>
   </svg>
     <a id="home-switch-btn" class="home-switch-btn" title="На главный экран">
-      <svg width="80" height="100" viewBox="0 0 80 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Основной корпус кнопки -->
-        <rect x="22" y="2" width="56" height="96" rx="6" fill="#222" stroke="#444" stroke-width="3"/>
-        <!-- Углубление для рычага -->
-        <rect x="27" y="10" width="46" height="80" rx="4" fill="#181818" stroke="#111" stroke-width="2"/>
-        <!-- Индикаторы -->
-        <circle class="indicator-on" cx="12" cy="35" r="4" fill="#3fff3c" filter="drop-shadow(0 0 2px #3fff3c)"/>
-        <circle class="indicator-off" cx="12" cy="65" r="4" fill="#ff3b3b" filter="drop-shadow(0 0 2px #ff3b3b)"/>
-        <!-- Группа рычага -->
-        <g class="switch-lever-group">
-          <rect class="switch-lever" x="27" y="10" width="46" height="40" rx="4" fill="#333" stroke="#222" stroke-width="2"/>
-          <!-- Блики на рычаге -->
-          <rect x="29" y="12" width="42" height="2" rx="1" fill="#444" opacity="0.5"/>
-          <rect x="29" y="46" width="42" height="2" rx="1" fill="#222" opacity="0.5" class="switch-lever"/>
-          <!-- Текст -->
-          <text x="50" y="32" text-anchor="middle" font-size="22" font-family="Arial" fill="#fff" font-weight="bold">I</text>
-          <text x="50" y="82" text-anchor="middle" font-size="22" font-family="Arial" fill="#fff" font-weight="bold">O</text>
+      <svg width="120" height="56" viewBox="0 0 120 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g class="rew-arrows" fill="#fff">
+          <polygon points="36,18 22,28 36,38"/>
+          <polygon points="54,18 40,28 54,38"/>
         </g>
       </svg>
     </a>

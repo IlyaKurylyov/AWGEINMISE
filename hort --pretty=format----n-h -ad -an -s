@@ -1,0 +1,73 @@
+---
+c5f622e 2025-08-29 IlyaKurylyov chore: подготовка ветки 29082025
+M	admin.html
+R100	assets/beats/@DopeTheProduce - Mi Vida (128 bpm, Bbm).mp3	assets/beats/@DopeTheProducer - Mi Vida (128 bpm, Bbm).mp3
+R100	assets/beats/@DopeTheProduce - So sad (85bpm, Gm).mp3	assets/beats/@DopeTheProducer - So sad (85bpm, Gm).mp3
+R100	"assets/beats/@DopeTheProduce - Vetreno (134 bpm, F\342\231\257m).mp3"	"assets/beats/@DopeTheProducer - Vetreno (134 bpm, F\342\231\257m).mp3"
+R100	"assets/beats/@DopeTheProduce - long night (115 bpm, G\342\231\257m).mp3"	"assets/beats/@DopeTheProducer - long night (115 bpm, G\342\231\257m).mp3"
+R100	"assets/beats/@DopeTheProduce - rBilly [115bpm, D\342\231\257m].mp3"	"assets/beats/@DopeTheProducer - rBilly [115bpm, D\342\231\257m].mp3"
+R100	assets/beats/@prod.shibvri -  Yokai (142bpm Dmin).mp3	assets/beats/@SHIBVRI -  Yokai (142bpm Dmin).mp3
+R100	assets/beats/@prod.shibvri - Olivera (141 Fmin).mp3	assets/beats/@SHIBVRI - Olivera (141 Fmin).mp3
+R100	assets/beats/@prod.shibvri - Out the head (142bpm Amin).mp3	assets/beats/@SHIBVRI - Out the head (142bpm Amin).mp3
+R100	assets/beats/@prod.shibvri- 2XL (110bpm F).mp3	assets/beats/@SHIBVRI- 2XL (110bpm F).mp3
+M	contacts.html
+M	music.html
+M	package.json
+M	scripts/admin.js
+M	scripts/app.js
+M	scripts/beats.js
+M	scripts/music.js
+M	scripts/work-dynamic.js
+M	styles/contacts.css
+M	styles/main.css
+A	tools/import-beats.js
+M	work.html
+
+---
+10ccdb3 2025-08-15 IlyaKurylyov feat(admin): add Matrix text editing (matrix_text) in admin; use it in public render; static fallback reads data-matrix-text;
+M	admin.html
+M	scripts/admin.js
+M	scripts/app.js
+M	scripts/artists-public.js
+
+---
+df22877 2025-08-15 IlyaKurylyov feat(matrix): rebuild Matrix rain on artist cards — background rain + 1-2 letter sticking; remove initial spill; fix dynamic/static click conflict; tune speeds
+A	admin.html
+M	artists.html
+A	scripts/admin.js
+M	scripts/app.js
+A	scripts/artists-admin.js
+A	scripts/artists-public.js
+A	scripts/config.js
+A	scripts/work-dynamic.js
+M	styles/artists.css
+M	styles/music.css
+M	styles/work-responsive.css
+M	work.html
+
+---
+5ec7acd 2025-08-08 IlyaKurylyov Work mobile UX: analog toggles for producer filters, spaced beat cards via grid gap; music.js duplicate cleanup; FTP secrets removed from repo; mobile layout fixes (sticky offsets)
+M	ftp_commands.txt
+M	scripts/music.js
+M	styles/music.css
+A	styles/work-responsive.css
+M	upload.ps1
+M	work.html
+
+---
+a31cbc8 2025-07-21 IlyaKurylyov Fix: еорганизация адаптивной навигации
+A	RESPONSIVE_GUIDE.md
+M	artists.html
+M	contacts.html
+M	index.html
+M	music.html
+M	scripts/app.js
+M	scripts/music.js
+M	styles/contacts.css
+A	styles/desktop-protection.css
+M	styles/main.css
+A	styles/mobile.css.backup
+M	styles/music.css
+R054	styles/mobile.css	styles/responsive.css
+A	styles/work.css
+M	work.html

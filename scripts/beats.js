@@ -1,7 +1,7 @@
 (function(){
-// Если Supabase сконфигурирован и есть динамическая загрузка, не рендерим статический список
+// Если Supabase сконфигурирован и нет принудительного фолбэка — не рендерим статический список
 const hasSupabaseConfig = typeof window !== 'undefined' && window.supabase && typeof window.SUPABASE_URL === 'string' && window.SUPABASE_URL && typeof window.SUPABASE_ANON_KEY === 'string' && window.SUPABASE_ANON_KEY;
-if (hasSupabaseConfig) return; // динамический рендер возьмёт на себя
+if (hasSupabaseConfig && !window.BEATS_FORCE_STATIC) return; // динамический рендер возьмёт на себя
 
 const beats = [
     {

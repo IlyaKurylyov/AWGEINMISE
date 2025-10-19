@@ -1,6 +1,6 @@
 // Дожидаемся загрузки DOM
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, initializing sparks...');
+    console.log('DOM loaded, initializing sparks and neon controller...');
 
     // Функция для создания искр
     function createSparks(button) {
@@ -92,4 +92,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log('Added event listeners to switch:', index);
     });
+
+    // === Neon sign controller: periodically pick a nav item, flicker and turn it off for a while ===
+    try {
+        const navTexts = Array.from(document.querySelectorAll('.page-home .nav-link .nav-text'));
+        if (navTexts.length) {
+            let lastIdx = -1;
+            function runNeonCycle(){
+                // случайная задержка между циклами 3.5–7 секунд
+                const delay = 3500 + Math.random()*3500;
+                setTimeout(() => {
+                    // выбрать индекс, не повторяя предыдущий
+                    let idx = Math.floor(Math.random()*navTexts.length);
+                    if (idx === lastIdx && navTexts.length > 1) idx = (idx+1) % navTexts.length;
+                    lastIdx = idx;
+                    const el = navTexts[idx];
+                    if (!el) return runNeonCycle();
+
+                    // короткая вспышка-мерцание
+                    el.classList.remove('neon-off');
+                    el.classList.add('neon-burst');
+                    // после вспышки — выключить на 2–4 секунды
+                    setTimeout(() => {
+                        el.classList.remove('neon-burst');
+                        el.classList.add('neon-off');
+                        const offTime = 2000 + Math.random()*2000;
+                        setTimeout(() => {
+                            // вернуть свет
+                            el.classList.remove('neon-off');
+                            runNeonCycle();
+                        }, offTime);
+                    }, 1100);
+                }, delay);
+            }
+            runNeonCycle();
+        }
+    } catch(e){ console.warn('Neon controller init failed:', e); }
 }); 
