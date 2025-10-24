@@ -17,17 +17,90 @@
     userBox: () => document.getElementById('auth-user'),
     pName: () => document.getElementById('p-name'),
     pDesc: () => document.getElementById('p-desc'),
+    pDescCounter: () => document.getElementById('p-desc-counter'),
+    pMatrix: () => document.getElementById('p-matrix'),
+    pMatrixCounter: () => document.getElementById('p-matrix-counter'),
     pImageFile: () => document.getElementById('p-image-file'),
     pImagePreview: () => document.getElementById('p-image-preview'),
     pSave: () => document.getElementById('p-save'),
+    btnTg: () => document.getElementById('btn-tg'),
+    btnVk: () => document.getElementById('btn-vk'),
+    btnInst: () => document.getElementById('btn-inst'),
+    linkModal: () => document.getElementById('link-modal'),
+    linkInput: () => document.getElementById('link-input'),
+    linkSave: () => document.getElementById('link-save'),
+    linkCancel: () => document.getElementById('link-cancel'),
+    linkTitle: () => document.getElementById('link-modal-title'),
     beatsList: () => document.getElementById('beats-list'),
     bTitle: () => document.getElementById('b-title'),
     bFile: () => document.getElementById('b-file'),
     bAdd: () => document.getElementById('b-add'),
   };
 
+  // Максимальная длина подробного описания и обновление счетчика
+  const MAX_MATRIX = 629;
+  function updateMatrixCounter() {
+    try {
+      const mtx = els.pMatrix && els.pMatrix();
+      const mtxCounter = els.pMatrixCounter && els.pMatrixCounter();
+      if (!mtx || !mtxCounter) return;
+      const val = mtx.value || '';
+      if (val.length > MAX_MATRIX) mtx.value = val.slice(0, MAX_MATRIX);
+      mtxCounter.textContent = `${mtx.value.length}/${MAX_MATRIX}`;
+    } catch(_) {}
+  }
+
+  const MAX_DESC = 60;
+  function updateDescCounter() {
+    try {
+      const d = els.pDesc && els.pDesc();
+      const c = els.pDescCounter && els.pDescCounter();
+      if (!d || !c) return;
+      const val = d.value || '';
+      if (val.length > MAX_DESC) d.value = val.slice(0, MAX_DESC);
+      c.textContent = `${d.value.length}/${MAX_DESC}`;
+    } catch(_) {}
+  }
+
   function setStatus(msg) {
     const s = els.status(); if (s) s.textContent = msg || '';
+  }
+
+  function getCanonicalName() {
+    return (typeof window.__ARTIST_CANONICAL_NAME__ === 'string' && window.__ARTIST_CANONICAL_NAME__)
+      ? window.__ARTIST_CANONICAL_NAME__
+      : (els.pName().value || '').trim();
+  }
+
+  function buildProfileDraft(overrides) {
+    const draft = {
+      name: getCanonicalName(),
+      description: (els.pDesc()?.value || '').trim(),
+      image_url: window.__PROFILE_IMAGE_URL__ || '',
+      matrix_text: (els.pMatrix && els.pMatrix() ? els.pMatrix().value : '').trim(),
+      tg_url: (els.btnTg() && els.btnTg().dataset.url) || null,
+      vk_url: (els.btnVk() && els.btnVk().dataset.url) || null,
+      inst_url: (els.btnInst() && els.btnInst().dataset.url) || null,
+    };
+    return Object.assign(draft, overrides || {});
+  }
+
+  async function saveProfileWithFallback(uid, profileDraft) {
+    try {
+      await upsertProfile(uid, profileDraft);
+    } catch (e) {
+      const msg = String(e.message || '');
+      if (msg.includes('column "matrix_text"') || msg.includes('column "tg_url"') || msg.includes('column "vk_url"') || msg.includes('column "inst_url"') || String(e.code || '').toUpperCase() === 'PGRST204') {
+        const fallback = { ...profileDraft };
+        delete fallback.matrix_text;
+        delete fallback.tg_url;
+        delete fallback.vk_url;
+        delete fallback.inst_url;
+        await upsertProfile(uid, fallback);
+      } else {
+        throw e;
+      }
+    }
   }
 
   function bindAuthUI() {
@@ -35,35 +108,35 @@
     const logoutBtn = els.logoutBtn();
     const userBox = els.userBox();
     const unauth = document.getElementById('unauth-screen');
+    const adminWrap = document.querySelector('.admin-wrap');
     const overlay = document.getElementById('auth-modal');
     if (!loginBtn || !logoutBtn || !userBox) return;
 
     function attachLoginHandlers() {
-      if (!overlay || window.__authHandlersBound) return;
+      if (window.__authHandlersBound) return;
       const emailInput = document.getElementById('auth-email');
       const passInput = document.getElementById('auth-password');
       const submitBtn = document.getElementById('auth-submit');
       const cancelBtn = document.getElementById('auth-cancel');
-      if (!emailInput || !passInput || !submitBtn || !cancelBtn) return;
+      if (!emailInput || !passInput || !submitBtn) return;
       const doLogin = async () => {
         const email = emailInput.value.trim();
         const password = passInput.value;
         if (!email || !password) { alert('Укажи e-mail и пароль'); return; }
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) { alert('Ошибка входа: ' + error.message); return; }
-        overlay.style.display = 'none';
+        if (overlay) overlay.style.display = 'none';
       };
       submitBtn.addEventListener('click', (e) => { e.preventDefault(); doLogin(); });
-      cancelBtn.addEventListener('click', (e) => { e.preventDefault(); overlay.style.display = 'none'; });
+      if (cancelBtn) cancelBtn.addEventListener('click', (e) => { e.preventDefault(); if (overlay) overlay.style.display = 'none'; });
       passInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doLogin(); } });
       emailInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doLogin(); } });
       window.__authHandlersBound = true;
     }
 
     function openLogin() {
-      if (!overlay) return;
       attachLoginHandlers();
-      overlay.style.display = 'flex';
+      if (overlay) overlay.style.display = 'flex';
       const emailInput = document.getElementById('auth-email');
       if (emailInput) setTimeout(() => emailInput.focus(), 0);
     }
@@ -75,6 +148,7 @@
       userBox.textContent = '';
       setStatus('');
       if (unauth) unauth.style.display = 'flex';
+      if (adminWrap) adminWrap.style.display = 'none';
       openLogin();
     };
     const setLoggedIn = (email) => {
@@ -84,6 +158,7 @@
       userBox.textContent = email;
       setStatus('Вход выполнен');
       if (unauth) unauth.style.display = 'none';
+      if (adminWrap) adminWrap.style.display = '';
       if (overlay) overlay.style.display = 'none';
     };
 
@@ -92,7 +167,7 @@
         setLoggedIn(session.user.email || '');
         // hydrate только при входе/первичной инициализации, не на TOKEN_REFRESHED
         hydrate();
-      } else if (event === 'SIGNED_OUT') {
+      } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session?.user)) {
         setLoggedOut();
         clearForms();
       } else {
@@ -114,12 +189,15 @@
     const nameInput = els.pName();
     if (nameInput) nameInput.disabled = false;
     els.beatsList().innerHTML = '';
+    try { delete window.__beatsSig; } catch(_) { window.__beatsSig = undefined; }
+    try { window.__PROFILE_IMAGE_URL__ = ''; } catch(_) {}
+    try { window.__ARTIST_CANONICAL_NAME__ = ''; } catch(_) {}
   }
 
   async function loadProfile(uid) {
     const { data, error } = await supabase
       .from('artists')
-      .select('id,name,description,image_url')
+      .select('id,name,description,image_url,matrix_text,tg_url,vk_url,inst_url')
       .eq('owner_user_id', uid)
       .single();
     if (error && error.code !== 'PGRST116') throw error; // not found is ok
@@ -136,6 +214,10 @@
           name: profile.name,
           description: profile.description,
           image_url: profile.image_url,
+          matrix_text: profile.matrix_text,
+          tg_url: profile.tg_url,
+          vk_url: profile.vk_url,
+          inst_url: profile.inst_url,
           updated_at: new Date().toISOString()
         })
         .eq('id', existing.id)
@@ -149,6 +231,10 @@
           name: profile.name,
           description: profile.description,
           image_url: profile.image_url,
+          matrix_text: profile.matrix_text,
+          tg_url: profile.tg_url,
+          vk_url: profile.vk_url,
+          inst_url: profile.inst_url,
           owner_user_id: uid
         })
         .select('id')
@@ -399,6 +485,18 @@
       if (profile) {
         els.pName().value = profile.name || '';
         els.pDesc().value = profile.description || '';
+        updateDescCounter();
+        const matrixEl = els.pMatrix && els.pMatrix();
+        if (matrixEl) {
+          matrixEl.value = profile.matrix_text || '';
+          updateMatrixCounter();
+        }
+        // восстановим ссылки в dataset кнопок, чтобы модалка подхватывала сохранённые значения
+        try {
+          const tgBtn = els.btnTg(); if (tgBtn) tgBtn.dataset.url = profile.tg_url || '';
+          const vkBtn = els.btnVk(); if (vkBtn) vkBtn.dataset.url = profile.vk_url || '';
+          const instBtn = els.btnInst(); if (instBtn) instBtn.dataset.url = profile.inst_url || '';
+        } catch(_) {}
         window.__PROFILE_IMAGE_URL__ = profile.image_url || '';
         const prev = els.pImagePreview();
         if (prev && window.__PROFILE_IMAGE_URL__) {
@@ -452,18 +550,30 @@
       const uid = sess?.session?.user?.id;
       if (!uid) return alert('Нет сессии');
       try {
-        const canonicalName = typeof window.__ARTIST_CANONICAL_NAME__ === 'string' && window.__ARTIST_CANONICAL_NAME__
-          ? window.__ARTIST_CANONICAL_NAME__
-          : (els.pName().value || '').trim();
+        // show busy overlay for save
+        const saveBtn = els.pSave();
+        if (saveBtn) saveBtn.disabled = true;
+        let busy = document.createElement('div');
+        busy.className = 'busy-overlay';
+        busy.innerHTML = '<div class="busy-box"><div class="spinner"></div>Сохранение…</div>';
+        const profileCard = document.getElementById('profile-card');
+        if (profileCard) profileCard.appendChild(busy);
+
         const imageUrl = await uploadArtistImageIfAny(uid);
-        const profile = {
-          name: canonicalName,
-          description: els.pDesc().value.trim(),
-          image_url: imageUrl
-        };
-        await upsertProfile(uid, profile);
+        const profile = buildProfileDraft({ image_url: imageUrl });
+        try {
+          await saveProfileWithFallback(uid, profile);
+        } catch (e) {
+          throw e;
+        }
         setStatus('Профиль сохранен');
+        if (busy && busy.parentNode) busy.parentNode.removeChild(busy);
+        if (saveBtn) saveBtn.disabled = false;
       } catch (e) {
+        const found = document.querySelector('#profile-card .busy-overlay');
+        if (found && found.parentNode) found.parentNode.removeChild(found);
+        const saveBtn = els.pSave();
+        if (saveBtn) saveBtn.disabled = false;
         alert('Ошибка сохранения: ' + (e.message || e));
       }
     });
@@ -535,6 +645,78 @@
         }
       });
     }
+    // Счетчик символов для подробного описания (макс 629)
+    const mtx = els.pMatrix();
+    if (mtx) {
+      mtx.addEventListener('input', updateMatrixCounter);
+    }
+    updateMatrixCounter();
+
+    const d = els.pDesc();
+    if (d) {
+      d.addEventListener('input', updateDescCounter);
+    }
+    updateDescCounter();
+
+    // Быстрые ссылки (заглушки): клик открывает соответствующие URL поля, если есть
+    const tgBtn = els.btnTg();
+    const vkBtn = els.btnVk();
+    const instBtn = els.btnInst();
+    const linkModal = els.linkModal();
+    const linkInput = els.linkInput();
+    const linkSave = els.linkSave();
+    const linkCancel = els.linkCancel();
+    const linkTitle = els.linkTitle();
+
+    let currentLinkTarget = null; // 'tg' | 'vk' | 'inst'
+    function openLinkModal(target, title) {
+      currentLinkTarget = target;
+      if (linkTitle) linkTitle.textContent = title || 'Ссылка';
+      if (linkInput) {
+        let preset = '';
+        if (target === 'tg' && tgBtn) preset = tgBtn.dataset.url || '';
+        if (target === 'vk' && vkBtn) preset = vkBtn.dataset.url || '';
+        if (target === 'inst' && instBtn) preset = instBtn.dataset.url || '';
+        linkInput.value = preset;
+      }
+      if (linkModal) linkModal.style.display = 'flex';
+      if (linkInput) setTimeout(() => linkInput.focus(), 0);
+    }
+    function closeLinkModal() {
+      if (linkModal) linkModal.style.display = 'none';
+      currentLinkTarget = null;
+    }
+    linkCancel && linkCancel.addEventListener('click', (e) => { e.preventDefault(); closeLinkModal(); });
+    linkSave && linkSave.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const url = (linkInput && linkInput.value || '').trim();
+      if (!url) { closeLinkModal(); return; }
+      const btnMap = { tg: tgBtn, vk: vkBtn, inst: instBtn };
+      const btn = btnMap[currentLinkTarget];
+      if (btn) btn.dataset.url = url;
+      // анимация сохранения на карточке
+      let busy = document.createElement('div');
+      busy.className = 'busy-overlay';
+      busy.innerHTML = '<div class="busy-box"><div class="spinner"></div>Сохранение…</div>';
+      const profileCard = document.getElementById('profile-card');
+      if (profileCard) profileCard.appendChild(busy);
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        const uid = sess?.session?.user?.id;
+        if (!uid) throw new Error('Нет сессии');
+        await saveProfileWithFallback(uid, buildProfileDraft());
+        setStatus('Ссылка сохранена');
+      } catch (err) {
+        alert('Ошибка сохранения ссылки: ' + (err.message || err));
+      } finally {
+        if (busy && busy.parentNode) busy.parentNode.removeChild(busy);
+        closeLinkModal();
+      }
+    });
+    tgBtn && tgBtn.addEventListener('click', () => openLinkModal('tg', 'Ссылка TG'));
+    vkBtn && vkBtn.addEventListener('click', () => openLinkModal('vk', 'Ссылка VK'));
+    instBtn && instBtn.addEventListener('click', () => openLinkModal('inst', 'Ссылка INST'));
+
     // пересчёт при ресайзе
     window.addEventListener('resize', () => updateSideBlur());
   });

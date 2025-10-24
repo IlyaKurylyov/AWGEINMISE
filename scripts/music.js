@@ -636,6 +636,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedArtist = this.value;
         const artistId = artistIds[selectedArtist];
         const display = document.querySelector('.vhs-display');
+
+        // Триггер короткой scanline-подсветки экрана
+        if (display) {
+            display.classList.add('activated');
+            setTimeout(() => display.classList.remove('activated'), 650);
+        }
         
         // Останавливаем текущее воспроизведение
         if (audioPlayer.src) {
@@ -692,7 +698,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const widget = createYandexMusicWidget(artistId);
             display.innerHTML = '';
             display.appendChild(widget);
-            
+
             // Отключаем режим воспроизведения сайта
             isWebsitePlayback = false;
         } else {

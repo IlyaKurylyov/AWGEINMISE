@@ -69,8 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
           const tgText = info && info.querySelector('.artist-tg') ? info.querySelector('.artist-tg').textContent.trim() : '';
           const details = document.createElement('div');
           details.className = 'artist-details';
-          const vkLink = vkText ? `<a class="artist-link" href="${vkText}" target="_blank" rel="noopener"><img src="assets/icons/vk.svg" alt="VK"/>VK</a>` : '';
-          const tgLink = tgText ? `<a class="artist-link" href="${tgText}" target="_blank" rel="noopener"><img src="assets/icons/telegram.svg" alt="TG"/>TG</a>` : '';
+          const vkLink = vkText ? `<a class="artist-link-chip" href="${vkText}" target="_blank" rel="noopener"><img src="assets/icons/vk.svg" alt="VK"/>VK</a>` : '';
+          const tgLink = tgText ? `<a class="artist-link-chip" href="${tgText}" target="_blank" rel="noopener"><img src="assets/icons/telegram.svg" alt="TG"/>TG</a>` : '';
           const links = (vkLink || tgLink) ? `<div class="artist-links">${vkLink}${tgLink}</div>` : '';
           // целевая фраза для сборки дождя → текста
           const matrixText = (info?.dataset?.matrixText && info.dataset.matrixText.trim()) || '';
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
           })();
           const finalPhrase = matrixText || `Группа TG - ${tgHandle}`;
           // контейнеры под матричную анимацию
-          details.innerHTML = `${links}<div class="artist-details__desc"><span class="matrix-typing" data-full="${finalPhrase.replace(/"/g, '&quot;')}"></span></div>`;
+          details.innerHTML = `${links}<div class="artist-details__desc" aria-hidden="true"><span class="matrix-typing" data-full="${finalPhrase.replace(/"/g, '&quot;')}"></span></div>`;
           const canvas = document.createElement('canvas');
           canvas.className = 'matrix-canvas';
           details.appendChild(canvas);
@@ -439,7 +439,7 @@ function startMatrixTypingAndRain(card){
   const canvas = details.querySelector('canvas.matrix-canvas');
   if (!typingEl || !canvas) return;
 
-  const full = typingEl.getAttribute('data-full') || '';
+  let full = typingEl.getAttribute('data-full') || '';
   typingEl.textContent = '';
 
   // Печать синхронизируется с фиксацией букв (см. recomputeTypingFromFixed)
@@ -458,22 +458,143 @@ function startMatrixTypingAndRain(card){
 
   const glyphs = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const fontSize = 14 * dpr;
-  const columns = Math.max(1, Math.floor(canvas.width / (fontSize * 0.9)));
+  // Настройка контекста для корректного измерения ширины символов (кириллица/латиница)
+  ctx.font = `${fontSize}px monospace`;
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+  // Реальная «шаговая» ширина символа по метрике текста
+  const charAdvance = Math.max(1, Math.ceil((ctx.measureText('Я').width || ctx.measureText('W').width || fontSize)));
+  // Добавим интерлиньяж ~20% от размера шрифта, чтобы строки не слипались
+  const lineGap = Math.ceil(fontSize * 0.26);
+  const lineHeight = Math.ceil(fontSize + lineGap);
+  const innerSidePad = Math.round(10 * dpr);
+  const innerTopPad = Math.round(10 * dpr);
+  const usableWidth = Math.max(charAdvance, canvas.width - innerSidePad * 2);
+  const columns = Math.max(1, Math.floor(usableWidth / charAdvance));
 
-  // Параметры скорости
+  // Ограничим текст по области и переносим по слогам (ru hyphenation)
+  const usableHeight = Math.max(lineHeight, canvas.height - innerTopPad);
+  const maxLines = Math.max(1, Math.floor(usableHeight / lineHeight));
+  const maxCapacity = Math.max(1, columns * maxLines);
+
+  const RU_VOWEL_RE = /[аеёиоуыэюяАЕЁИОУЫЭЮЯ]/;
+  function hyphenPointsRu(word) {
+    const letters = Array.from(word);
+    const points = [];
+    for (let i = 0; i < letters.length - 1; i++) {
+      if (RU_VOWEL_RE.test(letters[i])) {
+        const leftLen = i + 1;
+        const rightLen = letters.length - (i + 1);
+        if (leftLen >= 2 && rightLen >= 2) points.push(i + 1); // перенос после гласной
+      }
+    }
+    return points;
+  }
+  function firstSyllableLen(word) {
+    const pts = hyphenPointsRu(word);
+    if (pts.length) return pts[0];
+    // иначе минимальный слог — весь word (если без внутренних гласных)
+    // но чтобы не зависнуть, вернём хотя бы 2 при наличии длины
+    return Math.min(Math.max(2, word.length), word.length);
+  }
+  function wrapToGridRu(text, cols, linesLimit) {
+    const outLines = [];
+    let current = '';
+    const tokens = text.split(/(\s+)/);
+    const pushLine = (line) => { outLines.push(line.padEnd(cols, ' ')); };
+    for (let t of tokens) {
+      if (outLines.length >= linesLimit) break;
+      if (/^\s+$/.test(t)) { // пробелы
+        // не добавляем пробел, если он приведёт к недопустимому «висящему» слогу
+        if (current.length === 0) continue;
+        if (current.length < cols) current += ' ';
+        continue;
+      }
+      // слово/символы
+      let w = t;
+      while (w.length) {
+        const remain = cols - current.length;
+        if (remain <= 0) { pushLine(current); current = ''; if (outLines.length >= linesLimit) break; continue; }
+        // если слово полностью влезает — кладём целиком
+        if (w.length <= remain) { current += w; w = ''; break; }
+        // не влезает
+        const points = hyphenPointsRu(w);
+        // выбираем наибольшую точку переноса, которая помещается в текущую строку
+        let cut = -1;
+        for (let p of points) { if (p <= remain) cut = Math.max(cut, p); }
+        if (cut > 0) {
+          // перенос по слогу без дефиса
+          current += w.slice(0, cut);
+          w = w.slice(cut);
+          pushLine(current);
+          current = '';
+        } else {
+          // ни одной валидной точки — не кладём «висящий» кусок без гласной
+          // если строка пустая, попробуем поместить минимальный слог целиком
+          if (current.length === 0) {
+            let sl = firstSyllableLen(w);
+            sl = Math.min(sl, cols);
+            current = w.slice(0, sl);
+            w = w.slice(sl);
+            pushLine(current);
+            current = '';
+          } else {
+            // переносим слово полностью на следующую строку
+            pushLine(current);
+            current = '';
+          }
+        }
+      }
+    }
+    if (outLines.length < linesLimit && current) pushLine(current);
+    // обрежем по лимиту линий; последнюю строку закончим многоточием, если есть лишний текст
+    if (outLines.length > linesLimit) outLines.length = linesLimit;
+    // Если исходный текст не поместился полностью — ставим многоточие в конец сетки
+    const flattened = outLines.join('');
+    if (flattened.length < Math.min(maxCapacity, text.length)) {
+      // подстрахуемся: заменим последний символ на …
+      const lastLineIdx = outLines.length - 1;
+      if (lastLineIdx >= 0) {
+        let line = outLines[lastLineIdx];
+        if (line.length >= 1) {
+          line = line.slice(0, cols - 1) + '…';
+          outLines[lastLineIdx] = line;
+        }
+      }
+    }
+    // добьём до точной ёмкости
+    while (outLines.length < linesLimit) outLines.push(''.padEnd(cols, ' '));
+    return outLines.slice(0, linesLimit).join('').slice(0, cols * linesLimit);
+  }
+
+  full = wrapToGridRu(full, columns, maxLines);
+  // Экспорт вместимости для отладки/подсказок
+  try {
+    card.dataset.matrixCapacity = String(maxCapacity);
+    if (details) {
+      details.setAttribute('data-matrix-capacity', String(maxCapacity));
+      const title = details.getAttribute('title') || '';
+      const capMsg = `Вместимость текста: ${maxCapacity} символов`;
+      details.setAttribute('title', title ? title + '\n' + capMsg : capMsg);
+    }
+  } catch(_) {}
+
+  // Параметры скорости (динамика под длину текста)
   const bgRainSpeed = 2.0;     // фоновые капли
-  const mainRainSpeed = 2.2;   // капли с целевыми буквами
-  const idleRainSpeed = 1.1;   // капли в колонке без целевых букв
+  const mainRainSpeed = 2.6;   // капли с целевыми буквами (чуть быстрее)
+  const idleRainSpeed = 1.2;   // капли в колонке без целевых букв
   const bgRainAlpha = 0.28;    // прозрачность фонового дождя
 
-  // Спавним 1–2 целевые капли за тик: токен‑бак спавна
-  const spawnRefillIntervalMs = 140; // каждые 140мс пополняем разрешения
-  const spawnRefillAmount = 2;       // пополняем на 2
-  const spawnMaxAllowance = 2;       // максимум 2 одновременно
+  // Спавн целевых капель с динамическим тактом
+  const desiredTotalMs = 2200; // примерное время сборки (не жёстко)
+  const spawnRefillAmount = Math.max(1, Math.min(3, Math.ceil(columns / 6)));
+  const estimatedTicks = Math.max(1, Math.ceil((full.length || 1) / spawnRefillAmount));
+  const spawnRefillIntervalMs = Math.max(40, Math.floor(desiredTotalMs / estimatedTicks));
+  const spawnMaxAllowance = spawnRefillAmount;
   let spawnAllowance = 0;
   let lastRefillTs = performance.now();
 
-  // Целевая фраза и сетка
+  // Целевая фраза и сетка (после clamp по вместимости)
   const target = full.split('');
   const buildLines = Math.max(1, Math.ceil(target.length / columns));
   const buildBuffer = new Array(columns * buildLines).fill('');
@@ -493,10 +614,42 @@ function startMatrixTypingAndRain(card){
   // Активность целевых капель по колонкам
   const active = new Array(columns).fill(false);
 
+  // Таймер: хотим, чтобы весь текст успел проявиться за ~2 секунды
+  const totalDurationMs = 2000;
+  const startedAt = performance.now();
+  function countFixed() {
+    let n = 0; for (let i = 0; i < fixed.length; i++) if (fixed[i]) n++; return n;
+  }
+  function enforceTimeBudget() {
+    const total = target.length || 0; if (total === 0) return;
+    const elapsed = performance.now() - startedAt;
+    const shouldFixed = Math.min(total, Math.floor((elapsed / totalDurationMs) * total));
+    const already = countFixed();
+    let need = shouldFixed - already;
+    if (need <= 0) return;
+    // хаотично выберем индексы для мгновенной фиксации поверх дождя
+    const pool = [];
+    for (let i = 0; i < total; i++) if (!fixed[i]) pool.push(i);
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    for (let k = 0; k < need && k < pool.length; k++) {
+      const idx = pool[k];
+      fixed[idx] = true;
+      const row = Math.floor(idx / columns); const col = idx % columns;
+      buildBuffer[row * columns + col] = target[idx];
+      // продвинем очередь колонки мимо уже зафиксированного индекса
+      while (queuePtr[col] < indicesPerColumn[col].length && fixed[indicesPerColumn[col][queuePtr[col]]]) {
+        queuePtr[col]++;
+        active[col] = false;
+      }
+    }
+    recomputeTypingFromFixed();
+  }
+
+
   function targetYForIndex(idx) {
     const row = Math.floor(idx / columns); // 0..buildLines-1 (сверху вниз в сетке)
-    // Рендерим текст внизу карточки: снизу-вверх преобразуем в экранные координаты
-    return canvas.height - (buildLines - row) * fontSize;
+    // Рендерим текст СНИЗУ вверх (классический дождь) с внутренним верхним отступом
+    return innerTopPad + (usableHeight - (buildLines - row) * lineHeight);
   }
 
   function recomputeTypingFromFixed() {
@@ -508,6 +661,8 @@ function startMatrixTypingAndRain(card){
 
   function draw() {
     if (!card.classList.contains('open')) return;
+    // Поддерживаем целевой прогресс по таймеру (хаотичная фиксация)
+    enforceTimeBudget();
     // Пополнение «разрешений» на спавн целевых капель
     const now = performance.now();
     if (now - lastRefillTs >= spawnRefillIntervalMs) {
@@ -546,12 +701,12 @@ function startMatrixTypingAndRain(card){
     ctx.fillStyle = '#00ff6a';
     ctx.globalAlpha = bgRainAlpha;
     for (let col = 0; col < columns; col++) {
-      const x = col * fontSize;
-      const y = (bgDropY[col] * fontSize);
+      const x = innerSidePad + col * charAdvance;
+      const y = (bgDropY[col] * lineHeight);
       const g = glyphs[Math.floor(Math.random() * glyphs.length)];
       ctx.fillText(g, x, y);
       bgDropY[col] += bgRainSpeed;
-      if (bgDropY[col] * fontSize > canvas.height) bgDropY[col] = -10 - Math.random() * 10;
+      if (bgDropY[col] * lineHeight > canvas.height) bgDropY[col] = -10 - Math.random() * 10;
     }
     ctx.restore();
 
@@ -565,13 +720,13 @@ function startMatrixTypingAndRain(card){
       if (ptr >= list.length) {
         // нет больше целевых букв: можно рисовать редкие шумовые символы
         if (Math.random() < 0.12) {
-          const x = col * fontSize;
-          const y = (dropY[col] * fontSize);
+          const x = innerSidePad + col * charAdvance;
+          const y = (dropY[col] * lineHeight);
           ctx.fillText(glyphs[Math.floor(Math.random() * glyphs.length)], x, y);
         }
         // медленный дрейф базовой капли
         dropY[col] += idleRainSpeed;
-        if (dropY[col] * fontSize > canvas.height) dropY[col] = -10;
+        if (dropY[col] * lineHeight > canvas.height) dropY[col] = -10;
         continue;
       }
 
@@ -582,8 +737,8 @@ function startMatrixTypingAndRain(card){
 
       const idx = list[ptr];
       const ch = target[idx] === ' ' ? '·' : target[idx]; // пробел визуализируем точкой
-      const x = col * fontSize;
-      const y = (dropY[col] * fontSize);
+      const x = innerSidePad + col * charAdvance;
+      const y = (dropY[col] * lineHeight);
       ctx.fillText(ch, x, y);
 
       const ty = targetYForIndex(idx);
@@ -611,8 +766,8 @@ function startMatrixTypingAndRain(card){
       for (let c = 0; c < columns; c++) {
         const ch = buildBuffer[r * columns + c] || '';
         if (!ch) continue;
-        const x = c * fontSize;
-        const y = canvas.height - (buildLines - r) * fontSize;
+        const x = innerSidePad + c * charAdvance;
+        const y = innerTopPad + (usableHeight - (buildLines - r) * lineHeight);
         ctx.fillText(ch, x, y);
       }
     }

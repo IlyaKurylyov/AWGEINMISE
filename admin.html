@@ -55,6 +55,8 @@
     .admin-input, .admin-textarea { width:100%; background: linear-gradient(180deg,#242321,#1A1A19); border:1px solid var(--vhs-border); color:var(--vhs-text); padding:10px 12px; border-radius:2px; box-shadow: inset 1px 1px 0 rgba(255,255,255,0.06), inset -1px -1px 0 rgba(0,0,0,0.7); transition: box-shadow .18s, border .18s, background .18s; }
     .admin-input:focus, .admin-textarea:focus { outline: none; border-color: #5c5c5c; box-shadow: 0 0 6px rgba(255,184,76,0.3), inset 1px 1px 0 rgba(255,255,255,0.1); }
     .admin-textarea { min-height: 120px; resize: vertical; font-family: 'VT323', monospace; font-size:16px; line-height:1.4; background: #1A1A1A url('/assets/images/vhs_noise.png') repeat; }
+    /* ОПИСАНИЕ в 3 раза меньше по высоте */
+    #p-desc.admin-textarea { min-height: 40px; }
     .admin-row { display:flex; gap:10px; }
     .admin-row > * { flex: 1; }
     .admin-actions { display:flex; gap:10px; justify-content:flex-end; margin-top: 8px; }
@@ -100,6 +102,17 @@
     .admin-meter { margin-top: 10px; height: 12px; background:#0f0f0f; border:2px solid var(--vhs-border); border-radius: 8px; box-shadow: inset 0 2px 6px #000, 0 0 10px #0006; position: relative; }
     .admin-meter .fill { position:absolute; left:2px; top:2px; bottom:2px; width: 60%; border-radius:6px; background: linear-gradient(90deg,#a4782e,#ffb84c); box-shadow: 0 0 10px rgba(255,184,76,.4), inset 0 0 6px #0006; }
 
+    .counter-hint { font-size: 12px; color: rgba(214,211,197,0.75); margin-top: 4px; text-align: right; padding-right: 6px; pointer-events: none; display:block; }
+
+    /* Simple link modal */
+    .link-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:400; }
+    .link-modal { background:#0b0b0b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:16px; width:min(420px,92vw); color:#fff; }
+    .link-modal h3{margin:0 0 12px;}
+    .link-modal label{display:block; margin:8px 0 6px; color:rgba(255,255,255,0.8)}
+    .link-modal input{width:100%; background:#111; border:1px solid rgba(255,255,255,0.2); color:#fff; padding:8px 10px; border-radius:8px;}
+    .link-modal .actions{display:flex; gap:10px; justify-content:flex-end; margin-top:12px}
+    .link-modal .actions .auth-btn{padding:8px 12px}
+
     /* Beat rows */
     .beat-row { display:flex; flex-direction:column; gap:8px; }
     .beat-row-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
@@ -112,7 +125,7 @@
     .file-switch .lamp { width:14px; height:14px; border-radius:50%; background: var(--vhs-amber); opacity:.25; box-shadow: 0 0 8px rgba(255,184,76,.35); transition: opacity .12s ease; }
     .file-switch:hover .lamp, .file-switch.on .lamp { opacity:.8; }
     .file-switch:active { transform: translateY(1px); }
-    .file-aux-btn { width:40px; height:36px; border:1px solid #3A3936; border-radius:4px; background: linear-gradient(180deg,#30302d,#1f1f1d); box-shadow: inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.5); cursor:pointer; }
+    .file-aux-btn { width:40px; height:36px; border:1px solid #3A3936; border-radius:4px; background: linear-gradient(180deg,#30302d,#1f1f1d); box-shadow: inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.5); cursor:pointer; color: var(--vhs-text); display:inline-flex; align-items:center; justify-content:center; font-weight:700; letter-spacing:.06em; }
     .file-aux-btn:active { transform: translateY(1px); }
 
     /* Beat card + controls */
@@ -171,7 +184,7 @@
       radial-gradient(1200px 600px at 50% 0%, rgba(255,184,76,0.08), transparent 70%);
       filter: contrast(1) brightness(0.95);
     }
-    .unauth-grid { position:absolute; inset:8% 6%; border:1px solid #2f2e2c; border-radius: 8px; box-shadow: inset 0 0 30px rgba(0,0,0,0.7), 0 0 20px rgba(0,0,0,0.5); overflow:hidden; }
+    .unauth-grid { position:absolute; inset:8% 6%; border:1px solid #2f2e2c; border-radius: 8px; box-shadow: inset 0 0 30px rgba(0,0,0,0.7), 0 0 20px rgba(0,0,0,0.5); overflow:hidden; display:flex; align-items:center; justify-content:center; }
     .unauth-grid::before { content:""; position:absolute; inset:0; background:
       repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 12px),
       repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 12px);
@@ -195,24 +208,38 @@
   <div class="noise-overlay"></div>
   <div class="unauth-screen" id="unauth-screen">
     <div class="unauth-bg"></div>
-    <div class="unauth-grid"></div>
-  </div>
-
-
-  <main class="content main" style="padding: 0;">
-    <div class="auth-modal-overlay" id="auth-modal" aria-hidden="true">
-      <div class="auth-modal" role="dialog" aria-modal="true">
+    <div class="unauth-grid">
+      <div class="login-panel">
         <h3>Вход</h3>
-        <label>E-mail</label>
-        <input id="auth-email" type="email" placeholder="you@example.com" />
-        <label>Пароль</label>
-        <input id="auth-password" type="password" placeholder="••••••••" />
+        <div class="row">
+          <label>E-mail</label>
+          <input id="auth-email" type="email" placeholder="you@example.com" />
+        </div>
+        <div class="row">
+          <label>Пароль</label>
+          <input id="auth-password" type="password" placeholder="••••••••" />
+        </div>
         <div class="actions">
-          <button class="auth-btn" id="auth-cancel">Отмена</button>
           <button class="auth-btn" id="auth-submit">Войти</button>
         </div>
       </div>
     </div>
+  </div>
+
+
+  <main class="content main" style="padding: 0;">
+    <div class="link-modal-overlay" id="link-modal" aria-hidden="true">
+      <div class="link-modal" role="dialog" aria-modal="true">
+        <h3 id="link-modal-title">Ссылка</h3>
+        <label>URL</label>
+        <input id="link-input" type="text" placeholder="https://..." />
+        <div class="actions">
+          <button class="auth-btn" id="link-cancel">Отмена</button>
+          <button class="auth-btn" id="link-save">Сохранить</button>
+        </div>
+      </div>
+    </div>
+    
     <div class="admin-wrap">
       <div class="admin-header">
         <h2 class="admin-h">Кабинет артиста</h2>
@@ -231,13 +258,19 @@
           <h3 class="admin-h">Моя карточка</h3>
           <label class="admin-label">Имя</label>
           <input id="p-name" class="admin-input" type="text" />
-          <label class="admin-label">Описание (текст, который «льется дождем»)</label>
+          <label class="admin-label">ОПИСАНИЕ</label>
           <textarea id="p-desc" class="admin-textarea"></textarea>
+          <div id="p-desc-counter" class="counter-hint">0/60</div>
+          <label class="admin-label">ПОДРОБНОЕ ОПИСАНИЕ</label>
+          <textarea id="p-matrix" class="admin-textarea" placeholder="Текст, который показывается при клике на карточку"></textarea>
+          <div id="p-matrix-counter" class="counter-hint">0/629</div>
           <label class="admin-label">Заменить фото</label>
           <div class="file-controls">
             <input id="p-image-file" type="file" accept="image/*" style="display:none;" />
             <label for="p-image-file" class="file-switch">Выберите файл <span class="lamp"></span></label>
-            <button type="button" class="file-aux-btn" id="p-image-aux" aria-label="Доп. кнопка"></button>
+            <button type="button" class="file-aux-btn" id="btn-tg">TG</button>
+            <button type="button" class="file-aux-btn" id="btn-vk">VK</button>
+            <button type="button" class="file-aux-btn" id="btn-inst">INST</button>
           </div>
           <div class="admin-avatar crt">
             <div class="side-blur left" aria-hidden="true"></div>

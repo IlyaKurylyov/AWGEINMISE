@@ -18,9 +18,10 @@
   }
 
   function buildDetailsHTML(a) {
-    const vk = a.vk_url ? `<a class="artist-link" href="${a.vk_url}" target="_blank" rel="noopener"><img src="assets/icons/vk.svg" alt="VK"/>VK</a>` : '';
-    const tg = a.tg_url ? `<a class="artist-link" href="${a.tg_url}" target="_blank" rel="noopener"><img src="assets/icons/telegram.svg" alt="TG"/>TG</a>` : '';
-    const links = (vk || tg) ? `<div class="artist-links">${vk}${tg}</div>` : '';
+    const vk = a.vk_url ? `<a class="artist-link-chip" href="${a.vk_url}" target="_blank" rel="noopener"><img src="assets/icons/vk.svg" alt="VK"/>VK</a>` : '';
+    const tg = a.tg_url ? `<a class="artist-link-chip" href="${a.tg_url}" target="_blank" rel="noopener"><img src="assets/icons/telegram.svg" alt="TG"/>TG</a>` : '';
+    const inst = a.inst_url ? `<a class="artist-link-chip" href="${a.inst_url}" target="_blank" rel="noopener"><img src="assets/icons/instagram.svg" alt="INST"/>INST</a>` : '';
+    const links = (vk || tg || inst) ? `<div class="artist-links">${vk}${tg}${inst}</div>` : '';
     // matrix_text имеет приоритет, иначе формируем по TG
     const phrase = (a.matrix_text && String(a.matrix_text).trim())
       ? String(a.matrix_text).trim()
@@ -28,9 +29,9 @@
     const safePhrase = phrase.replace(/"/g, '&quot;');
     return `
       <div class="artist-details">
-        ${links}
-        <div class="artist-details__desc"><span class="matrix-typing" data-full="${safePhrase}"></span></div>
+        <div class="artist-details__desc" aria-hidden="true"><span class="matrix-typing" data-full="${safePhrase}"></span></div>
         <canvas class="matrix-canvas"></canvas>
+        ${links}
       </div>
     `;
   }
