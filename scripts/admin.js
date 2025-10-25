@@ -38,7 +38,7 @@
   };
 
   // Максимальная длина подробного описания и обновление счетчика
-  const MAX_MATRIX = 629;
+  const MAX_MATRIX = 515;
   function updateMatrixCounter() {
     try {
       const mtx = els.pMatrix && els.pMatrix();

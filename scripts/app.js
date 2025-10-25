@@ -61,8 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Добавим контейнер деталей если отсутствует
         if (!card.querySelector('.artist-details')) {
           const info = card.querySelector('.artist-info');
-          const descEl = info ? info.querySelector('.artist-description') : null;
-          const descText = descEl ? descEl.textContent : '';
+          // Не используем краткое описание в details
           const nameEl = info ? info.querySelector('.artist-name') : null;
           const artistName = nameEl ? nameEl.textContent.trim() : '';
           const vkText = info && info.querySelector('.artist-vk') ? info.querySelector('.artist-vk').textContent.trim() : '';
@@ -626,23 +625,45 @@ function startMatrixTypingAndRain(card){
     const shouldFixed = Math.min(total, Math.floor((elapsed / totalDurationMs) * total));
     const already = countFixed();
     let need = shouldFixed - already;
-    if (need <= 0) return;
-    // хаотично выберем индексы для мгновенной фиксации поверх дождя
-    const pool = [];
-    for (let i = 0; i < total; i++) if (!fixed[i]) pool.push(i);
-    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
-    for (let k = 0; k < need && k < pool.length; k++) {
-      const idx = pool[k];
-      fixed[idx] = true;
-      const row = Math.floor(idx / columns); const col = idx % columns;
-      buildBuffer[row * columns + col] = target[idx];
-      // продвинем очередь колонки мимо уже зафиксированного индекса
-      while (queuePtr[col] < indicesPerColumn[col].length && fixed[indicesPerColumn[col][queuePtr[col]]]) {
-        queuePtr[col]++;
-        active[col] = false;
+    if (need > 0) {
+      // Вместо мгновенной фиксации — агрессивно активируем падения в случайных колонках
+      // столько раз, сколько нужно приблизительно для достижения прогресса
+      const candidateCols = [];
+      for (let col = 0; col < columns; col++) {
+        if (!active[col]) {
+          const list = indicesPerColumn[col];
+          if (queuePtr[col] < list.length) candidateCols.push(col);
+        }
+      }
+      for (let i = candidateCols.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [candidateCols[i], candidateCols[j]] = [candidateCols[j], candidateCols[i]];
+      }
+      const toActivate = Math.min(candidateCols.length, Math.max(1, Math.ceil(need / Math.max(1, buildLines))));
+      for (let i = 0; i < toActivate; i++) {
+        const col = candidateCols[i];
+        if (col == null) break;
+        active[col] = true;
+        dropY[col] = -Math.floor(Math.random() * 12) - 6; // старт повыше
       }
     }
-    recomputeTypingFromFixed();
+    // Жёсткий дедлайн: к окончанию интервала зафиксировать оставшееся
+    if (elapsed >= totalDurationMs) {
+      for (let idx = 0; idx < total; idx++) {
+        if (!fixed[idx]) {
+          fixed[idx] = true;
+          const row = Math.floor(idx / columns); const col = idx % columns;
+          buildBuffer[row * columns + col] = target[idx];
+        }
+      }
+      for (let col = 0; col < columns; col++) {
+        while (queuePtr[col] < indicesPerColumn[col].length && fixed[indicesPerColumn[col][queuePtr[col]]]) {
+          queuePtr[col]++;
+          active[col] = false;
+        }
+      }
+      recomputeTypingFromFixed();
+    }
   }
 
 
@@ -702,7 +723,7 @@ function startMatrixTypingAndRain(card){
     ctx.globalAlpha = bgRainAlpha;
     for (let col = 0; col < columns; col++) {
       const x = innerSidePad + col * charAdvance;
-      const y = (bgDropY[col] * lineHeight);
+      const y = innerTopPad + (bgDropY[col] * lineHeight);
       const g = glyphs[Math.floor(Math.random() * glyphs.length)];
       ctx.fillText(g, x, y);
       bgDropY[col] += bgRainSpeed;
@@ -721,7 +742,7 @@ function startMatrixTypingAndRain(card){
         // нет больше целевых букв: можно рисовать редкие шумовые символы
         if (Math.random() < 0.12) {
           const x = innerSidePad + col * charAdvance;
-          const y = (dropY[col] * lineHeight);
+          const y = innerTopPad + (dropY[col] * lineHeight);
           ctx.fillText(glyphs[Math.floor(Math.random() * glyphs.length)], x, y);
         }
         // медленный дрейф базовой капли
@@ -738,7 +759,7 @@ function startMatrixTypingAndRain(card){
       const idx = list[ptr];
       const ch = target[idx] === ' ' ? '·' : target[idx]; // пробел визуализируем точкой
       const x = innerSidePad + col * charAdvance;
-      const y = (dropY[col] * lineHeight);
+      const y = innerTopPad + (dropY[col] * lineHeight);
       ctx.fillText(ch, x, y);
 
       const ty = targetYForIndex(idx);

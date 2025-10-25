@@ -91,7 +91,8 @@ body {
     right: 0;
     bottom: 0;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 1;
+    z-index: 0; /* ниже оверлея деталей */
+    pointer-events: none; /* не блокируем клики по деталям/ссылкам */
 }
 
 /* Информация об артисте */
@@ -308,15 +309,44 @@ body {
 
 /* Canvas под текстом и ссылками */
 .artist-details { --links-footer-h: 56px; }
-.artist-details .matrix-canvas { position:absolute; left:8px; right:8px; top:8px; bottom: var(--links-footer-h); z-index:0; }
+.artist-details .matrix-canvas { position:absolute; left:0; right:0; top:0; bottom: var(--links-footer-h); z-index:0; }
 .artist-details > :not(.matrix-canvas) { position:relative; z-index:1; }
 
 /* Ссылки TG/VK/INST внизу карточки */
-.artist-links { position:absolute; left:12px; right:12px; bottom:12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-.artist-link-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border:1px solid rgba(255,255,255,0.18); border-radius:8px; background: rgba(0,0,0,0.35); color: rgba(255,255,255,0.85); text-decoration:none; font-weight:700; font-size:12px; letter-spacing:.04em; }
-.artist-link-chip img { width:14px; height:14px; }
+.artist-details .artist-links { position:absolute; left:12px; right:12px; bottom:12px; display:flex; gap:40px !important; flex-wrap:wrap; align-items:center; justify-content: space-around; z-index: 2; }
+.artist-details .artist-link-chip, .artist-details .artist-link { display:inline-block; padding:0 2px; border:none; background: transparent; color: #EDEBE3; text-decoration:none; font-family: 'VT323', monospace; font-size: 24px; letter-spacing:.14em; cursor: pointer; user-select: none; position: relative; transition: color .35s ease, text-shadow .35s ease, filter .35s ease, opacity .35s ease, transform .35s ease; will-change: text-shadow, filter, opacity, transform; pointer-events: auto; }
+.artist-details .artist-link-chip img, .artist-details .artist-link img { display: none !important; }
 
-.artist-links {
+/* Живой неон для букв (мягкое мерцание) */
+.artist-details .artist-link-chip, .artist-details .artist-link {
+  text-shadow: 0 0 8px rgba(255,255,255,0.3), 0 0 22px rgba(255,255,255,0.18);
+  filter: drop-shadow(0 0 6px rgba(255,255,255,0.25));
+  animation: linkPulseStrong 3.6s ease-in-out infinite;
+}
+.artist-details .artist-link-chip:hover, .artist-details .artist-link:hover,
+.artist-details .artist-link-chip:focus-visible, .artist-details .artist-link:focus-visible {
+  color: #FFFFFF;
+  text-shadow: 0 0 16px rgba(255,255,255,0.65), 0 0 32px rgba(255,255,255,0.35), 0 0 48px rgba(255,255,255,0.22);
+  filter: drop-shadow(0 0 10px rgba(255,255,255,0.35));
+  opacity: 1;
+  transform: translateY(-1px) scale(1.04);
+  outline: none;
+}
+
+@keyframes linkPulseStrong {
+  0%, 100% {
+    opacity: .92;
+    text-shadow: 0 0 6px rgba(255,255,255,0.22), 0 0 16px rgba(255,255,255,0.14);
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.22));
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 18px rgba(255,255,255,0.6), 0 0 36px rgba(255,255,255,0.3);
+    filter: drop-shadow(0 0 10px rgba(255,255,255,0.35));
+  }
+}
+
+.artist-info .artist-links {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
@@ -357,10 +387,9 @@ body {
 
 /* Canvas оверлей дождя */
 .artist-details .matrix-canvas {
-  position: absolute;
-  inset: 0;
   pointer-events: none;
   opacity: 0.95;
+  left: 0; right: 0; top: 0; bottom: var(--links-footer-h);
 }
 
 /* Ограничим глитч-эффект имени при открытии, чтобы не мигал поверх */

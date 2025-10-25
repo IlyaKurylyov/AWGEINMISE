@@ -171,8 +171,7 @@
         // обновим существующую статическую карточку
         const img = card.querySelector('.artist-image');
         if (img && a.image_url) { img.src = a.image_url; img.alt = a.name; }
-        const desc = card.querySelector('.artist-description');
-        if (desc) desc.textContent = a.description || '';
+        // Описание не показываем при клике; краткое описание не трогаем внутри details
         // добавить/обновить блок details в контейнер изображения
         const imgContainer = card.querySelector('.artist-image-container') || card;
         let details = card.querySelector('.artist-details');
