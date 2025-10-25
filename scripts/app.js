@@ -304,88 +304,35 @@ function createTVNoise() {
 createTVNoise();
 
 // Интерактивность переключателей
-document.querySelectorAll('.switch').forEach((switch_, index) => {
-    // Обрабатываем только центральную кнопку
-    if (index !== 1) return;
-
+// VHS SLOT click = запуск/стоп фона
+(function(){
+  const slot = document.querySelector('.vhs-slot');
     const video = document.getElementById('bgVideo');
     const videoContainer = document.querySelector('.video-background');
-    let isPressed = false;
-
-    // Создаем звук щелчка
-    function createClickSound() {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(100, audioContext.currentTime);
-        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-        
-        oscillator.start();
-        oscillator.stop(audioContext.currentTime + 0.1);
-    }
-
-    async function handleVideoPlayback() {
-        if (!isPressed) {
-            // Включаем видео
-            try {
-                video.currentTime = 3;
-                await video.play();
-                videoContainer.classList.add('active');
-                switch_.classList.add('pressed');
-                isPressed = true;
-            } catch (error) {
-                console.error("Ошибка воспроизведения:", error);
-                switch_.classList.remove('pressed');
-                isPressed = false;
-            }
-        } else {
-            // Выключаем видео
-            video.pause();
-            videoContainer.classList.remove('active');
-            switch_.classList.remove('pressed');
-            isPressed = false;
-        }
-    }
-
-    function handleClick() {
-        createClickSound();
-
-        // Эффекты при нажатии
+  if (!slot || !video) return;
+  let on = false;
+  function clickSound(){
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type='square'; osc.frequency.value=100; gain.gain.value=0.08;
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime+0.09);
+    osc.start(); osc.stop(ctx.currentTime+0.1);
+  }
+  async function toggle(){
+    clickSound();
         const noise = document.querySelector('.noise-overlay');
-        noise.style.opacity = '0.8';
-        document.body.style.transform = `scale(${1 + Math.random() * 0.005}) skew(${Math.random() * 1}deg)`;
-
-        handleVideoPlayback();
-
-        // Сброс эффектов
-        setTimeout(() => {
-            noise.style.opacity = '0.2';
-            document.body.style.transform = 'none';
-        }, 150);
-    }
-
-    // Обработка кликов
-    switch_.addEventListener('click', handleClick);
-
-    // Обработка касаний
-    switch_.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        handleClick();
-    });
-
-    // Сброс состояния при ошибках видео
-    video.addEventListener('error', () => {
-        isPressed = false;
-        switch_.classList.remove('pressed');
-        videoContainer.classList.remove('active');
-    });
-});
+    noise && (noise.style.opacity='0.8');
+    document.body.style.transform=`scale(${1+Math.random()*0.005}) skew(${Math.random()*1}deg)`;
+    try{
+      if (!on){ video.currentTime=3; await video.play(); videoContainer.classList.add('active'); on=true; }
+      else { video.pause(); videoContainer.classList.remove('active'); on=false; }
+    }catch(e){ console.warn('video toggle:',e); }
+    setTimeout(()=>{ if(noise) noise.style.opacity='0.05'; document.body.style.transform='none'; },150);
+  }
+  slot.addEventListener('click', toggle);
+  slot.addEventListener('touchend', (e)=>{ e.preventDefault(); toggle(); });
+})();
 
 window.addEventListener('DOMContentLoaded', function() {
   var switchBtn = document.getElementById('home-switch-btn');
