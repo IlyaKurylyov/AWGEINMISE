@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>INMISE</title>
+    <link rel="preload" href="/src/vhs-main.jsx" as="script" crossorigin>
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/music-widget.css">
     <link rel="stylesheet" href="styles/responsive.css">
@@ -27,7 +28,7 @@
     <!-- Фоновое видео -->
     <div class="video-background">
         <div class="video-wrapper">
-            <video id="bgVideo" muted loop playsinline>
+            <video id="bgVideo" muted loop playsinline preload="none">
                 <source src="assets/videos/background.mp4" type="video/mp4">
             </video>
         </div>
@@ -47,12 +48,13 @@
             <div class="hero-content">
                 <h1 class="glitch-text" data-text="INMISE">INMISE</h1>
                 <div class="switches-container">
-                    <div class="vhs-slot" aria-hidden="true"></div>
+                    <div id="vhs-root"></div>
                 </div>
             </div>
         </section>
     </main>
 
+    <script type="module" src="/src/vhs-main.jsx"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/main.js"></script>
 </body>

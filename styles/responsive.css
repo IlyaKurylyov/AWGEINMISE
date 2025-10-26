@@ -164,7 +164,7 @@
 
     /* Основной контент ниже фильтра */
     .work-section {
-        margin-top: 20px;
+        margin-top: 0 !important; /* убираем зазор на планшетах/мобилах */
         height: auto;
     }
 
@@ -193,34 +193,35 @@
     }
 
     .filter-buttons {
-        flex-direction: column;
-        gap: 2rem;
-        padding: 1rem;
+        flex-direction: row; /* меньше высота: расположение в ряд с переносами */
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 0.5rem;
     }
 
     .producer-switch {
-        width: 100%;
+        width: 48%;
         justify-content: center;
-        gap: 1.5rem;
+        gap: 0.4rem;
     }
 
     .btn-indicator {
-        width: 24px;
-        height: 24px;
-    }
-
-    .indicator-light {
         width: 16px;
         height: 16px;
     }
 
+    .indicator-light {
+        width: 10px;
+        height: 10px;
+    }
+
     .indicator-glow {
-        width: 20px;
-        height: 20px;
+        width: 12px;
+        height: 12px;
     }
 
     .producer-name {
-        font-size: 0.9rem;
+        font-size: 0.8rem;
     }
 }
 
@@ -245,6 +246,9 @@
         top: 0 !important;
         position: fixed !important;
     }
+
+    /* Чёрная прокладка между меню и фильтром (на случай композиции слоёв) */
+    .page-work .main-nav { background: #000 !important; }
 
     .nav-link {
         width: 100% !important;
@@ -312,19 +316,19 @@
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
-        gap: 0.8rem;
+        gap: 0.35rem; /* ещё компактнее для уменьшения высоты */
     }
 
     .producer-switch {
-        width: 48%;
-        gap: 0.6rem;
-        font-size: 0.9rem;
-        padding: 0.4rem 0.2rem;
+        width: 32%; /* 3 в ряд на телефонах → в 2 раза ниже */
+        gap: 0.3rem;
+        font-size: 0.7rem;
+        padding: 0.18rem 0.12rem;
     }
 
     /* Основной контент – идёт за фильтром */
     .work-section {
-        margin-top: 20px;
+        margin-top: 0 !important; /* жёстко убираем зазор */
         position: static;
         height: auto;
         overflow: visible;
@@ -338,11 +342,14 @@
         left: 0;
         width: 100%;
         max-width: 100%;
-        padding: 0.5rem 4% 0.5rem;
+        padding: 0.25rem 4% 0.25rem; /* меньше высота */
         background: rgba(0,0,0,0.95);
         z-index: 1500; /* Выше навигации но ниже nav-links */
         visibility: visible; /* ПРИНУДИТЕЛЬНО показываем */
+        margin-bottom: 0; /* не добавляем дополнительное пространство снизу */
     }
+
+    .producer-name { font-size: 0.7rem; }
 
     .main-nav {
         position: fixed;
@@ -352,6 +359,12 @@
         height: 250px; /* Высота до навигации */
         background: #000;
         z-index: 2000;
+    }
+
+    /* Главный фикс: убираем искусственный отступ под фильтром на мобилках */
+    .page-work .work-section {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
     }
 }
 
@@ -402,6 +415,14 @@
     .tv-frame {
         border-width: 10px;
     }
+
+    /* Ещё компактнее на очень маленьких экранах */
+    .filter-buttons { gap: 0.25rem; }
+    .producer-switch { width: 32%; gap: 0.26rem; font-size: 0.66rem; padding: 0.14rem 0.1rem; }
+    .btn-indicator { width: 12px; height: 12px; }
+    .indicator-light { width: 8px; height: 8px; }
+    .indicator-glow { width: 10px; height: 10px; }
+    .work-filter { padding: 0.18rem 3% 0.18rem; }
 }
 
 /* ===== ОЧЕНЬ МАЛЕНЬКИЕ ЭКРАНЫ ≤380px ===== */

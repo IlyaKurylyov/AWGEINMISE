@@ -69,6 +69,7 @@
         backdrop-filter: blur(10px);
         margin: 0;
         padding: 0;
+        height: 140px; /* перекрываем зазор до work-filter в режиме 769-1024 */
     }
     
     /* Work filter positioning - под навигацией (sticky на планшетах) */
@@ -84,6 +85,18 @@
         margin: 0 0 12px 0; /* зазор над первым битом */
         visibility: visible !important;
         display: block !important;
+    }
+
+    /* Закрасить только вверх до меню: псевдоэлемент вытягивается к верху вьюпорта */
+    .page-work .work-filter::before {
+        content: "";
+        position: absolute;
+        left: 0; right: 0;
+        top: -100vh;            /* тянем вверх */
+        height: 100vh;          /* покрываем весь возможный зазор */
+        background: #000;
+        z-index: 1400;          /* ниже меню (2000), ниже фильтра (1500), выше контента */
+        pointer-events: none;
     }
     
     .filter-buttons {
@@ -114,8 +127,8 @@
         max-width: 100%;
         gap: 16px;
     }
-    /* Опускаем весь main-контент ниже sticky фильтра */
-    .page-work .content { padding-top: 140px !important; }
+    /* Контент должен начинаться сразу под фильтром */
+    .page-work .content { padding-top: 0 !important; }
     .page-work .work-section { margin-top: 0 !important; padding-top: 0 !important; }
 }
 
@@ -155,6 +168,7 @@
         background: rgba(0,0,0,0.98) !important;
         margin: 0 !important;
         padding: 0 !important;
+        height: 260px !important; /* закрашиваем ровно зазор до work-filter */
     }
     
     /* Work filter - компактнее, sticky; компенсируем высоту в контенте */
@@ -175,6 +189,17 @@
         height: auto !important;
         overflow: visible !important;
         transform: none !important;
+    }
+
+    .page-work .work-filter::before {
+        content: "";
+        position: absolute;
+        left: 0; right: 0;
+        top: -100vh;
+        height: 100vh;
+        background: #000;
+        z-index: 1400;
+        pointer-events: none;
     }
     
     .filter-buttons {
@@ -266,9 +291,8 @@
     .beat-audio { grid-area: audio; width: 100%; min-height: 36px; }
     .beat-buy { grid-area: buy; width: 100%; text-align: center; padding: 10px 14px; }
 
-    /* Контент — биты строго после фильтров */
-    /* Опускаем весь main-контент ниже sticky фильтра */
-    .page-work .content { padding-top: 180px !important; }
+    /* Контент — биты сразу под фильтрами */
+    .page-work .content { padding-top: 0 !important; }
     .page-work .work-section { margin-top: 0 !important; padding-top: 0 !important; }
 }
 
@@ -342,6 +366,17 @@
         overflow: visible !important;
         transform: none !important;
     }
+
+    .page-work .work-filter::before {
+        content: "";
+        position: absolute;
+        left: 0; right: 0;
+        top: -100vh;
+        height: 100vh;
+        background: #000;
+        z-index: 1400;
+        pointer-events: none;
+    }
     
     .page-work .filter-buttons,
     .filter-buttons {
@@ -414,8 +449,8 @@
     .page-work .producer-switch .filter-checkbox{ position: absolute !important; inset: 0 !important; opacity: 0 !important; cursor: pointer !important; }
     .page-work .producer-switch .filter-checkbox:checked ~ .producer-name{ color:#eaffc5 !important; text-shadow: 0 0 10px rgba(159,255,0,.35) !important; }
     
-    /* Опускаем весь main-контент ниже sticky фильтра */
-    .page-work .content { padding-top: 300px !important; }
+    /* Контент сразу под фильтром — без искусственного зазора */
+    .page-work .content { padding-top: 0 !important; }
     .page-work .work-section { margin-top: 0 !important; padding-top: 0 !important; }
     
     .beats-grid {

@@ -10,11 +10,19 @@ body {
     font-family: 'Courier New', monospace;
     background-color: #000;
     color: #fff;
-    /* overflow: hidden; убрано для плавного скролла */
     line-height: 1;
     letter-spacing: -0.02em;
     position: relative;
     min-height: 100vh;
+}
+
+/* Убираем скролл только на главной странице */
+body.page-home {
+    overflow: hidden;
+}
+
+html:has(body.page-home) {
+    overflow: hidden;
 }
 
 body::before {
@@ -476,42 +484,18 @@ body::after {
 .switches-container {
     display: flex;
     justify-content: center;
+    align-items: center;
     margin-top: 60px;
+    min-height: 100px;
 }
 
-/* VHS SLOT instead of 3 switches */
-.vhs-slot {
-    width: calc(60px * 3 + 80px * 2); /* та же общая ширина, что у 3 кнопок с gap 80 */
-    height: 90px;
-    border-radius: 8px;
-    position: relative;
-    background: linear-gradient(180deg, rgba(20,20,20,0.96) 0%, rgba(0,0,0,0.96) 100%),
-                repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0 2px, transparent 2px 6px);
-    box-shadow: 0 0 30px #fff2, inset 0 0 12px rgba(0,0,0,0.8);
-    border: 2px solid rgba(255,255,255,0.25);
-    overflow: hidden;
+/* VHS Root container for React component */
+#vhs-root {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
 }
-.vhs-slot::before {
-    content: '';
-    position: absolute; inset: 8px;
-    border-radius: 6px;
-    background: radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, transparent 60%),
-                linear-gradient(180deg, rgba(0,0,0,0.4), rgba(0,0,0,0.8));
-    mix-blend-mode: screen;
-    opacity: 0.45;
-    pointer-events: none;
-}
-.vhs-slot::after {
-    content: '';
-    position: absolute; left: 0; right: 0; bottom: -2px; height: 12px;
-    background: linear-gradient(0deg, rgba(255,255,255,0.2), transparent);
-    filter: blur(6px);
-    pointer-events: none;
-}
-
-/* лёгкое VHS-мерцание рамки слот-приёмника */
-@keyframes vhsSlotFlicker { 0%,100%{ box-shadow: 0 0 30px #fff2, inset 0 0 12px rgba(0,0,0,0.8);} 50%{ box-shadow: 0 0 40px #fff3, inset 0 0 14px rgba(0,0,0,0.85);} }
-.vhs-slot { animation: vhsSlotFlicker 2.2s ease-in-out infinite; }
 
 .switch:hover {
     border-color: rgba(255, 255, 255, 0.4);
