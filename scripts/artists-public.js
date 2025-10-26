@@ -59,6 +59,37 @@
       return null;
     };
 
+    // Вспомогательный: одноразовый белый шум поверх фото
+    function showNoiseBurst(container) {
+      if (!container) return;
+      // создаём стили один раз
+      if (!document.getElementById('artist-noise-style')) {
+        const st = document.createElement('style');
+        st.id = 'artist-noise-style';
+        st.textContent = `
+          .artist-noise-burst{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0}
+          .artist-noise-burst.run{opacity:1;animation:artistNoiseBurst 650ms steps(6) forwards, noiseJitter 60ms steps(2) infinite}
+          .artist-noise-burst>svg{width:100%;height:100%;display:block}
+          @keyframes noiseJitter{0%{transform:translate(0,0)}50%{transform:translate(-1px,1px)}100%{transform:translate(1px,-1px)}}
+        `;
+        document.head.appendChild(st);
+      }
+      const noise = document.createElement('div');
+      noise.className = 'artist-noise-burst';
+      noise.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+          <filter id="ab_noise_filter2" x="0" y="0" width="100%" height="100%">
+            <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/>
+          </filter>
+          <rect width="100" height="100" filter="url(#ab_noise_filter2)" opacity="1"/>
+        </svg>`;
+      container.appendChild(noise);
+      requestAnimationFrame(() => noise.classList.add('run'));
+      return new Promise((resolve)=>{
+        setTimeout(()=>{ noise.remove(); resolve(); }, 680);
+      });
+    }
+
     const bindCard = (card) => {
       if (card.dataset.bound === '1') return;
       card.dataset.bound = '1';
@@ -87,16 +118,20 @@
           // форс‑рестарт ряби
           const imgCont = card.querySelector('.artist-image-container');
           if (imgCont) {
-            imgCont.classList.remove('ripple-run');
-            imgCont.classList.add('ripple-reset');
-            void imgCont.offsetWidth;
-            imgCont.classList.remove('ripple-reset');
-            imgCont.classList.add('ripple-run');
-          }
-          if (img) {
-            img.classList.remove('image-ripple');
-            void img.offsetWidth;
-            img.classList.add('image-ripple');
+            // сразу белый шум поверх фото
+            if (img) { img.style.opacity = '0'; }
+            showNoiseBurst(imgCont).then(() => {
+              // после шума скрываем фото и запускаем дождь/буквы
+              card.classList.add('image-hidden');
+              const img2 = card.querySelector('.artist-image');
+              if (img2) img2.classList.remove('image-ripple');
+              const cont = card.querySelector('.artist-image-container');
+              if (cont) cont.classList.remove('ripple-run');
+              if (card._rippleTimer) { clearTimeout(card._rippleTimer); card._rippleTimer = null; }
+              const canvas = card.querySelector('.matrix-canvas');
+              if (canvas) canvas.style.opacity = '0.95';
+              try { if (typeof window.startMatrixTypingAndRain === 'function') { window.startMatrixTypingAndRain(card); } } catch(_) {}
+            });
           }
           // Очистка/скрытие канваса дождя до старта + гарантируем наличие узлов матрицы
           let detailsEl = card.querySelector('.artist-details');
@@ -127,28 +162,11 @@
           try { const c = canvas.getContext('2d'); if (c) c.clearRect(0,0,canvas.width,canvas.height); } catch(_){ }
           canvas.style.opacity = '0';
           card.classList.add('open');
-          // строго дождёмся конца ряби, затем скрываем фото и запускаем дождь
-          const onRippleEnd = (ev) => {
-            if (ev && ev.animationName && ev.animationName !== 'artistImageRippleOut') return;
-            if (!card.classList.contains('open')) return;
-            card.classList.add('image-hidden');
-            if (canvas) canvas.style.opacity = '0.95';
-            const img2 = card.querySelector('.artist-image');
-            if (img2) img2.classList.remove('image-ripple');
-            const cont = card.querySelector('.artist-image-container');
-            if (cont) cont.classList.remove('ripple-run');
-            img && img.removeEventListener('animationend', onRippleEnd);
-            if (card._rippleTimer) { clearTimeout(card._rippleTimer); card._rippleTimer = null; }
-            try { if (typeof window.startMatrixTypingAndRain === 'function') { window.startMatrixTypingAndRain(card); } } catch(_) {}
-          };
-          img && img.addEventListener('animationend', onRippleEnd, { once: false });
-          if (card._rippleTimer) clearTimeout(card._rippleTimer);
-          card._rippleTimer = setTimeout(onRippleEnd, 1100);
         } else {
           card.classList.remove('open');
           card.classList.remove('image-hidden');
           const img = card.querySelector('.artist-image');
-          if (img) img.style.display = '';
+          if (img) { img.style.display = ''; img.style.opacity = ''; }
           if (card._rippleTimer) { clearTimeout(card._rippleTimer); card._rippleTimer = null; }
           const canvas = card.querySelector('.matrix-canvas');
           if (canvas) {
@@ -168,12 +186,38 @@
     for (const a of artists) {
       let card = findCard(a);
       if (card) {
-        // обновим существующую статическую карточку
+        // обновим существующую карточку
         const img = card.querySelector('.artist-image');
-        if (img && a.image_url) { img.src = a.image_url; img.alt = a.name; }
+        const imgContainer = card.querySelector('.artist-image-container');
+        
+        // Добавляем лоадер если его еще нет
+        let loader = imgContainer?.querySelector('.artist-image-loader');
+        if (!loader && imgContainer) {
+          loader = document.createElement('div');
+          loader.className = 'artist-image-loader';
+          imgContainer.appendChild(loader);
+        }
+        
+        // Устанавливаем src из Supabase Storage (т.к. в HTML src пустой)
+        if (img && a.image_url) {
+          img.classList.remove('loaded');
+          img.src = a.image_url;
+          img.alt = a.name;
+          
+          // Скрыть лоадер когда фото загрузилось
+          img.onload = () => {
+            img.classList.add('loaded');
+            if (loader) loader.classList.add('hidden');
+          };
+          
+          // На случай ошибки загрузки
+          img.onerror = () => {
+            if (loader) loader.classList.add('hidden');
+            img.classList.add('loaded');
+          };
+        }
         // Описание не показываем при клике; краткое описание не трогаем внутри details
         // добавить/обновить блок details в контейнер изображения
-        const imgContainer = card.querySelector('.artist-image-container') || card;
         let details = card.querySelector('.artist-details');
         if (!details || details.parentElement !== imgContainer) {
           if (details) details.remove();
@@ -201,10 +245,34 @@
         if (fallbackStatic) {
           fallbackStatic.setAttribute('data-artist-id', a.id);
           const img = fallbackStatic.querySelector('.artist-image');
-          if (img && a.image_url) { img.src = a.image_url; img.alt = a.name; }
+          const imgContainer = fallbackStatic.querySelector('.artist-image-container');
+          
+          // Добавляем лоадер
+          let loader = imgContainer?.querySelector('.artist-image-loader');
+          if (!loader && imgContainer) {
+            loader = document.createElement('div');
+            loader.className = 'artist-image-loader';
+            imgContainer.appendChild(loader);
+          }
+          
+          // Устанавливаем src из Supabase Storage
+          if (img && a.image_url) {
+            img.classList.remove('loaded');
+            img.src = a.image_url;
+            img.alt = a.name;
+            
+            img.onload = () => {
+              img.classList.add('loaded');
+              if (loader) loader.classList.add('hidden');
+            };
+            
+            img.onerror = () => {
+              if (loader) loader.classList.add('hidden');
+              img.classList.add('loaded');
+            };
+          }
           const desc = fallbackStatic.querySelector('.artist-description');
           if (desc) desc.textContent = a.description || '';
-          const imgContainer = fallbackStatic.querySelector('.artist-image-container') || fallbackStatic;
           let details = fallbackStatic.querySelector('.artist-details');
           if (!details || details.parentElement !== imgContainer) {
             if (details) details.remove();
@@ -222,7 +290,8 @@
         card.setAttribute('data-artist-id', a.id);
         card.innerHTML = `
           <div class="artist-image-container">
-            <img src="${a.image_url || 'assets/images/artists/artist1.jpg'}" alt="${a.name}" class="artist-image">
+            <div class="artist-image-loader"></div>
+            <img alt="${a.name}" class="artist-image">
           </div>
           ${buildDetailsHTML(a)}
           <div class="artist-info">
@@ -230,6 +299,24 @@
             <div class="artist-description">${a.description || ''}</div>
           </div>
         `;
+        
+        // Настраиваем загрузку изображения
+        const img = card.querySelector('.artist-image');
+        const loader = card.querySelector('.artist-image-loader');
+        if (img && a.image_url) {
+          img.src = a.image_url;
+          img.onload = () => {
+            img.classList.add('loaded');
+            if (loader) loader.classList.add('hidden');
+          };
+          img.onerror = () => {
+            if (loader) loader.classList.add('hidden');
+            img.classList.add('loaded');
+          };
+        } else if (loader) {
+          loader.classList.add('hidden');
+        }
+        
         bindCard(card);
         if (placeholderCard) grid.insertBefore(card, placeholderCard);
         else grid.appendChild(card);
@@ -256,6 +343,26 @@
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
+    // Даем странице отрисоваться сначала
+    await new Promise(r => setTimeout(r, 150));
+
+    // Форс: проверяем доступность статических картинок, если есть отмены запросов — повторим загрузку
+    try {
+      document.querySelectorAll('.artist-image').forEach((img) => {
+        if (!img) return;
+        // Если браузер пометил как отменённый, перезапустим загрузку
+        if (!img.complete || img.naturalWidth === 0) {
+          const src = img.getAttribute('src');
+          if (src) {
+            const tmp = new Image();
+            tmp.onload = () => { img.src = src; };
+            tmp.onerror = () => { /* игнорируем, будет заменено данными из БД */ };
+            tmp.src = src + (src.includes('?') ? '&' : '?') + 'ts=' + Date.now();
+          }
+        }
+      });
+    } catch (_) {}
+    
     const artists = await loadArtists();
     if (artists.length) {
       window.__ARTISTS_DYNAMIC = true;

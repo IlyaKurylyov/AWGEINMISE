@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 
 export default function VhsSlot() {
@@ -90,8 +91,8 @@ export default function VhsSlot() {
 
   return (
     <>
-      {/* VHS White Noise Overlay - Пиксельная рябь */}
-      {showNoise && (
+      {/* VHS White Noise Overlay - Пиксельная рябь через Portal */}
+      {showNoise && createPortal(
         <div style={{
           position: 'fixed',
           inset: 0,
@@ -163,7 +164,8 @@ export default function VhsSlot() {
               100% { transform: translateY(4px); }
             }
           `}</style>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

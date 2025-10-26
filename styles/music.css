@@ -1,3 +1,10 @@
+/* Добавляем шрифт VT323 для LCD-эффекта */
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+/* ВАЖНО: импортируем main.css для базовых стилей */
+@import './main.css';
+@import './responsive.css';
+
 /* Основной контейнер */
 .music-content {
     display: flex;
@@ -240,9 +247,6 @@
     }
 }
 
-/* Добавляем шрифт VT323 для LCD-эффекта */
-@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
-
 .vhs-player {
     background: linear-gradient(180deg,#2e2e2e 0%, #232323 60%, #1b1b1b 100%);
     border-radius: 18px;
@@ -450,6 +454,7 @@
     transition: all 0.25s ease;
     border: 1px solid #550000;
     flex-shrink: 0;
+    order: 1 !important; /* LED сверху */
 }
 
 .indicator-light.active {
@@ -494,14 +499,20 @@
 }
 
 .indicator span {
-    font-family: 'VT323', monospace;
-    font-size: 14px; /* сопоставимо с высотой LED */
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    white-space: nowrap;
-    line-height: 18px; /* единая базовая линия с LED */
-    margin: 0; padding: 0; /* убираем влияние отступов */
+    font-family: 'VT323', monospace !important;
+    font-size: 14px !important;
+    color: #d0d0d0 !important; /* Светло-серый вместо #888 для контраста */
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    white-space: nowrap !important;
+    line-height: 18px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: inline-block !important;
+    flex-shrink: 0 !important;
+    order: 2 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 /* Эффект сканлайнов */
@@ -817,7 +828,7 @@
 
 .vhs-indicators {
     position: relative;
-    display: flex;
+    display: flex !important;
     justify-content: center;
     align-items: center;
     gap: 24px; /* равномерный отступ между парами */
@@ -825,14 +836,19 @@
     height: auto;
     margin-top: 8px;
     flex-wrap: nowrap;
+    width: 100%;
 }
 
+.vhs-indicators .indicator,
+div.indicator,
 .indicator {
-    display: inline-grid; /* строгая сетка: текст + LED в ряд */
-    grid-auto-flow: column;
-    grid-template-columns: auto 18px;
-    align-items: center; /* вертикально по центру */
-    column-gap: 4px; /* LED максимально близко к подписи */
+    display: inline-flex !important; /* более надежный flex */
+    flex-direction: column !important; /* вертикально: LED сверху, текст снизу */
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important; /* отступ между LED и текстом */
+    white-space: nowrap !important;
+    min-width: fit-content !important;
 }
 
 .error-message {

@@ -1,6 +1,68 @@
-# Редирект с http на https создан автоматически при заказе бесплатного ssl-сертификата
-RewriteEngine On
-RewriteCond %{SERVER_PORT} !^443$
-RewriteRule .* https://%{SERVER_NAME}%{REQUEST_URI} [R,L]
-# Конец редиректа
+# ========================================
+# INMISE - Apache Configuration
+# ========================================
 
+# Включаем модуль заголовков (если доступен)
+<IfModule mod_headers.c>
+    # HTML - БЕЗ кэша (всегда свежие)
+    <FilesMatch "\.(html|htm)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+
+    # CSS и JS - короткий кэш (1 день)
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "max-age=86400, public, must-revalidate"
+    </FilesMatch>
+
+    # Медиа - длинный кэш (30 дней)
+    <FilesMatch "\.(jpg|jpeg|png|gif|svg|webp|ico|mp4|mp3|woff|woff2|ttf|eot)$">
+        Header set Cache-Control "max-age=2592000, public"
+    </FilesMatch>
+</IfModule>
+
+# Правильные MIME типы
+<IfModule mod_mime.c>
+    AddType text/html .html
+    AddType text/css .css
+    AddType application/javascript .js
+    AddType video/mp4 .mp4
+    AddType audio/mpeg .mp3
+    AddType image/svg+xml .svg
+    AddType font/woff2 .woff2
+</IfModule>
+
+# Gzip сжатие (если доступно)
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json text/xml
+</IfModule>
+
+# ETag для проверки обновлений
+FileETag MTime Size
+
+# URL Rewriting - открываем страницы без .html
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    
+    # Если запрашивается директория или файл - пропускаем
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+    
+    # Если есть .html файл - отдаём его
+    RewriteCond %{REQUEST_FILENAME}.html -f
+    RewriteRule ^(.*)$ $1.html [L]
+</IfModule>
+
+# Разрешаем доступ к файлам
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+
+# Для старых версий Apache
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Allow from all
+</IfModule>

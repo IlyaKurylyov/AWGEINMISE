@@ -64,18 +64,54 @@ body {
     aspect-ratio: 4/5;
     overflow: hidden;
     margin-bottom: 15px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* Лоадер для загрузки фото */
+.artist-image-loader {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top-color: #FFB84C;
+    border-radius: 50%;
+    animation: vhs-spin 1s linear infinite;
+    z-index: 10;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+.artist-image-loader.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+@keyframes vhs-spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 .artist-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
     filter: grayscale(100%);
+    display: block !important;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.artist-image.loaded {
+    opacity: 1 !important;
 }
 
 /* Когда изображение скрыто полностью после анимации: контейнер оставляем для оверлея */
-.artist-card.image-hidden .artist-image { display: none; }
+.artist-card.image-hidden .artist-image { 
+    display: none !important; 
+}
 
 .artist-card:hover .artist-image {
     transform: scale(1.05);
@@ -248,11 +284,7 @@ body {
 }
 
 /* Рябь + исчезновение фото запускается классом .image-ripple (см. ниже) */
-.artist-card.open .artist-image {
-  transform: none !important;
-  transition: none !important;
-  will-change: transform, opacity;
-}
+.artist-card.open .artist-image { opacity: 0 !important; }
 .artist-card.open:hover .artist-image { transform: none !important; }
 
 /* Программный перезапуск ряби */

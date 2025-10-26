@@ -124,6 +124,19 @@
         font-size: 2rem;
     }
 
+    /* VHS слот на планшетах */
+    .switches-container {
+        margin-top: 40px;
+        min-height: 80px;
+        padding: 0 20px;
+    }
+
+    #vhs-root {
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
     .artists-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 20px;
@@ -246,6 +259,25 @@
         top: 0 !important;
         position: fixed !important;
     }
+    
+    /* На главной странице - прозрачный фон навигации, чтобы был виден шум */
+    body.page-home .nav-links {
+        background: transparent !important;
+    }
+    
+    /* Шум на весь экран для главной страницы на мобилках */
+    body.page-home .noise,
+    body.page-home .noise-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 500 !important; /* Ниже навигации (2000), но выше контента */
+        pointer-events: none !important;
+    }
 
     /* Чёрная прокладка между меню и фильтром (на случай композиции слоёв) */
     .page-work .main-nav { background: #000 !important; }
@@ -269,8 +301,65 @@
         pointer-events: none !important;
     }
 
-    .content {
+    /* Для главной страницы - убираем padding, чтобы hero был по центру */
+    body.page-home .content {
+        padding-top: 0 !important;
+    }
+
+    /* Hero на весь экран минус навигация */
+    body.page-home .hero {
+        height: 100vh !important;
+        padding-top: 0 !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    body.page-home .hero-content {
+        margin-top: -500px !important;
+        padding-top: 0 !important;
+        transform: none !important;
+    }
+
+    /* Для остальных страниц оставляем отступ под навигацию */
+    .page-music .content,
+    .page-artists .content,
+    .page-work .content,
+    .page-contacts .content {
         padding-top: 250px !important;
+    }
+
+    /* VHS слот для мобильных ≤768px */
+    .switches-container {
+        margin-top: 25px !important;
+        min-height: 60px !important;
+        padding: 0 15px !important;
+    }
+
+    #vhs-root {
+        width: 100% !important;
+        max-width: 500px !important;
+        margin: 0 auto !important;
+    }
+
+    .hero-content {
+        padding: 0 15px !important;
+    }
+
+    .glitch-text {
+        font-size: 4.5rem !important;
+        margin-bottom: 15px !important;
+        letter-spacing: 0.1em !important;
+    }
+    
+    /* Поднимаем INMISE выше */
+    body.page-home .hero-content {
+        margin-top: -100px !important;
+        padding-top: 0 !important;
+    }
+    
+    /* Видео целиком на мобильных */
+    body.page-home .video-background video {
+        object-fit: contain !important;
     }
 
     /* Специально для страницы релизов — выше, чтобы VHS-плеер не лез под меню */
@@ -278,9 +367,16 @@
         padding-top: 320px !important;
     }
 
+    /* Видео влезает целиком на мобильных */
+    .video-background video,
     .video-wrapper video {
-        width: auto;
-        height: 100%;
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain !important; /* Видео целиком, могут быть черные полосы */
+    }
+    
+    .video-background {
+        background: #000 !important; /* Черный фон для полос */
     }
 
     .social-links {
@@ -384,6 +480,21 @@
         align-items: center !important;
         gap: 16px !important;
     }
+    
+    /* На главной - прозрачный фон и шум на весь экран */
+    body.page-home .nav-links {
+        background: transparent !important;
+    }
+    
+    body.page-home .noise,
+    body.page-home .noise-overlay {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 500 !important;
+        pointer-events: none !important;
+    }
 
     .nav-link {
         font-size: 0.9rem !important;
@@ -405,10 +516,52 @@
     }
 
     .glitch-text {
-        font-size: 1.5rem !important;
+        font-size: 3.5rem !important;
+        margin-bottom: 12px !important;
+        letter-spacing: 0.08em !important;
+    }
+    
+    /* Поднимаем INMISE выше */
+    body.page-home .hero-content {
+        margin-top: -100px !important;
+        padding-top: 0 !important;
     }
 
-    .content {
+    /* VHS слот на мобильных ≤480px */
+    .switches-container {
+        margin-top: 20px !important;
+        min-height: 50px !important;
+        padding: 0 10px !important;
+    }
+
+    #vhs-root {
+        width: 100% !important;
+        max-width: 380px !important;
+        margin: 0 auto !important;
+        transform: scale(0.9);
+    }
+
+    /* Для главной страницы */
+    body.page-home .content {
+        padding-top: 0 !important;
+    }
+
+    body.page-home .hero {
+        height: 100vh !important;
+        align-items: center !important;
+    }
+    
+    body.page-home .hero-content {
+        margin-top: -500px !important;
+        padding-top: 0 !important;
+        transform: none !important;
+    }
+
+    /* Для остальных страниц */
+    .page-music .content,
+    .page-artists .content,
+    .page-work .content,
+    .page-contacts .content {
         padding-top: 220px !important;
     }
 
@@ -427,6 +580,22 @@
 
 /* ===== ОЧЕНЬ МАЛЕНЬКИЕ ЭКРАНЫ ≤380px ===== */
 @media screen and (max-width: 380px) {
+    /* На главной - прозрачный фон навигации */
+    body.page-home .nav-links {
+        background: transparent !important;
+    }
+    
+    /* Шум на весь экран */
+    body.page-home .noise,
+    body.page-home .noise-overlay {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 500 !important;
+        pointer-events: none !important;
+    }
+    
     .nav-link {
         font-size: 0.8rem !important;
         padding: 8px 6px !important;
@@ -451,11 +620,56 @@
     }
 
     .glitch-text {
-        font-size: 1.3rem !important;
+        font-size: 2.8rem !important;
+        margin-bottom: 10px !important;
+        letter-spacing: 0.05em !important;
+    }
+    
+    /* Поднимаем INMISE выше */
+    body.page-home .hero-content {
+        margin-top: -100px !important;
+        padding-top: 0 !important;
+    }
+
+    /* VHS слот на очень маленьких экранах ≤380px */
+    .switches-container {
+        margin-top: 15px !important;
+        min-height: 40px !important;
+        padding: 0 5px !important;
+    }
+
+    #vhs-root {
+        width: 100% !important;
+        max-width: 300px !important;
+        transform: scale(0.8);
     }
 
     .hero-content {
-        padding: 0 12px !important;
+        padding: 0 10px !important;
+    }
+
+    /* Для главной страницы */
+    body.page-home .content {
+        padding-top: 0 !important;
+    }
+
+    body.page-home .hero {
+        height: 100vh !important;
+        align-items: center !important;
+    }
+    
+    body.page-home .hero-content {
+        margin-top: -500px !important;
+        padding-top: 0 !important;
+        transform: none !important;
+    }
+
+    /* Для остальных страниц */
+    .page-music .content,
+    .page-artists .content,
+    .page-work .content,
+    .page-contacts .content {
+        padding-top: 200px !important;
     }
 }
 

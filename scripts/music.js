@@ -609,6 +609,17 @@ function createYandexMusicWidget(artistId) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Жестко фиксируем индикаторы (на хостинге display сбрасывается до flex)
+    try {
+        document.querySelectorAll('.vhs-indicators .indicator').forEach((el) => {
+            el.style.display = 'inline-flex';
+            el.style.flexDirection = 'column';
+            el.style.alignItems = 'center';
+            el.style.justifyContent = 'center';
+            el.style.whiteSpace = 'nowrap';
+        });
+    } catch (_) {}
+
     // Обработчик ошибок аудиоплеера
     audioPlayer.addEventListener('error', (e) => {
         if (e.target.error && e.target.error.code === 4) {

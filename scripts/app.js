@@ -277,6 +277,9 @@ function createTVNoise() {
     const noise = document.querySelector('.noise');
     const tvFrame = document.querySelector('.tv-frame');
     
+    // Проверяем существование элементов
+    if (!noise || !tvFrame) return;
+    
     // Случайные сильные помехи
     setInterval(() => {
         const intensity = Math.random();
