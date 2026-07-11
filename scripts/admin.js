@@ -112,13 +112,41 @@
     const overlay = document.getElementById('auth-modal');
     if (!loginBtn || !logoutBtn || !userBox) return;
 
+    let showRecoveryForm = () => {};
+
     function attachLoginHandlers() {
       if (window.__authHandlersBound) return;
       const emailInput = document.getElementById('auth-email');
       const passInput = document.getElementById('auth-password');
       const submitBtn = document.getElementById('auth-submit');
       const cancelBtn = document.getElementById('auth-cancel');
+      const forgotBtn = document.getElementById('auth-forgot');
+      const forgotRow = document.getElementById('auth-forgot-row');
+      const resetForm = document.getElementById('password-reset-form');
+      const resetMessage = document.getElementById('password-reset-message');
+      const resetPassword = document.getElementById('reset-password');
+      const resetPasswordConfirm = document.getElementById('reset-password-confirm');
+      const resetSubmit = document.getElementById('reset-password-submit');
       if (!emailInput || !passInput || !submitBtn) return;
+
+      const loginRows = [emailInput.closest('.row'), passInput.closest('.row')];
+      const loginActions = submitBtn.closest('.actions');
+      const showLoginForm = () => {
+        loginRows.forEach((row) => { if (row) row.style.display = ''; });
+        if (loginActions) loginActions.style.display = '';
+        if (forgotRow) forgotRow.style.display = '';
+        if (resetForm) resetForm.style.display = 'none';
+      };
+      showRecoveryForm = () => {
+        if (unauth) unauth.style.display = 'flex';
+        if (adminWrap) adminWrap.style.display = 'none';
+        loginRows.forEach((row) => { if (row) row.style.display = 'none'; });
+        if (loginActions) loginActions.style.display = 'none';
+        if (forgotRow) forgotRow.style.display = 'none';
+        if (resetForm) resetForm.style.display = '';
+        if (resetMessage) resetMessage.textContent = 'Придумайте новый пароль для кабинета.';
+        setTimeout(() => resetPassword?.focus(), 0);
+      };
       const doLogin = async () => {
         const email = emailInput.value.trim();
         const password = passInput.value;
@@ -131,6 +159,42 @@
       if (cancelBtn) cancelBtn.addEventListener('click', (e) => { e.preventDefault(); if (overlay) overlay.style.display = 'none'; });
       passInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doLogin(); } });
       emailInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doLogin(); } });
+      forgotBtn?.addEventListener('click', async () => {
+        const email = emailInput.value.trim();
+        if (!email) { alert('Сначала укажите e-mail, на который зарегистрирован кабинет.'); emailInput.focus(); return; }
+        forgotBtn.disabled = true;
+        try {
+          const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin + window.location.pathname
+          });
+          if (error) throw error;
+          alert('Если такой e-mail зарегистрирован, письмо для восстановления уже отправлено.');
+        } catch (error) {
+          alert('Не удалось отправить письмо: ' + (error.message || error));
+        } finally {
+          forgotBtn.disabled = false;
+        }
+      });
+      resetSubmit?.addEventListener('click', async () => {
+        const password = resetPassword?.value || '';
+        const confirmation = resetPasswordConfirm?.value || '';
+        if (password.length < 8) { alert('Пароль должен содержать не меньше 8 символов.'); return; }
+        if (password !== confirmation) { alert('Пароли не совпадают.'); return; }
+        resetSubmit.disabled = true;
+        try {
+          const { data, error } = await supabase.auth.updateUser({ password });
+          if (error) throw error;
+          resetPassword.value = '';
+          resetPasswordConfirm.value = '';
+          showLoginForm();
+          setLoggedIn(data.user?.email || '');
+          alert('Пароль обновлён.');
+        } catch (error) {
+          alert('Не удалось обновить пароль: ' + (error.message || error));
+        } finally {
+          resetSubmit.disabled = false;
+        }
+      });
       window.__authHandlersBound = true;
     }
 
@@ -163,7 +227,9 @@
     };
 
     supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+      if (event === 'PASSWORD_RECOVERY' && session?.user) {
+        showRecoveryForm();
+      } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
         setLoggedIn(session.user.email || '');
         // hydrate только при входе/первичной инициализации, не на TOKEN_REFRESHED
         hydrate();
@@ -721,4 +787,3 @@
     window.addEventListener('resize', () => updateSideBlur());
   });
 })();
-
