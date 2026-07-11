@@ -5,12 +5,14 @@
 //   SUPABASE_SERVICE_ROLE=...
 
 /* eslint-disable no-console */
-const fs = require('fs');
-const path = require('path');
-require('dotenv').config({ path: path.resolve(process.cwd(), '.env.local') });
-const { createClient } = require('@supabase/supabase-js');
-const fg = require('fast-glob');
-const mime = require('mime');
+import fs from 'node:fs';
+import path from 'node:path';
+import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
+import fg from 'fast-glob';
+import mime from 'mime';
+
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE;

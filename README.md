@@ -120,11 +120,16 @@ npm run build
 
 ### Supabase
 
-`scripts/config.js`:
+1. Скопируй `scripts/config.local.example.js` в `scripts/config.local.js`.
+2. Заполни URL нового проекта и его publishable (или legacy anon) key:
 ```javascript
-window.SUPABASE_URL = 'https://lzpesnkjffmsnigahuav.supabase.co';
-window.SUPABASE_ANON_KEY = 'your_anon_key_here';
+window.SUPABASE_CONFIG = {
+  url: 'https://YOUR_PROJECT_REF.supabase.co',
+  publishableKey: 'YOUR_PUBLISHABLE_OR_ANON_KEY'
+};
 ```
+
+`scripts/config.local.js` исключён из Git. Никогда не добавляй в него service-role key.
 
 **База данных:**
 - Таблица `artists`:

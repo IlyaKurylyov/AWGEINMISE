@@ -15,11 +15,11 @@ ORDER BY name;
 
 /*
 UPDATE artists 
-SET image_url = 'https://lzpesnkjffmsnigahuav.supabase.co/storage/v1/object/public/artists/{user_id}/avatar-xxx.jpg'
+SET image_url = 'https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/artists/{user_id}/avatar-xxx.jpg'
 WHERE name = 'Hahahap';
 
 UPDATE artists 
-SET image_url = 'https://lzpesnkjffmsnigahuav.supabase.co/storage/v1/object/public/artists/{user_id}/avatar-xxx.jpg'
+SET image_url = 'https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/artists/{user_id}/avatar-xxx.jpg'
 WHERE name = 'Kodik';
 
 -- И так далее для каждого артиста
