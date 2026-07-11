@@ -1,0 +1,608 @@
+/* =================================
+   WORK PAGE RESPONSIVE DESIGN
+   Dedicated mobile optimization for work.html
+   ================================= */
+
+/* ===== DESKTOP RANGES ===== */
+/* Большие мониторы 1440px+ */
+@media screen and (min-width: 1440px) {
+    :root {
+        --container-max-width: 1200px;
+        --font-scale: 1.2;
+    }
+}
+
+/* Стандартные мониторы 1200px-1439px */
+@media screen and (min-width: 1200px) and (max-width: 1439px) {
+    :root {
+        --container-max-width: 1000px;
+        --font-scale: 1;
+    }
+}
+
+/* Маленькие мониторы/ноутбуки 1025px-1199px */
+@media screen and (min-width: 1025px) and (max-width: 1199px) {
+    :root {
+        --container-max-width: 900px;
+        --font-scale: 0.95;
+    }
+    
+    .nav-links {
+        gap: 20px;
+    }
+}
+
+/* ===== TABLET LANDSCAPE 769px-1024px ===== */
+@media screen and (max-width: 1024px) and (min-width: 769px) {
+    
+    /* Navigation adaptation */
+    .nav-link {
+        position: static !important;
+        font-size: 1.1rem;
+        padding: 10px 15px;
+        left: auto !important;
+        top: auto !important;
+        min-width: auto;
+    }
+    
+    .nav-links {
+        position: static;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+        padding: 20px 15px;
+        background: rgba(0,0,0,0.95);
+        width: 100%;
+        height: auto;
+        overflow: visible;
+    }
+    
+    .main-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 2000;
+        background: rgba(0,0,0,0.98);
+        backdrop-filter: blur(10px);
+        margin: 0;
+        padding: 0;
+        height: 140px; /* перекрываем зазор до work-filter в режиме 769-1024 */
+    }
+    
+    /* Work filter positioning - под навигацией (sticky на планшетах) */
+    .work-filter {
+        position: sticky !important;
+        top: 120px !important; /* высота навигации */
+        left: 0;
+        width: 100%;
+        padding: 15px 3%;
+        background: rgba(0,0,0,0.98);
+        z-index: 1500;
+        border-bottom: 2px solid rgba(255,255,255,0.1);
+        margin: 0 0 12px 0; /* зазор над первым битом */
+        visibility: visible !important;
+        display: block !important;
+    }
+
+    /* Закрасить только вверх до меню: псевдоэлемент вытягивается к верху вьюпорта */
+    .page-work .work-filter::before {
+        content: "";
+        position: absolute;
+        left: 0; right: 0;
+        top: -100vh;            /* тянем вверх */
+        height: 100vh;          /* покрываем весь возможный зазор */
+        background: #000;
+        z-index: 1400;          /* ниже меню (2000), ниже фильтра (1500), выше контента */
+        pointer-events: none;
+    }
+    
+    .filter-buttons {
+        display: flex !important;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+        visibility: visible !important;
+    }
+    
+    .producer-switch {
+        margin: 0;
+        min-width: 180px;
+        display: flex !important;
+        visibility: visible !important;
+    }
+    
+    /* Work content */
+    .work-section {
+        margin-top: 20px;
+        padding: 20px 3%;
+        height: auto;
+    }
+    
+    .beats-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        max-width: 100%;
+        gap: 16px;
+    }
+    /* Контент должен начинаться сразу под фильтром */
+    .page-work .content { padding-top: 0 !important; }
+    .page-work .work-section { margin-top: 0 !important; padding-top: 0 !important; }
+}
+
+/* ===== TABLET PORTRAIT 481px-768px ===== */
+@media screen and (max-width: 768px) and (min-width: 481px) {
+    
+    /* Navigation - вертикальный стек - ПРИКЛЕИТЬ К ВЕРХУ */
+    .nav-links {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 15px 10px !important;
+        background: rgba(0,0,0,0.98) !important;
+        z-index: 2000 !important;
+        margin: 0 !important;
+    }
+    
+    .nav-link {
+        font-size: 1rem;
+        padding: 8px 20px;
+        width: 100%;
+        max-width: none;
+        text-align: center;
+        margin: 0 10px;
+    }
+    
+    .main-nav {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        z-index: 2000 !important;
+        background: rgba(0,0,0,0.98) !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: 260px !important; /* закрашиваем ровно зазор до work-filter */
+    }
+    
+    /* Work filter - компактнее, sticky; компенсируем высоту в контенте */
+    .page-work .work-filter,
+    .work-filter {
+        position: sticky !important;
+        top: 160px !important; /* высота вертикальной навигации */
+        padding: 12px 2% !important;
+        background: rgba(0,0,0,0.98) !important;
+        width: 100% !important;
+        left: 0 !important;
+        right: 0 !important;
+        visibility: visible !important;
+        display: block !important;
+        z-index: 1500 !important;
+        margin: 0 0 12px 0 !important; /* зазор над первым битом */
+        opacity: 1 !important;
+        height: auto !important;
+        overflow: visible !important;
+        transform: none !important;
+    }
+
+    .page-work .work-filter::before {
+        content: "";
+        position: absolute;
+        left: 0; right: 0;
+        top: -100vh;
+        height: 100vh;
+        background: #000;
+        z-index: 1400;
+        pointer-events: none;
+    }
+    
+    .filter-buttons {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .producer-switch {
+        width: 100%;
+        max-width: 280px;
+        justify-content: center;
+    }
+    
+    .producer-name {
+        font-size: 0.9rem;
+    }
+    /* ——— Analog toggle switch (tablet portrait) ——— */
+    .page-work .filter-buttons { gap: 12px !important; }
+    .page-work .producer-switch {
+        position: relative !important;
+        width: 100% !important;
+        max-width: 360px !important;
+        padding: 6px 2px !important;
+        border: none !important;
+        background: none !important;
+        box-shadow: none !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+    }
+    /* Корпус тумблера */
+    .page-work .producer-switch .btn-indicator{
+        position: relative !important;
+        width: 56px !important; height: 28px !important; border-radius: 16px !important;
+        background: linear-gradient(180deg,#2a2a2a,#0f0f0f) !important; border:2px solid #444 !important;
+        box-shadow: inset 0 2px 6px rgba(0,0,0,.7), 0 1px 2px rgba(255,255,255,.08) !important;
+    }
+    /* Ручка */
+    .page-work .producer-switch .indicator-light{
+        position: absolute !important; top: 50% !important; left: 4px !important; transform: translateY(-50%) translateX(0) !important;
+        width: 22px !important; height: 22px !important; border-radius: 50% !important;
+        background: radial-gradient(circle at 30% 30%, #ffffff55, #bcbcbc 30%, #8a8a8a 60%, #3a3a3a 100%) !important;
+        box-shadow: inset 0 0 6px rgba(0,0,0,.6), 0 0 6px rgba(255,255,255,.12) !important;
+        transition: transform .18s ease, box-shadow .18s ease, background .18s ease !important;
+    }
+    .page-work .producer-switch .indicator-glow{ display: none !important; }
+    /* Активный: ручка вправо и зелёный свет */
+    .page-work .producer-switch .filter-checkbox:checked ~ .btn-indicator .indicator-light{
+        transform: translateY(-50%) translateX(26px) !important;
+        background: radial-gradient(circle at 30% 30%, #eaffc5, #9fff00 40%, #6ab300 70%, #2a5a00 100%) !important;
+        box-shadow: 0 0 10px #9fff00, 0 0 18px #9fff0066, inset 0 0 6px rgba(0,0,0,.6) !important;
+    }
+    .page-work .producer-switch .producer-name{
+        font-weight: 800 !important; text-transform: uppercase !important; letter-spacing: .06em !important; color:#fff !important; text-shadow: 0 0 6px rgba(255,255,255,.18) !important;
+    }
+    .page-work .producer-switch .filter-checkbox{ position: absolute !important; inset: 0 !important; opacity: 0 !important; cursor: pointer !important; }
+    .page-work .producer-switch .filter-checkbox:checked ~ .producer-name{ color:#eaffc5 !important; text-shadow: 0 0 10px rgba(159,255,0,.35) !important; }
+    
+    /* Work content */
+    .work-section {
+        margin-top: 15px;
+        padding: 15px 2%;
+    }
+    
+    .beats-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    
+    /* Карточка — читабельная сетка на планшете (портрет) */
+    .beat-card {
+        padding: 14px 12px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+          "title price"
+          "seller seller"
+          "audio audio"
+          "buy buy";
+        gap: 8px 12px;
+        align-items: center;
+        margin: 0 !important; /* расстояние между карточками даёт grid gap */
+    }
+    .beat-title { grid-area: title; font-size: 1rem; line-height: 1.25; letter-spacing: .02em; }
+    .beat-price { grid-area: price; font-weight: 700; color: #cfea7f; text-align: right; font-size: .95rem; }
+    .beat-seller { grid-area: seller; font-size: .9rem; color: #bdbdbd; }
+    .beat-audio { grid-area: audio; width: 100%; min-height: 36px; }
+    .beat-buy { grid-area: buy; width: 100%; text-align: center; padding: 10px 14px; }
+
+    /* Контент — биты сразу под фильтрами */
+    .page-work .content { padding-top: 0 !important; }
+    .page-work .work-section { margin-top: 0 !important; padding-top: 0 !important; }
+}
+
+/* ===== MOBILE 320px-480px ===== */
+@media screen and (max-width: 480px) {
+    
+    /* Home switch button - компактнее */
+    .home-switch-btn {
+        top: 8px;
+        left: 8px;
+        width: 60px;
+        height: 75px;
+    }
+    
+    .home-switch-btn svg {
+        width: 55px;
+        height: 65px;
+    }
+    
+    /* Navigation - мобильная версия - ПРИКЛЕИТЬ К ВЕРХУ */
+    .nav-links {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px 5px !important;
+        background: rgba(0,0,0,0.98) !important;
+        z-index: 2000 !important;
+        margin: 0 !important;
+    }
+    
+    .nav-link {
+        font-size: 0.9rem;
+        padding: 8px 15px;
+        width: 100%;
+        max-width: none;
+        margin: 0 10px;
+    }
+    
+    .main-nav {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        z-index: 2000 !important;
+        background: rgba(0,0,0,0.98) !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Work filter - мобильная адаптация, sticky под мобильной навигацией */
+    .page-work .work-filter,
+    .work-filter {
+        position: sticky !important;
+        top: 260px !important; /* Под мобильной навигацией, чтобы верхний тумблер не уходил под меню */
+        padding: 10px 3% !important;
+        background: rgba(0,0,0,0.98) !important;
+        width: 100% !important;
+        left: 0 !important;
+        right: 0 !important;
+        visibility: visible !important;
+        display: block !important;
+        z-index: 1500 !important;
+        margin: 0 0 12px 0 !important; /* зазор над первым битом */
+        opacity: 1 !important;
+        height: auto !important;
+        min-height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        transform: none !important;
+    }
+
+    .page-work .work-filter::before {
+        content: "";
+        position: absolute;
+        left: 0; right: 0;
+        top: -100vh;
+        height: 100vh;
+        background: #000;
+        z-index: 1400;
+        pointer-events: none;
+    }
+    
+    .page-work .filter-buttons,
+    .filter-buttons {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        align-items: center !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+    
+    .page-work .producer-switch,
+    .producer-switch {
+        display: flex !important;
+        width: 100% !important;
+        max-width: 250px !important;
+        padding: 8px !important;
+        font-size: 0.85rem !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        margin: 4px 0 !important;
+        background: rgba(40,40,40,0.9) !important;
+        border: 1px solid #666 !important;
+        border-radius: 6px !important;
+        color: #fff !important;
+    }
+    
+    .btn-indicator {
+        width: 12px;
+        height: 12px;
+    }
+    
+    .producer-name {
+        font-size: 0.8rem;
+    }
+    /* ——— Analog toggle switch (mobile) ——— */
+    .page-work .filter-buttons { gap: 10px !important; }
+    .page-work .producer-switch {
+        position: relative !important;
+        width: 100% !important; max-width: 340px !important; padding: 6px 2px !important;
+        border: none !important; background: none !important; box-shadow: none !important;
+        display: flex !important; align-items: center !important; gap: 12px !important;
+    }
+    .page-work .producer-switch::before{ content: none; }
+    /* Корпус тумблера */
+    .page-work .producer-switch .btn-indicator{
+        position: relative !important; width: 54px !important; height: 28px !important; border-radius: 16px !important;
+        background: linear-gradient(180deg,#2a2a2a,#0f0f0f) !important; border:2px solid #444 !important;
+        box-shadow: inset 0 2px 6px rgba(0,0,0,.7), 0 1px 2px rgba(255,255,255,.08) !important;
+    }
+    /* Ручка */
+    .page-work .producer-switch .indicator-light{
+        position: absolute !important; top: 50% !important; left: 3px !important; transform: translateY(-50%) translateX(0) !important;
+        width: 22px !important; height: 22px !important; border-radius: 50% !important;
+        background: radial-gradient(circle at 30% 30%, #ffffff55, #bcbcbc 30%, #8a8a8a 60%, #3a3a3a 100%) !important;
+        box-shadow: inset 0 0 6px rgba(0,0,0,.6), 0 0 6px rgba(255,255,255,.12) !important;
+        transition: transform .18s ease, box-shadow .18s ease, background .18s ease !important;
+    }
+    .page-work .producer-switch .indicator-glow{ display:none !important; }
+    .page-work .producer-switch .filter-checkbox:checked ~ .btn-indicator .indicator-light{
+        transform: translateY(-50%) translateX(26px) !important;
+        background: radial-gradient(circle at 30% 30%, #eaffc5, #9fff00 40%, #6ab300 70%, #2a5a00 100%) !important;
+        box-shadow: 0 0 10px #9fff00, 0 0 18px #9fff0066, inset 0 0 6px rgba(0,0,0,.6) !important;
+    }
+    .page-work .producer-switch .producer-name{ font-weight: 800 !important; text-transform: uppercase !important; letter-spacing: .06em !important; color:#fff !important; text-shadow: 0 0 6px rgba(255,255,255,.18) !important; }
+    .page-work .producer-switch .filter-checkbox{ position: absolute !important; inset: 0 !important; opacity: 0 !important; cursor: pointer !important; }
+    .page-work .producer-switch .filter-checkbox:checked ~ .producer-name{ color:#eaffc5 !important; text-shadow: 0 0 10px rgba(159,255,0,.35) !important; }
+    
+    /* Контент сразу под фильтром — без искусственного зазора */
+    .page-work .content { padding-top: 0 !important; }
+    .page-work .work-section { margin-top: 0 !important; padding-top: 0 !important; }
+    
+    .beats-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    /* Карточка — компактная сетка на мобильных */
+    .beat-card {
+        padding: 12px 10px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+          "title price"
+          "seller seller"
+          "audio audio"
+          "buy buy";
+        gap: 8px 10px;
+        align-items: center;
+    }
+    .beat-title { grid-area: title; font-size: .95rem; line-height: 1.2; letter-spacing: .02em; }
+    .beat-price { grid-area: price; font-weight: 800; color: #d8ff8a; text-align: right; font-size: .95rem; }
+    .beat-seller { grid-area: seller; font-size: .85rem; color: #c7c7c7; }
+    .beat-audio { grid-area: audio; width: 100%; min-height: 34px; }
+    .beat-buy { grid-area: buy; width: 100%; text-align: center; padding: 9px 12px; }
+    
+    .beat-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .beat-title {
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+    }
+    
+    .beat-seller, .beat-price {
+        font-size: 0.8rem;
+        margin-bottom: 3px;
+    }
+    
+    .beat-audio {
+        flex: 1.5;
+        margin: 0;
+        min-width: 0;
+    }
+    
+    .beat-buy {
+        flex-shrink: 0;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        text-align: center;
+        white-space: nowrap;
+    }
+}
+
+/* ===== ОЧЕНЬ МАЛЕНЬКИЕ ЭКРАНЫ <320px ===== */
+@media screen and (max-width: 319px) {
+    
+    .home-switch-btn {
+        width: 50px;
+        height: 65px;
+        top: 5px;
+        left: 5px;
+    }
+    
+    .home-switch-btn svg {
+        width: 45px;
+        height: 55px;
+    }
+    
+    .nav-link {
+        font-size: 0.8rem;
+        padding: 6px 10px;
+    }
+    
+    .work-filter {
+        position: sticky;
+        top: 180px;
+        padding: 8px 2%;
+        width: 100%;
+        left: 0;
+        visibility: visible !important;
+        display: block !important;
+        z-index: 1500;
+        background: rgba(0,0,0,0.98);
+    }
+    
+    .producer-switch {
+        font-size: 0.75rem;
+        padding: 6px;
+        max-width: 220px;
+    }
+    
+    .producer-name {
+        font-size: 0.7rem;
+    }
+    
+    .work-section {
+        padding: 8px 2%;
+    }
+    
+    .beat-card {
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .beat-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .beat-title {
+        font-size: 0.8rem;
+    }
+    
+    .beat-seller, .beat-price {
+        font-size: 0.7rem;
+    }
+    
+    .beat-audio {
+        flex: 1.2;
+        margin: 0;
+        min-width: 0;
+        height: 35px;
+    }
+    
+    .beat-buy {
+        flex-shrink: 0;
+        padding: 5px 8px;
+        font-size: 0.7rem;
+        white-space: nowrap;
+    }
+}
+
+/* ===== ACCESSIBILITY ===== */
+@media (prefers-reduced-motion: reduce) {
+    .nav-link,
+    .producer-switch,
+    .beat-card {
+        transition: none;
+    }
+}
+
+@media (prefers-contrast: high) {
+    .work-filter {
+        background: rgba(0,0,0,1);
+        border: 2px solid #fff;
+    }
+    
+    .producer-switch {
+        border: 1px solid #fff;
+    }
+} 

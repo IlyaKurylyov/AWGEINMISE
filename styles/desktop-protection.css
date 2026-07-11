@@ -1,0 +1,45 @@
+/* =================================
+   DESKTOP PROTECTION LAYER
+   Защита от мобильных переопределений
+   ================================= */
+
+/* ВАЖНО: Этот файл подключается ПОСЛЕДНИМ для защиты десктопа */
+
+/* Минимальная защита для экранов 1025px+ */
+@media screen and (min-width: 1025px) {
+    
+    /* Только критически важные переопределения */
+    .nav-links {
+        flex-direction: row !important;
+        background: transparent !important;
+        width: 100% !important;
+        padding: 0 1rem !important;
+        position: fixed !important;
+        top: 25px !important;
+        left: 0 !important;
+        transform: none !important;
+        height: auto !important;
+    }
+    
+    .nav-link {
+        width: auto !important;
+        margin: 0 !important;
+        position: relative !important;
+        flex: none !important;
+        left: auto !important;
+        top: auto !important;
+    }
+    
+    /* Контент без лишних отступов */
+    .content {
+        padding-top: 0 !important;
+    }
+    
+    /* Музыкальный контент нуждается в отступе для VHS-плеера */
+    .music-content {
+        padding-top: 135px !important; /* Поднят на 15px для видимости плеера */
+        height: 100vh !important; /* Фиксированная высота экрана */
+        overflow: hidden !important; /* Принудительно скрываем переполнение */
+        box-sizing: border-box !important; /* Включаем padding в общую высоту */
+    }
+} 

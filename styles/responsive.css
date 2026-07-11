@@ -1,0 +1,746 @@
+/* =================================
+   RESPONSIVE BREAKPOINTS SYSTEM
+   ================================= */
+
+/* Desktop First - базовые стили для больших экранов */
+/* По умолчанию стили для 1200px+ */
+
+/* ===== DESKTOP RANGES ===== */
+/* Большие мониторы 1440px+ */
+@media screen and (min-width: 1440px) {
+    :root {
+        --container-max-width: 1200px;
+        --font-scale: 1.2;
+    }
+}
+
+/* Стандартные мониторы 1200px-1439px */
+@media screen and (min-width: 1200px) and (max-width: 1439px) {
+    :root {
+        --container-max-width: 1000px;
+        --font-scale: 1;
+    }
+}
+
+/* Маленькие мониторы/ноутбуки 1025px-1199px */
+@media screen and (min-width: 1025px) and (max-width: 1199px) {
+    :root {
+        --container-max-width: 900px;
+        --font-scale: 0.95;
+    }
+    
+    .nav-links {
+        gap: 20px;
+    }
+    
+    .hero-content {
+        padding: 0 40px;
+    }
+}
+
+/* ===== БАЗОВАЯ МОБИЛЬНАЯ АДАПТАЦИЯ 1025px-769px ===== */
+/* Горизонтальная навигация с центрированием */
+@media screen and (max-width: 1024px) {
+    .nav-link {
+        position: static !important;
+        font-size: 1.1rem;
+        padding: 10px 15px;
+        left: auto !important;
+        top: auto !important;
+        min-width: auto;
+        flex: 1;
+        text-align: center;
+        z-index: 200 !important;
+        /* Уменьшаем эффекты свечения для мобильной версии */
+        text-shadow: 
+            -1px -1px 0 #000,
+            1px -1px 0 #000,
+            -1px 1px 0 #000,
+            1px 1px 0 #000,
+            0 0 8px rgba(255, 255, 255, 0.6);
+        box-shadow: 
+            inset 0 0 15px rgba(255, 255, 255, 0.4),
+            0 0 15px rgba(255, 255, 255, 0.4);
+    }
+
+    .nav-links {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 30px; /* Увеличиваем расстояние между кнопками */
+        width: 95%;
+        max-width: 800px;
+        justify-content: center;
+        flex-wrap: nowrap;
+        z-index: 100;
+    }
+
+    /* Уменьшаем эффект свечения при наведении */
+    .nav-link:hover {
+        text-shadow: 
+            -1px -1px 0 #000,
+            1px -1px 0 #000,
+            -1px 1px 0 #000,
+            1px 1px 0 #000,
+            0 0 10px rgba(255, 255, 255, 0.7);
+        box-shadow: 
+            inset 0 0 20px rgba(255, 255, 255, 0.5),
+            0 0 20px rgba(255, 255, 255, 0.5);
+    }
+
+    /* Уменьшаем свечение подложки */
+    .nav-link::before {
+        background: radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.2) 0%,
+            rgba(255, 255, 255, 0.15) 30%,
+            rgba(255, 255, 255, 0.1) 60%,
+            transparent 100%
+        );
+    }
+
+    /* Переопределяем позиционирование для всех кнопок */
+    .nav-link:nth-child(1),
+    .nav-link:nth-child(2),
+    .nav-link:nth-child(3),
+    .nav-link:nth-child(4) {
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+        z-index: 200 !important;
+    }
+
+    .content {
+        padding-top: 100px;
+    }
+
+    .hero-content {
+        padding: 0 20px;
+    }
+
+    .glitch-text {
+        font-size: 2rem;
+    }
+
+    /* VHS слот на планшетах */
+    .switches-container {
+        margin-top: 40px;
+        min-height: 80px;
+        padding: 0 20px;
+    }
+
+    #vhs-root {
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .artists-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        padding: 20px;
+    }
+
+    .artist-card {
+        height: auto;
+    }
+
+    .artist-info {
+        padding: 15px;
+    }
+
+    .artist-name {
+        font-size: 1.2rem;
+    }
+
+    /* Исправлено: фильтр битов тянется на всю ширину, липкий под навигацией */
+    .work-filter {
+        position: sticky;
+        top: 120px;
+        left: 0;
+        transform: none;
+        width: 100%;
+        max-width: 100%;
+        padding: 0 4%;
+        background: rgba(0,0,0,0.95);
+        z-index: 1500; /* Выше навигации но ниже nav-links */
+        visibility: visible; /* ПРИНУДИТЕЛЬНО показываем */
+    }
+
+    #seller-filter {
+        width: 100%;
+        font-size: 1rem;
+        padding: 10px 15px;
+    }
+
+    /* Основной контент ниже фильтра */
+    .work-section {
+        margin-top: 0 !important; /* убираем зазор на планшетах/мобилах */
+        height: auto;
+    }
+
+    .beats-grid {
+        max-width: 100%;
+    }
+
+    .beat-card {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .beat-info {
+        text-align: center;
+    }
+
+    .beat-audio {
+        width: 100%;
+        flex: 0 0 auto; /* фиксируем высоту, чтобы controls не схлопывались */
+    }
+
+    .beat-buy {
+        width: 100%;
+        text-align: center;
+    }
+
+    .filter-buttons {
+        flex-direction: row; /* меньше высота: расположение в ряд с переносами */
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 0.5rem;
+    }
+
+    .producer-switch {
+        width: 48%;
+        justify-content: center;
+        gap: 0.4rem;
+    }
+
+    .btn-indicator {
+        width: 16px;
+        height: 16px;
+    }
+
+    .indicator-light {
+        width: 10px;
+        height: 10px;
+    }
+
+    .indicator-glow {
+        width: 12px;
+        height: 12px;
+    }
+
+    .producer-name {
+        font-size: 0.8rem;
+    }
+}
+
+/* ===== ВЕРТИКАЛЬНАЯ НАВИГАЦИЯ ДЛЯ МАЛЕНЬКИХ ЭКРАНОВ ≤768px ===== */
+/* КРИТИЧЕСКИ ВАЖНО: Кардинально другая навигация! */
+@media screen and (max-width: 768px) {
+    body {
+        overflow-y: auto;
+    }
+
+    .nav-links {
+        flex-direction: column !important;
+        align-items: center !important;
+        background: #000 !important; /* полностью непрозрачный фон */
+        padding: 10px !important;
+        border-radius: 0 !important; /* убираем скругления, чтобы не было просветов */
+        width: 100% !important; /* во всю ширину экрана */
+        gap: 24px !important;
+        z-index: 2000 !important; /* поверх карточек и навигации */
+        left: 0 !important;
+        transform: none !important; /* убираем центрирование, чтобы не «скакало» */
+        top: 0 !important;
+        position: fixed !important;
+    }
+    
+    /* На главной странице - прозрачный фон навигации, чтобы был виден шум */
+    body.page-home .nav-links {
+        background: transparent !important;
+    }
+    
+    /* Шум на весь экран для главной страницы на мобилках */
+    body.page-home .noise,
+    body.page-home .noise-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 500 !important; /* Ниже навигации (2000), но выше контента */
+        pointer-events: none !important;
+    }
+
+    /* Чёрная прокладка между меню и фильтром (на случай композиции слоёв) */
+    .page-work .main-nav { background: #000 !important; }
+
+    .nav-link {
+        width: 100% !important;
+        text-align: center !important;
+        margin: 0 !important;
+        font-size: 1.1rem !important;
+        padding: 12px 15px !important;
+        z-index: 201 !important;
+        pointer-events: auto !important;
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+        flex: none !important;
+    }
+
+    .nav-link::before {
+        z-index: -1 !important;
+        pointer-events: none !important;
+    }
+
+    /* Для главной страницы - убираем padding, чтобы hero был по центру */
+    body.page-home .content {
+        padding-top: 0 !important;
+    }
+
+    /* Hero на весь экран минус навигация */
+    body.page-home .hero {
+        height: 100vh !important;
+        padding-top: 0 !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    body.page-home .hero-content {
+        margin-top: -500px !important;
+        padding-top: 0 !important;
+        transform: none !important;
+    }
+
+    /* Для остальных страниц оставляем отступ под навигацию */
+    .page-music .content,
+    .page-artists .content,
+    .page-work .content,
+    .page-contacts .content {
+        padding-top: 250px !important;
+    }
+
+    /* VHS слот для мобильных ≤768px */
+    .switches-container {
+        margin-top: 25px !important;
+        min-height: 60px !important;
+        padding: 0 15px !important;
+    }
+
+    #vhs-root {
+        width: 100% !important;
+        max-width: 500px !important;
+        margin: 0 auto !important;
+    }
+
+    .hero-content {
+        padding: 0 15px !important;
+    }
+
+    .glitch-text {
+        font-size: 4.5rem !important;
+        margin-bottom: 15px !important;
+        letter-spacing: 0.1em !important;
+    }
+    
+    /* Поднимаем INMISE выше */
+    body.page-home .hero-content {
+        margin-top: -100px !important;
+        padding-top: 0 !important;
+    }
+    
+    /* Видео целиком на мобильных */
+    body.page-home .video-background video {
+        object-fit: contain !important;
+    }
+
+    /* Специально для страницы релизов — выше, чтобы VHS-плеер не лез под меню */
+    .music-content {
+        padding-top: 320px !important;
+    }
+
+    /* Видео влезает целиком на мобильных */
+    .video-background video,
+    .video-wrapper video {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain !important; /* Видео целиком, могут быть черные полосы */
+    }
+    
+    .video-background {
+        background: #000 !important; /* Черный фон для полос */
+    }
+
+    .social-links {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .social-link {
+        width: 80%;
+        max-width: 300px;
+    }
+
+    .artists-grid {
+        grid-template-columns: 1fr !important;
+        max-width: 500px !important;
+        margin: 0 auto !important;
+        gap: 3rem !important;               /* такой же gap, как на ≥769 */
+        padding: 120px 5% 100px !important; /* совпадает с десктопом: 5% боковые, 100px нижний */
+        margin-top: 0 !important;
+    }
+
+    .artist-card {
+        margin-bottom: 20px;
+    }
+
+    .artist-image {
+        height: 300px;
+    }
+
+    /* Кнопки фильтра */
+    .filter-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.35rem; /* ещё компактнее для уменьшения высоты */
+    }
+
+    .producer-switch {
+        width: 32%; /* 3 в ряд на телефонах → в 2 раза ниже */
+        gap: 0.3rem;
+        font-size: 0.7rem;
+        padding: 0.18rem 0.12rem;
+    }
+
+    /* Основной контент – идёт за фильтром */
+    .work-section {
+        margin-top: 0 !important; /* жёстко убираем зазор */
+        position: static;
+        height: auto;
+        overflow: visible;
+        z-index: auto;
+    }
+
+    /* Фильтр битов под навигацией */
+    .work-filter {
+        position: sticky;
+        top: 470px; /* под нав-меню */
+        left: 0;
+        width: 100%;
+        max-width: 100%;
+        padding: 0.25rem 4% 0.25rem; /* меньше высота */
+        background: rgba(0,0,0,0.95);
+        z-index: 1500; /* Выше навигации но ниже nav-links */
+        visibility: visible; /* ПРИНУДИТЕЛЬНО показываем */
+        margin-bottom: 0; /* не добавляем дополнительное пространство снизу */
+    }
+
+    .producer-name { font-size: 0.7rem; }
+
+    .main-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 250px; /* Высота до навигации */
+        background: #000;
+        z-index: 2000;
+    }
+
+    /* Главный фикс: убираем искусственный отступ под фильтром на мобилках */
+    .page-work .work-section {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+}
+
+/* ===== ДОПОЛНИТЕЛЬНАЯ АДАПТАЦИЯ ДЛЯ МАЛЕНЬКИХ ЭКРАНОВ ≤480px ===== */
+@media screen and (max-width: 480px) {
+    .nav-links {
+        width: 100% !important;
+        padding: 8px 10px !important;
+        border-radius: 0 !important;
+        background: #000 !important;
+        z-index: 2000 !important;
+        left: 0 !important;
+        transform: none !important;
+        top: 0 !important;
+        position: fixed !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 16px !important;
+    }
+    
+    /* На главной - прозрачный фон и шум на весь экран */
+    body.page-home .nav-links {
+        background: transparent !important;
+    }
+    
+    body.page-home .noise,
+    body.page-home .noise-overlay {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 500 !important;
+        pointer-events: none !important;
+    }
+
+    .nav-link {
+        font-size: 0.9rem !important;
+        padding: 10px 8px !important;
+        z-index: 201 !important;
+        width: 100% !important;
+        text-align: center !important;
+        margin: 0 !important;
+        pointer-events: auto !important;
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+        flex: none !important;
+    }
+
+    .nav-link::before {
+        z-index: -1 !important;
+        pointer-events: none !important;
+    }
+
+    .glitch-text {
+        font-size: 3.5rem !important;
+        margin-bottom: 12px !important;
+        letter-spacing: 0.08em !important;
+    }
+    
+    /* Поднимаем INMISE выше */
+    body.page-home .hero-content {
+        margin-top: -100px !important;
+        padding-top: 0 !important;
+    }
+
+    /* VHS слот на мобильных ≤480px */
+    .switches-container {
+        margin-top: 20px !important;
+        min-height: 50px !important;
+        padding: 0 10px !important;
+    }
+
+    #vhs-root {
+        width: 100% !important;
+        max-width: 380px !important;
+        margin: 0 auto !important;
+        transform: scale(0.9);
+    }
+
+    /* Для главной страницы */
+    body.page-home .content {
+        padding-top: 0 !important;
+    }
+
+    body.page-home .hero {
+        height: 100vh !important;
+        align-items: center !important;
+    }
+    
+    body.page-home .hero-content {
+        margin-top: -500px !important;
+        padding-top: 0 !important;
+        transform: none !important;
+    }
+
+    /* Для остальных страниц */
+    .page-music .content,
+    .page-artists .content,
+    .page-work .content,
+    .page-contacts .content {
+        padding-top: 220px !important;
+    }
+
+    .tv-frame {
+        border-width: 10px;
+    }
+
+    /* Ещё компактнее на очень маленьких экранах */
+    .filter-buttons { gap: 0.25rem; }
+    .producer-switch { width: 32%; gap: 0.26rem; font-size: 0.66rem; padding: 0.14rem 0.1rem; }
+    .btn-indicator { width: 12px; height: 12px; }
+    .indicator-light { width: 8px; height: 8px; }
+    .indicator-glow { width: 10px; height: 10px; }
+    .work-filter { padding: 0.18rem 3% 0.18rem; }
+}
+
+/* ===== ОЧЕНЬ МАЛЕНЬКИЕ ЭКРАНЫ ≤380px ===== */
+@media screen and (max-width: 380px) {
+    /* На главной - прозрачный фон навигации */
+    body.page-home .nav-links {
+        background: transparent !important;
+    }
+    
+    /* Шум на весь экран */
+    body.page-home .noise,
+    body.page-home .noise-overlay {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 500 !important;
+        pointer-events: none !important;
+    }
+    
+    .nav-link {
+        font-size: 0.8rem !important;
+        padding: 8px 6px !important;
+        z-index: 201 !important;
+        width: 100% !important;
+        text-align: center !important;
+        margin: 0 !important;
+        pointer-events: auto !important;
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+        flex: none !important;
+    }
+
+    .nav-link::before {
+        z-index: -1 !important;
+        pointer-events: none !important;
+    }
+    
+    .content {
+        padding-top: 200px !important;
+    }
+
+    .glitch-text {
+        font-size: 2.8rem !important;
+        margin-bottom: 10px !important;
+        letter-spacing: 0.05em !important;
+    }
+    
+    /* Поднимаем INMISE выше */
+    body.page-home .hero-content {
+        margin-top: -100px !important;
+        padding-top: 0 !important;
+    }
+
+    /* VHS слот на очень маленьких экранах ≤380px */
+    .switches-container {
+        margin-top: 15px !important;
+        min-height: 40px !important;
+        padding: 0 5px !important;
+    }
+
+    #vhs-root {
+        width: 100% !important;
+        max-width: 300px !important;
+        transform: scale(0.8);
+    }
+
+    .hero-content {
+        padding: 0 10px !important;
+    }
+
+    /* Для главной страницы */
+    body.page-home .content {
+        padding-top: 0 !important;
+    }
+
+    body.page-home .hero {
+        height: 100vh !important;
+        align-items: center !important;
+    }
+    
+    body.page-home .hero-content {
+        margin-top: -500px !important;
+        padding-top: 0 !important;
+        transform: none !important;
+    }
+
+    /* Для остальных страниц */
+    .page-music .content,
+    .page-artists .content,
+    .page-work .content,
+    .page-contacts .content {
+        padding-top: 200px !important;
+    }
+}
+
+/* ===== СПЕЦИАЛЬНЫЕ ПРАВИЛА ДЛЯ ВЫСОКИХ ЭКРАНОВ ===== */
+@media screen and (min-height: 900px) {
+    .content {
+        min-height: calc(100vh - 100px);
+    }
+}
+
+/* ===== СТИЛИ ДЛЯ СТРАНИЦЫ РЕЛИЗОВ ===== */
+@media screen and (max-width: 1024px) {
+    .music-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        padding: 20px;
+    }
+
+    .music-player {
+        width: 100%;
+        margin: 10px 0;
+    }
+
+    .track-info {
+        padding: 10px;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .music-grid {
+        grid-template-columns: 1fr;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    .music-player {
+        margin-bottom: 20px;
+    }
+
+    .controls {
+        padding: 10px;
+    }
+}
+
+/* ===== СТИЛИ ДЛЯ СТРАНИЦЫ КОНТАКТОВ ===== */
+@media screen and (max-width: 768px) {
+    .contacts-section {
+        padding: 20px;
+        margin-top: 150px;
+    }
+
+    .contacts-section h1 {
+        font-size: 2rem;
+        margin-bottom: 30px;
+    }
+
+    .social-links {
+        gap: 20px;
+    }
+
+    .social-link {
+        padding: 15px;
+    }
+}
+
+/* ===== УНИВЕРСАЛЬНАЯ ЗАЩИТА КЛИКОВ НА МОБИЛЬНЫХ ===== */
+@media screen and (max-width: 1024px) {
+    .nav-link::before {
+        pointer-events: none !important;
+    }
+}
+
+/* ===== ЗАЩИТА ДЕСКТОПНЫХ СТИЛЕЙ ===== */
+/* Десктоп использует оригинальные стили из main.css - НЕ переопределяем их */ 

@@ -1,3 +1,45 @@
+// Глобальные переменные
+const audioPlayer = new Audio();
+let currentTrackIndex = 0;
+let isPlaying = false;
+let isWebsitePlayback = false;
+const statusText = document.createElement('div');
+statusText.className = 'status-text';
+statusText.textContent = 'READY';
+
+// Глобальная функция для переключения индикатора PLAY
+function updatePlayIndicator(isPlaying) {
+    const playIndicator = document.querySelector('.indicator[data-type="play"] .indicator-light');
+    if (playIndicator) {
+        playIndicator.classList.toggle('active', isPlaying);
+    }
+}
+
+// Добавляем в начало файла
+let currentBlobUrl = null;
+
+function cleanupAudioResources() {
+    return new Promise((resolve) => {
+        if (currentBlobUrl) {
+            URL.revokeObjectURL(currentBlobUrl);
+            currentBlobUrl = null;
+        }
+        
+        if (audioPlayer.src) {
+            audioPlayer.pause();
+            audioPlayer.removeAttribute('src');
+            audioPlayer.load();
+            
+            // Даем браузеру время на очистку ресурсов
+            setTimeout(() => {
+                resolve();
+            }, 100);
+        } else {
+            resolve();
+        }
+    });
+}
+
 // Конфигурация артистов и их треков
 const artistTracks = {
     'Hahahap': {
@@ -6,26 +48,54 @@ const artistTracks = {
                 title: 'Название трека 1',
                 year: '2024',
                 cover: 'assets/images/releases/hahahap1.jpg',
-                yandexMusicId: 'TRACK_ID_1'
+                yandexMusicId: '23224451'
             }
-            // Добавьте больше треков
         ]
     },
     'Kodik': {
-        tracks: []
-        // Добавьте треки
+        tracks: [
+            {
+                title: 'Название трека 1',
+                year: '2024',
+                yandexMusicId: '13773076'
+            }
+        ]
     },
     'SHIBVRI': {
-        tracks: []
-        // Добавьте треки
+        tracks: [
+            {
+                title: 'Название трека 1',
+                year: '2024',
+                yandexMusicId: '22394975'
+            }
+        ]
     },
-    // Добавьте остальных артистов
+    'DOPE THE PRODUCER': {
+        tracks: [
+            {
+                title: 'DOPE THE PRODUCER',
+                year: '2024',
+                cover: 'assets/images/releases/dope.jpg',
+                yandexMusicId: '11748604'
+            }
+        ]
+    },
+    'XAN': {
+        tracks: [
+            {
+                title: 'XAN',
+                year: '2024',
+                cover: 'assets/images/releases/xan.jpg',
+                yandexMusicId: '22931926'
+            }
+        ]
+    }
 };
 
 // Инициализация Яндекс.Музыки
 document.addEventListener('DOMContentLoaded', () => {
     // Инициализация API
-    YandexMusic.init()
+    Ya.Music.init()
         .then(() => {
             console.log('Яндекс.Музыка API инициализирован');
             loadTracks();
@@ -37,43 +107,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Загрузка треков
 function loadTracks() {
-    Object.entries(artistTracks).forEach(([artistName, data]) => {
-        const container = document.querySelector(`.artist-releases:has(.artist-name:contains("${artistName}")) .tracks-container`);
-        if (!container) return;
+    const artistSelector = document.getElementById('artist-selector');
+    if (!artistSelector) return;
 
-        data.tracks.forEach(track => {
-            const trackCard = createTrackCard(track);
-            container.appendChild(trackCard);
-        });
+    // Очищаем текущие опции
+    artistSelector.innerHTML = '<option value="">Выберите артиста</option>';
+
+    // Добавляем артистов в селектор
+    Object.keys(artistTracks).forEach(artistName => {
+        const option = document.createElement('option');
+        option.value = artistName.toLowerCase();
+        option.textContent = artistName;
+        artistSelector.appendChild(option);
     });
-}
-
-// Создание карточки трека
-function createTrackCard(track) {
-    const card = document.createElement('div');
-    card.className = 'track-card';
-    card.innerHTML = `
-        <div class="track-art">
-            <img src="${track.cover}" alt="${track.title}">
-            <div class="play-overlay">
-                <div class="play-button"></div>
-            </div>
-        </div>
-        <div class="track-info">
-            <h3>${track.title}</h3>
-            <p>${track.year}</p>
-        </div>
-        <div class="yandex-player" data-id="${track.yandexMusicId}"></div>
-    `;
-
-    // Обработчик клика для воспроизведения
-    const playButton = card.querySelector('.play-button');
-    playButton.addEventListener('click', () => {
-        const player = card.querySelector('.yandex-player');
-        YandexMusic.playTrack(track.yandexMusicId, player);
-    });
-
-    return card;
 }
 
 // Вспомогательная функция для работы с API Яндекс.Музыки
@@ -83,13 +129,15 @@ const YandexMusic = {
     init() {
         return new Promise((resolve, reject) => {
             try {
-                this.player = new Ya.Music.Player({
-                    "type": "player",
-                    "preload": true,
-                    "autoplay": false,
-                    "controls": true
+                Ya.Music.ready(() => {
+                    this.player = new Ya.Music.Player({
+                        "type": "player",
+                        "preload": true,
+                        "autoplay": false,
+                        "controls": true
+                    });
+                    resolve();
                 });
-                resolve();
             } catch (error) {
                 reject(error);
             }
@@ -164,126 +212,860 @@ const artistData = {
     }
 };
 
-let currentArtist = null;
-let currentTrackIndex = 0;
-let isPlaying = false;
-
 const artistSelector = document.getElementById('artist-selector');
 const trackDisplay = document.getElementById('track-display');
 const playBtn = document.getElementById('play-btn');
 const stopBtn = document.getElementById('stop-btn');
 const prevBtn = document.getElementById('prev-btn');
 const nextBtn = document.getElementById('next-btn');
-const statusText = document.querySelector('.status-text');
-const powerIndicator = document.querySelector('.indicator:nth-child(1)');
-const playIndicator = document.querySelector('.indicator:nth-child(2)');
-const recIndicator = document.querySelector('.indicator:nth-child(3)');
+const vhsIndicators = document.querySelector('.vhs-indicators');
+const playIndicator = document.querySelector('.indicator[data-type="play"] .indicator-light');
 
-// Включаем индикатор питания
-powerIndicator.classList.add('active');
+// Включаем индикатор питания при загрузке
+vhsIndicators.classList.add('active');
 
-function updateDisplay() {
-    if (!currentArtist) {
-        trackDisplay.innerHTML = `
-            <div class="no-selection-message">
-                ВСТАВЬТЕ КАССЕТУ
-                <div class="blink-cursor">_</div>
-            </div>
-        `;
+// Удалено: старая версия updateDisplay() на базе неизвестного currentArtist
+
+// Добавляем функцию обновления статуса
+function updateStatus(text) {
+    statusText.textContent = text;
+    const display = document.querySelector('.vhs-display');
+    const statusElement = display.querySelector('.status-text');
+    
+    if (!statusElement) {
+        const statusContainer = document.createElement('div');
+        statusContainer.className = 'status-container';
+        statusContainer.appendChild(statusText);
+        display.appendChild(statusContainer);
+    }
+}
+
+// Обновляем функцию playWebsiteTrack
+function playWebsiteTrack() {
+    console.log('playWebsiteTrack вызван');
+    
+    if (!isWebsitePlayback) {
+        console.log('Не в режиме website');
         return;
     }
 
-    const artist = artistData[currentArtist];
-    const trackList = artist.tracks.map((track, index) => `
-        <div class="track-item ${index === currentTrackIndex ? 'active' : ''}">
-            ${index === currentTrackIndex ? '► ' : ''}${track}
-        </div>
-    `).join('');
+    if (!window.playlistInitialized) {
+        console.log('Инициализация плейлиста');
+        shufflePlaylist();
+        window.playlistInitialized = true;
+    }
 
-    trackDisplay.innerHTML = `
-        <div class="artist-name">${artist.name}</div>
-        <div class="track-list">${trackList}</div>
-    `;
-}
+    console.log('Состояние до:', {
+        paused: audioPlayer.paused,
+        src: audioPlayer.src,
+        isPlaying,
+        currentTime: audioPlayer.currentTime
+    });
 
-function playTrack() {
-    if (!currentArtist) return;
-    
-    isPlaying = !isPlaying;
-    playBtn.textContent = isPlaying ? '❚❚' : '►';
-    statusText.textContent = isPlaying ? 'PLAYING' : 'READY';
-    playIndicator.classList.toggle('active', isPlaying);
-    
-    // Добавляем эффект глитча при воспроизведении
-    if (isPlaying) {
-        trackDisplay.style.animation = 'glitch 0.2s infinite';
+    // --- НОВОЕ: если трек уже загружен и просто стоит на паузе, продолжаем воспроизведение без перезагрузки
+    if (audioPlayer.paused && audioPlayer.src) {
+        audioPlayer.play().then(() => {
+            playBtn.textContent = '❚❚';
+            statusText.textContent = 'PLAYING';
+            updatePlayIndicator(true);
+            isPlaying = true;
+        }).catch(err => {
+            console.error('Ошибка возобновления воспроизведения:', err);
+        });
+        return; // Выходим, чтобы не выполнять лишние операции ниже
+    }
+    // --- КОНЕЦ НОВОГО БЛОКА
+
+    if (audioPlayer.paused) {
+        const track = playlist[currentTrackIndex];
+        console.log('Текущий трек:', track);
+        
+        if (!track || !track.file) {
+            console.error('Трек не найден или отсутствует файл');
+            showError('Трек не найден');
+            return;
+        }
+        
+        // Очищаем предыдущие ресурсы
+        cleanupAudioResources().then(() => {
+            // Сразу обновляем отображение
+            const [artist, title] = track.title.split(' - ');
+            const display = document.querySelector('.vhs-display');
+            display.innerHTML = `
+                <div class="track-info">
+                    <div class="artist-name">${artist}</div>
+                    <div class="track-title">${title}</div>
+                    <div class="track-progress">
+                        <div class="time-current">0:00</div>
+                        <div class="progress-bar">
+                            <div class="progress" style="width: 0%"></div>
+                        </div>
+                        <div class="time-total">0:00</div>
+                    </div>
+                </div>
+            `;
+            
+            // Добавляем эффект глитча только при смене трека
+            display.style.animation = 'glitch 0.2s';
+            setTimeout(() => {
+                display.style.animation = 'none';
+            }, 200);
+            
+            // Потоковое воспроизведение без промежуточного blob
+            new Promise((resolve, reject) => {
+                const handleLoadedMetadata = () => {
+                    audioPlayer.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                    audioPlayer.removeEventListener('error', handleError);
+                    const totalTimeEl = display.querySelector('.time-total');
+                    if (totalTimeEl) {
+                        totalTimeEl.textContent = formatTime(audioPlayer.duration);
+                    }
+                    resolve();
+                };
+
+                const handleError = (error) => {
+                    audioPlayer.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                    audioPlayer.removeEventListener('error', handleError);
+                    reject(error);
+                };
+
+                audioPlayer.addEventListener('loadedmetadata', handleLoadedMetadata);
+                audioPlayer.addEventListener('error', handleError);
+                audioPlayer.preload = 'auto';
+                audioPlayer.src = track.file;
+                audioPlayer.load();
+            })
+                .then(() => audioPlayer.play())
+                .then(() => {
+                    playBtn.textContent = '❚❚';
+                    statusText.textContent = 'PLAYING';
+                    updatePlayIndicator(true);
+                    isPlaying = true;
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    showError(error.message || 'Ошибка воспроизведения');
+                    playBtn.textContent = '►';
+                    statusText.textContent = 'ERROR';
+                    updatePlayIndicator(false);
+                    isPlaying = false;
+                    cleanupAudioResources();
+                });
+        });
     } else {
-        trackDisplay.style.animation = 'none';
+        console.log('Ставим на паузу');
+        audioPlayer.pause();
+        console.log('Состояние после паузы:', {
+            paused: audioPlayer.paused,
+            src: audioPlayer.src,
+            isPlaying,
+            currentTime: audioPlayer.currentTime
+        });
+        playBtn.textContent = '►';
+        statusText.textContent = 'PAUSED';
+        updatePlayIndicator(false);
+        isPlaying = false;
     }
 }
 
+// Обновляем функцию stopTrack
 function stopTrack() {
-    isPlaying = false;
-    playBtn.textContent = '►';
-    statusText.textContent = 'READY';
-    playIndicator.classList.remove('active');
-    trackDisplay.style.animation = 'none';
+    if (!isWebsitePlayback) return;
+    
+    cleanupAudioResources().then(() => {
+        playBtn.textContent = '►';
+        statusText.textContent = 'STOPPED';
+        updatePlayIndicator(false);
+        isPlaying = false;
+        trackDisplay.style.animation = 'none';
+    });
+}
+
+// Обработчик для кнопки play
+playBtn.addEventListener('click', () => {
+    if (!isWebsitePlayback) return;
+    playWebsiteTrack();
+});
+
+function updateTrackDisplay(track) {
+    const [artist, title] = track.title.split(' - ');
+    const display = document.querySelector('.vhs-display');
+    display.innerHTML = `
+        <div class="track-info">
+            <div class="artist-name">${artist}</div>
+            <div class="track-title">${title}</div>
+            <div class="track-progress">
+                <div class="time-current">0:00</div>
+                <div class="progress-bar">
+                    <div class="progress" style="width: 0%"></div>
+                </div>
+                <div class="time-total">0:00</div>
+            </div>
+        </div>
+    `;
+    
+    // Добавляем эффект глитча при смене трека
+    display.style.animation = 'glitch 0.2s';
+    setTimeout(() => {
+        display.style.animation = 'none';
+    }, 200);
 }
 
 function nextTrack() {
-    if (!currentArtist) return;
+    if (!isWebsitePlayback) return;
     
-    const tracks = artistData[currentArtist].tracks;
-    currentTrackIndex = (currentTrackIndex + 1) % tracks.length;
-    updateDisplay();
+    // Останавливаем текущее воспроизведение
+    audioPlayer.pause();
     
-    if (isPlaying) {
-        trackDisplay.style.animation = 'glitch 0.2s infinite';
+    // Очищаем ресурсы
+    if (currentBlobUrl) {
+        URL.revokeObjectURL(currentBlobUrl);
+        currentBlobUrl = null;
     }
+    
+    currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+    const track = playlist[currentTrackIndex];
+    
+    // Обновляем отображение
+    const [artist, title] = track.title.split(' - ');
+    const display = document.querySelector('.vhs-display');
+    display.innerHTML = `
+        <div class="track-info">
+            <div class="artist-name">${artist}</div>
+            <div class="track-title">${title}</div>
+            <div class="track-progress">
+                <div class="time-current">0:00</div>
+                <div class="progress-bar">
+                    <div class="progress" style="width: 0%"></div>
+                </div>
+                <div class="time-total">0:00</div>
+            </div>
+        </div>
+    `;
+    
+    // Добавляем эффект глитча
+    display.style.animation = 'glitch 0.2s';
+    setTimeout(() => {
+        display.style.animation = 'none';
+    }, 200);
+    
+    // Проверяем доступность файла
+    fetch(track.file)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            currentBlobUrl = URL.createObjectURL(blob);
+            audioPlayer.src = currentBlobUrl;
+            
+            // Ждем загрузки метаданных
+            return new Promise((resolve, reject) => {
+                const handleLoadedMetadata = () => {
+                    audioPlayer.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                    const totalTimeEl = display.querySelector('.time-total');
+                    if (totalTimeEl) {
+                        totalTimeEl.textContent = formatTime(audioPlayer.duration);
+                    }
+                    resolve();
+                };
+                
+                audioPlayer.addEventListener('loadedmetadata', handleLoadedMetadata);
+                audioPlayer.addEventListener('error', () => {
+                    reject(new Error('Ошибка загрузки аудио'));
+                });
+            });
+        })
+        .then(() => audioPlayer.play())
+        .then(() => {
+            playBtn.textContent = '❚❚';
+            statusText.textContent = 'PLAYING';
+            updatePlayIndicator(true);
+            isPlaying = true;
+        })
+        .catch(error => {
+            console.error('Ошибка воспроизведения следующего трека:', error);
+            statusText.textContent = 'ERROR';
+            showError(error.message || 'Ошибка воспроизведения');
+            
+            // Очищаем ресурсы при ошибке
+            if (currentBlobUrl) {
+                URL.revokeObjectURL(currentBlobUrl);
+                currentBlobUrl = null;
+            }
+        });
 }
 
 function prevTrack() {
-    if (!currentArtist) return;
+    if (!isWebsitePlayback) return;
     
-    const tracks = artistData[currentArtist].tracks;
-    currentTrackIndex = (currentTrackIndex - 1 + tracks.length) % tracks.length;
-    updateDisplay();
+    // Останавливаем текущее воспроизведение
+    audioPlayer.pause();
     
-    if (isPlaying) {
-        trackDisplay.style.animation = 'glitch 0.2s infinite';
+    // Очищаем ресурсы
+    if (currentBlobUrl) {
+        URL.revokeObjectURL(currentBlobUrl);
+        currentBlobUrl = null;
+    }
+    
+    currentTrackIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length;
+    const track = playlist[currentTrackIndex];
+    
+    // Обновляем отображение
+    const [artist, title] = track.title.split(' - ');
+    const display = document.querySelector('.vhs-display');
+    display.innerHTML = `
+        <div class="track-info">
+            <div class="artist-name">${artist}</div>
+            <div class="track-title">${title}</div>
+            <div class="track-progress">
+                <div class="time-current">0:00</div>
+                <div class="progress-bar">
+                    <div class="progress" style="width: 0%"></div>
+                </div>
+                <div class="time-total">0:00</div>
+            </div>
+        </div>
+    `;
+    
+    // Добавляем эффект глитча
+    display.style.animation = 'glitch 0.2s';
+    setTimeout(() => {
+        display.style.animation = 'none';
+    }, 200);
+    
+    // Проверяем доступность файла
+    fetch(track.file)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            currentBlobUrl = URL.createObjectURL(blob);
+            audioPlayer.src = currentBlobUrl;
+            
+            // Ждем загрузки метаданных
+            return new Promise((resolve, reject) => {
+                const handleLoadedMetadata = () => {
+                    audioPlayer.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                    const totalTimeEl = display.querySelector('.time-total');
+                    if (totalTimeEl) {
+                        totalTimeEl.textContent = formatTime(audioPlayer.duration);
+                    }
+                    resolve();
+                };
+                
+                audioPlayer.addEventListener('loadedmetadata', handleLoadedMetadata);
+                audioPlayer.addEventListener('error', () => {
+                    reject(new Error('Ошибка загрузки аудио'));
+                });
+            });
+        })
+        .then(() => audioPlayer.play())
+        .then(() => {
+            playBtn.textContent = '❚❚';
+            statusText.textContent = 'PLAYING';
+            updatePlayIndicator(true);
+            isPlaying = true;
+        })
+        .catch(error => {
+            console.error('Ошибка воспроизведения предыдущего трека:', error);
+            statusText.textContent = 'ERROR';
+            showError(error.message || 'Ошибка воспроизведения');
+            
+            // Очищаем ресурсы при ошибке
+            if (currentBlobUrl) {
+                URL.revokeObjectURL(currentBlobUrl);
+                currentBlobUrl = null;
+            }
+        });
+}
+
+// ID артистов в Яндекс.Музыке
+const artistIds = {
+    'hahahap': '23224451',
+    'kodik': '13773076',
+    'shibvri': '22394975',
+    'dope': '11748604',
+    'xan': '22931926',
+    'namusorill': '11123653',
+    'febb': '22838316'
+};
+
+// Создание виджета Яндекс.Музыки
+function createYandexMusicWidget(artistId) {
+    const widget = document.createElement('iframe');
+    widget.src = `https://music.yandex.ru/iframe/#artist/${artistId}/tracks?visual-style=headerCompact`;
+    widget.width = '100%';
+    widget.height = '350px';
+    widget.frameBorder = '0';
+    widget.allow = 'autoplay';
+    widget.className = 'yandex-music-widget';
+    return widget;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Жестко фиксируем индикаторы (на хостинге display сбрасывается до flex)
+    try {
+        document.querySelectorAll('.vhs-indicators .indicator').forEach((el) => {
+            el.style.display = 'inline-flex';
+            el.style.flexDirection = 'column';
+            el.style.alignItems = 'center';
+            el.style.justifyContent = 'center';
+            el.style.whiteSpace = 'nowrap';
+        });
+    } catch (_) {}
+
+    // Обработчик ошибок аудиоплеера
+    audioPlayer.addEventListener('error', (e) => {
+        if (e.target.error && e.target.error.code === 4) {
+            // Игнорируем ошибку пустого src при инициализации
+            if (!isWebsitePlayback) return;
+        }
+        // Проверяем, действительно ли это ошибка
+        if (audioPlayer.src && !audioPlayer.paused) {
+            console.error('Ошибка аудиоплеера:', e.target.error);
+            showError(e.target.error.message || 'Ошибка воспроизведения');
+        }
+    });
+
+    const artistSelector = document.getElementById('artist-selector');
+    const trackDisplay = document.getElementById('track-display');
+    const playBtn = document.getElementById('play-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const vhsIndicators = document.querySelector('.vhs-indicators');
+    const playIndicator = document.querySelector('.indicator[data-type="play"] .indicator-light');
+    
+    // Обработчик изменения выбранного артиста
+    artistSelector.addEventListener('change', function() {
+        const selectedArtist = this.value;
+        const artistId = artistIds[selectedArtist];
+        const display = document.querySelector('.vhs-display');
+
+        // Триггер короткой scanline-подсветки экрана
+        if (display) {
+            display.classList.add('activated');
+            setTimeout(() => display.classList.remove('activated'), 650);
+        }
+        
+        // Останавливаем текущее воспроизведение
+        if (audioPlayer.src) {
+            audioPlayer.pause();
+            audioPlayer.src = '';
+            audioPlayer.currentTime = 0;
+            updatePlayIndicator(false);
+            isPlaying = false;
+            playBtn.textContent = '►';
+        }
+        
+        // Удаляем существующий виджет, если он есть
+        const existingWidget = display.querySelector('.yandex-music-widget');
+        if (existingWidget) {
+            existingWidget.remove();
+        }
+        
+        // Отключаем кнопки управления для всех режимов кроме 'website'
+        [playBtn, stopBtn, prevBtn, nextBtn].forEach(btn => {
+            if (!selectedArtist || selectedArtist === '') {
+                btn.disabled = true;
+                btn.classList.add('disabled');
+            } else if (selectedArtist !== 'website') {
+                btn.disabled = true;
+                btn.classList.add('disabled');
+            } else {
+                btn.disabled = false;
+                btn.classList.remove('disabled');
+            }
+        });
+
+        if (selectedArtist === 'website') {
+            display.innerHTML = `
+                <div class="track-info">
+                    <div class="message">НАЖМИТЕ PLAY ДЛЯ СЛУЧАЙНОГО ТРЕКА</div>
+                    <div class="track-progress">
+                        <div class="time-current">0:00</div>
+                        <div class="progress-bar">
+                            <div class="progress" style="width: 0%"></div>
+                        </div>
+                        <div class="time-total">0:00</div>
+                    </div>
+                </div>
+            `;
+            
+            // Устанавливаем режим воспроизведения
+            isWebsitePlayback = true;
+            if (!window.playlistInitialized) {
+                shufflePlaylist();
+                window.playlistInitialized = true;
+            }
+        } else if (artistId) {
+            // Создаем и добавляем виджет Яндекс.Музыки
+            const widget = createYandexMusicWidget(artistId);
+            display.innerHTML = '';
+            display.appendChild(widget);
+
+            // Отключаем режим воспроизведения сайта
+            isWebsitePlayback = false;
+        } else {
+            display.innerHTML = `
+                <div class="track-info">
+                    <div class="message">РЕЛИЗЫ НЕДОСТУПНЫ</div>
+                </div>
+            `;
+        }
+        
+        // Эффект глитча при смене режима
+        display.style.animation = 'glitch 0.5s';
+        setTimeout(() => {
+            display.style.animation = 'none';
+        }, 500);
+    });
+    
+    // Включаем индикатор питания при загрузке
+    vhsIndicators.querySelector('.indicator:nth-child(1) .indicator-light').classList.add('active');
+    
+    // Обработчики для кнопок next и prev
+    nextBtn.addEventListener('click', nextTrack);
+    prevBtn.addEventListener('click', prevTrack);
+
+    // Обработчик для кнопки stop
+    stopBtn.addEventListener('click', () => {
+        stopTrack();
+    });
+
+    // Автоматическое переключение на следующий трек
+    audioPlayer.addEventListener('ended', () => {
+        if (!isWebsitePlayback) return;
+        nextTrack();
+    });
+
+    // Сброс анимации при паузе
+    audioPlayer.addEventListener('pause', () => {
+        const display = document.querySelector('.vhs-display');
+        if (display) {
+            display.style.animation = 'none';
+        }
+    });
+
+    // Дизейбл всех кнопок плеера по умолчанию при загрузке страницы, если выбран 'ВЫБЕРИТЕ АРТИСТА'
+    if (!artistSelector.value || artistSelector.value === '') {
+        [playBtn, stopBtn, prevBtn, nextBtn].forEach(btn => {
+            btn.disabled = true;
+            btn.classList.add('disabled');
+        });
+    }
+});
+
+// Список MP3 файлов
+const playlist = [
+    {
+        title: "Febb Tufoe - Hyena",
+        file: "assets/audio/Febb Tufoe - Hyena.mp3"
+    },
+    {
+        title: "Febb Tufoe - Novocaine",
+        file: "assets/audio/Febb Tufoe - Novocaine.mp3"
+    },
+    {
+        title: "xxvnx - Огнем",
+        file: "assets/audio/xxvnx - Огнем.mp3"
+    },
+    {
+        title: "uwannadope - Не верю",
+        file: "assets/audio/uwannadope - Не верю.mp3"
+    },
+    {
+        title: "uwannadope - Она хочет",
+        file: "assets/audio/uwannadope - Она хочет.mp3"
+    },
+    {
+        title: "SHIBVRI - Помнит меня",
+        file: "assets/audio/SHIBVRI - Помнит меня (prod.shibvri).mp3"
+    },
+    {
+        title: "SHIBVRI - За стеной",
+        file: "assets/audio/SHIBVRI - За стеной.mp3"
+    },
+    {
+        title: "Kodik - ДРОП",
+        file: "assets/audio/Kodik - ДРОП.mp3"
+    },
+    {
+        title: "Kodik - Пустые карманы",
+        file: "assets/audio/Kodik - Пустые карманы.mp3"
+    },
+    {
+        title: "namusorill - Принятие питие",
+        file: "assets/audio/namusorill - Принятие питие.mp3"
+    },
+    {
+        title: "namusorill - Мягкая Посадка",
+        file: "assets/audio/namusorill - Мягкая Посадка.mp3"
+    },
+    {
+        title: "Hahahap - Disney",
+        file: "assets/audio/Hahahap - Disney (Prod by dope, the producer).mp3"
+    },
+    {
+        title: "Hahahap - Black Mercedes",
+        file: "assets/audio/Hahahap - Black Mercedes.mp3"
+    }
+];
+
+// Перемешивание плейлиста
+function shufflePlaylist() {
+    for (let i = playlist.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [playlist[i], playlist[j]] = [playlist[j], playlist[i]];
     }
 }
 
-// События
-artistSelector.addEventListener('change', (e) => {
-    currentArtist = e.target.value;
-    currentTrackIndex = 0;
-    stopTrack();
-    updateDisplay();
+// Воспроизведение текущего трека
+function playCurrentTrack() {
+    const track = playlist[currentTrackIndex];
+    if (!track || !track.file) {
+        console.error('Трек не найден или отсутствует файл');
+        return;
+    }
+
+    // Устанавливаем источник аудио
+    audioPlayer.src = track.file;
     
-    // Эффект вставки кассеты
-    trackDisplay.style.animation = 'glitch 0.5s';
-    setTimeout(() => {
-        trackDisplay.style.animation = 'none';
-    }, 500);
+    // Сразу обновляем информацию о треке
+    const [artist, title] = track.title.split(' - ');
+    trackDisplay.innerHTML = `
+        <div class="now-playing">
+            <div class="artist-name">${artist}</div>
+            <div class="track-name">${title}</div>
+            <div class="track-progress">
+                <div class="time-current">0:00</div>
+                <div class="progress-bar">
+                    <div class="progress" style="width: 0%"></div>
+                </div>
+                <div class="time-total">0:00</div>
+            </div>
+        </div>
+    `;
+
+    // Добавляем эффект глитча
+    trackDisplay.style.animation = 'glitch 0.2s';
+    
+    // Воспроизводим
+    audioPlayer.play()
+        .then(() => {
+            playBtn.textContent = '❚❚';
+            statusText.textContent = 'PLAYING';
+            updatePlayIndicator(true);
+            
+            setTimeout(() => {
+                trackDisplay.style.animation = 'glitch 0.2s infinite';
+            }, 200);
+        })
+        .catch(error => {
+            console.error('Ошибка воспроизведения:', error);
+            statusText.textContent = 'ERROR';
+            // Показываем ошибку на дисплее
+            trackDisplay.innerHTML = `
+                <div class="now-playing">
+                    <div class="message">ОШИБКА ВОСПРОИЗВЕДЕНИЯ</div>
+                </div>
+            `;
+        });
+
+    isPlaying = true;
+}
+
+// Удалено: дублирующаяся версия stopTrack()
+
+// Обновление дисплея
+function updateDisplay() {
+    const currentTrack = playlist[currentTrackIndex];
+    trackDisplay.innerHTML = `
+        <div class="track-info">
+            <div class="track-title">${currentTrack.title}</div>
+            <div class="track-progress">
+                <div class="time-current">${formatTime(audioPlayer.currentTime)}</div>
+                <div class="progress-bar">
+                    <div class="progress" style="width: ${(audioPlayer.currentTime / audioPlayer.duration) * 100}%"></div>
+                </div>
+                <div class="time-total">${formatTime(audioPlayer.duration)}</div>
+            </div>
+        </div>
+    `;
+}
+
+// Форматирование времени
+function formatTime(seconds) {
+    if (isNaN(seconds)) return '0:00';
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Обработчики кнопок определены внутри DOMContentLoaded блока
+
+// Обновление прогресса воспроизведения
+audioPlayer.addEventListener('timeupdate', () => {
+    const currentTime = document.querySelector('.time-current');
+    const progress = document.querySelector('.progress');
+    const totalTime = document.querySelector('.time-total');
+    
+    if (currentTime && progress && totalTime) {
+        currentTime.textContent = formatTime(audioPlayer.currentTime);
+        totalTime.textContent = formatTime(audioPlayer.duration);
+        const progressWidth = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+        progress.style.width = `${progressWidth}%`;
+    }
 });
 
-playBtn.addEventListener('click', playTrack);
-stopBtn.addEventListener('click', stopTrack);
-nextBtn.addEventListener('click', nextTrack);
-prevBtn.addEventListener('click', prevTrack);
+// Эффекты глитча
+audioPlayer.addEventListener('playing', () => {
+    trackDisplay.style.animation = 'glitch 0.2s infinite';
+});
 
-// Добавляем немного случайных глитчей
-setInterval(() => {
-    if (isPlaying && Math.random() < 0.1) {
-        trackDisplay.style.animation = 'glitch 0.2s';
-        setTimeout(() => {
-            if (isPlaying) {
-                trackDisplay.style.animation = 'glitch 0.2s infinite';
-            }
-        }, 200);
+audioPlayer.addEventListener('pause', () => {
+    trackDisplay.style.animation = 'none';
+});
+
+// Инициализация при загрузке страницы: обновляем дисплей только если активен режим воспроизведения сайта
+document.addEventListener('DOMContentLoaded', () => {
+    if (isWebsitePlayback) {
+        updateDisplay();
     }
-}, 2000);
+});
 
-// Инициализация
-updateDisplay(); 
+// Обновляем стили
+const styleSheet = document.createElement('style');
+styleSheet.textContent = `
+    .track-info {
+        text-align: center;
+        padding: 15px;
+        color: #fff;
+        font-family: 'Courier New', monospace;
+    }
+    
+    .message {
+        font-size: 18px;
+        margin-bottom: 15px;
+        color: #fff;
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        animation: blink 2s infinite;
+        letter-spacing: 1px;
+    }
+    
+    .artist-name {
+        font-size: 18px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        color: #00ff00;
+        text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        letter-spacing: 1px;
+    }
+    
+    .track-title {
+        font-size: 16px;
+        margin-bottom: 15px;
+        color: #fff;
+        opacity: 0.8;
+    }
+    
+    .track-progress {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .time-current, .time-total {
+        font-size: 14px;
+        min-width: 45px;
+        color: #00ff00;
+        opacity: 0.8;
+    }
+    
+    .progress-bar {
+        flex-grow: 1;
+        height: 2px;
+        background: rgba(0, 255, 0, 0.2);
+        position: relative;
+        max-width: 200px;
+    }
+    
+    .progress {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        background: #00ff00;
+        box-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+        transition: width 0.1s linear;
+    }
+    
+    .error-message {
+        color: #ff0000;
+        font-size: 18px;
+        margin-bottom: 10px;
+        text-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+    }
+    
+    .error-details {
+        color: #ff0000;
+        font-size: 14px;
+        opacity: 0.7;
+    }
+    
+    @keyframes blink {
+        0% { opacity: 1; }
+        50% { opacity: 0.3; }
+        100% { opacity: 1; }
+    }
+    
+    @keyframes glitch {
+        0% { transform: translate(0); }
+        20% { transform: translate(-2px, 2px); }
+        40% { transform: translate(-2px, -2px); }
+        60% { transform: translate(2px, 2px); }
+        80% { transform: translate(2px, -2px); }
+        100% { transform: translate(0); }
+    }
+`;
+document.head.appendChild(styleSheet);
+
+// Проверка загрузки аудио
+audioPlayer.addEventListener('loadeddata', () => {
+    console.log('Аудио загружено:', audioPlayer.src);
+});
+
+// Проверяем плейлист при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Проверка плейлиста при загрузке:', playlist);
+    // Проверяем доступность аудиофайлов
+    playlist.forEach((track, index) => {
+        if (!track.file) {
+            console.error('Отсутствует файл для трека', index, track);
+            return;
+        }
+
+        fetch(track.file)
+            .then(response => {
+                if (!response.ok) {
+                    console.error(`Файл ${track.file} недоступен:`, response.status);
+                }
+            })
+            .catch(error => {
+                console.error(`Ошибка проверки файла ${track.file}:`, error);
+            });
+    });
+});
+
+// Освобождаем ресурсы при закрытии страницы
+window.addEventListener('beforeunload', () => {
+    cleanupAudioResources();
+});

@@ -4,9 +4,47 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>INMISE</title>
+    <link rel="preload" href="/src/vhs-main.jsx" as="script" crossorigin>
     <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/music-widget.css">
+    <link rel="stylesheet" href="styles/responsive.css">
+    <link rel="stylesheet" href="styles/desktop-protection.css">
 </head>
-<body>
+<body class="page-home">
+    <style>
+        /* КРИТИЧНО: Максимальный приоритет - загружается последним в body */
+        @media screen and (max-width: 768px) {
+            body.page-home .hero-content { 
+                margin-top: -500px !important; 
+                padding-top: 0 !important; 
+                transform: none !important; 
+            }
+            body.page-home .video-wrapper video, 
+            body.page-home .video-background video, 
+            body.page-home #bgVideo { 
+                object-fit: contain !important; 
+                width: 100% !important; 
+                height: 100% !important; 
+            }
+            body.page-home .video-background { 
+                background: #000 !important; 
+            }
+        }
+        @media screen and (max-width: 480px) {
+            body.page-home .hero-content { 
+                margin-top: -500px !important; 
+                padding-top: 0 !important; 
+                transform: none !important; 
+            }
+        }
+        @media screen and (max-width: 380px) {
+            body.page-home .hero-content { 
+                margin-top: -500px !important; 
+                padding-top: 0 !important; 
+                transform: none !important; 
+            }
+        }
+    </style>
     <!-- Эффекты телевизора -->
     <div class="tv-frame"></div>
     <div class="noise"></div>
@@ -24,7 +62,7 @@
     <!-- Фоновое видео -->
     <div class="video-background">
         <div class="video-wrapper">
-            <video id="bgVideo" muted loop playsinline>
+            <video id="bgVideo" muted loop playsinline preload="none">
                 <source src="assets/videos/background.mp4" type="video/mp4">
             </video>
         </div>
@@ -32,10 +70,10 @@
 
     <nav class="main-nav">
         <div class="nav-links">
-            <a href="music.html" class="nav-link">РЕЛИЗЫ</a>
-            <a href="artists.html" class="nav-link">АРТИСТЫ</a>
-            <a href="about.html" class="nav-link">О НАС</a>
-            <a href="contacts.html" class="nav-link">КОНТАКТЫ</a>
+            <a href="music" class="nav-link"><span class="nav-text">РЕЛИЗЫ</span></a>
+            <a href="artists" class="nav-link"><span class="nav-text">АРТИСТЫ</span></a>
+            <a href="work" class="nav-link"><span class="nav-text">СОТРУДНИЧЕСТВО</span></a>
+            <a href="contacts" class="nav-link"><span class="nav-text">КОНТАКТЫ</span></a>
         </div>
     </nav>
 
@@ -44,20 +82,14 @@
             <div class="hero-content">
                 <h1 class="glitch-text" data-text="INMISE">INMISE</h1>
                 <div class="switches-container">
-                    <div class="switch">
-                        <div class="switch-lines"></div>
-                    </div>
-                    <div class="switch">
-                        <div class="switch-lines"></div>
-                    </div>
-                    <div class="switch">
-                        <div class="switch-lines"></div>
-                    </div>
+                    <div id="vhs-root"></div>
                 </div>
             </div>
         </section>
     </main>
 
+    <script type="module" src="/src/vhs-main.jsx"></script>
     <script src="scripts/app.js"></script>
+    <script src="scripts/main.js"></script>
 </body>
 </html> 

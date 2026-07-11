@@ -1,11 +1,24 @@
+/* Добавляем шрифт VT323 для LCD-эффекта */
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+/* ВАЖНО: импортируем main.css для базовых стилей */
+@import './main.css';
+@import './responsive.css';
+
 /* Основной контейнер */
 .music-content {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    min-height: calc(100vh - 80px);
+    min-height: 100vh;
     background: linear-gradient(to bottom, #1a1a1a, #000);
     padding: 2rem;
+    padding-top: 120px; /* отступ от навигации */
+    padding-bottom: 80px; /* отступ снизу */
+    padding-left: 220px; /* дополнительный отступ слева под новую ширину */
+    padding-right: 220px; /* дополнительный отступ справа под новую ширину */
+    overflow: visible; /* Разрешаем видеть весь контент */
+    box-sizing: border-box;
 }
 
 .music-grid {
@@ -234,28 +247,59 @@
     }
 }
 
-/* Добавляем шрифт VT323 для LCD-эффекта */
-@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
-
 .vhs-player {
-    background: #2a2a2a;
-    border-radius: 15px;
-    padding: 2rem;
+    background: linear-gradient(180deg,#2e2e2e 0%, #232323 60%, #1b1b1b 100%);
+    border-radius: 18px;
+    padding: 1.2rem 1.2rem 1.4rem;
+    width: calc(100% + 400px); /* шире на 200px влево и вправо */
+    max-width: 1200px;
+    height: 670px; /* ФИКСИРОВАННАЯ высота - вытянута вниз на 30px */
+    min-height: 670px; /* Гарантируем неизменность */
+    max-height: 670px; /* Гарантируем неизменность */
+    display: flex;
+    flex-direction: column;
+    margin-top: 20px;
+    margin-left: -200px; /* сдвиг влево на 200px */
+    margin-right: -200px; /* сдвиг вправо на 200px */
+    box-shadow:
+        0 0 0 2px #3a3a3a,
+        0 0 0 4px #1b1b1b,
+        0 12px 22px rgba(0,0,0,.55),
+        inset 0 2px 8px rgba(255,255,255,.06),
+        inset 0 -4px 16px rgba(0,0,0,.55);
+    position: relative;
+    overflow: hidden;
+}
+
+.vhs-player::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
-    max-width: 800px;
-    box-shadow: 
-        0 0 0 2px #333,
-        0 0 0 4px #222,
-        0 5px 15px rgba(0,0,0,0.5),
-        inset 0 0 20px rgba(0,0,0,0.3);
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.1),
+        rgba(0, 0, 0, 0.1) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+    pointer-events: none;
+    z-index: 10;
 }
 
 .vhs-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.2rem;
     padding: 0 1rem;
+    position: relative;
+    z-index: 11;
+    height: 42px;
+    background: linear-gradient(180deg, rgba(255,255,255,.06) 0%, rgba(0,0,0,0) 100%);
+    border-radius: 10px;
 }
 
 .vhs-brand {
@@ -273,18 +317,27 @@
 }
 
 .vhs-screen {
-    background: #000;
-    border-radius: 10px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    border: 2px solid #333;
+    background: radial-gradient(60% 80% at 50% 50%, #0a0a0a 0%, #000 60%);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border: 2px solid #2d2d2d;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 460px; /* ФИКСИРОВАННАЯ высота - вытянута на 30px */
+    margin-top: 0;
+    box-shadow:
+      inset 0 0 0 2px rgba(255,255,255,.03),
+      inset 0 10px 28px rgba(0,0,0,.65),
+      inset 0 -10px 28px rgba(0,0,0,.65);
 }
 
 .vhs-select-wrapper {
     margin-bottom: 1.5rem;
     position: relative;
     width: 100%;
+    z-index: 11;
 }
 
 .vhs-select {
@@ -317,156 +370,154 @@
     padding: 0.5rem;
 }
 
+/* Специальные стили для пункта "Слушать на сайте" */
+.vhs-select option[value="website"] {
+    background: #1a1a1a;
+    color: #ff0;
+    font-weight: bold;
+    border-bottom: 1px solid #333;
+}
+
 .vhs-display {
+    width: 100%;
+    height: 360px; /* ФИКСИРОВАННАЯ высота - вытянута на 30px */
+    min-height: 360px;
+    max-height: 360px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
     background: #000;
-    padding: 1rem;
-    border: 1px solid #333;
+    border-radius: 8px;
     position: relative;
-    min-height: 200px;
+    border: 2px solid #113311;
+    box-shadow:
+        0 0 14px rgba(0,255,0,.18),
+        inset 0 0 22px rgba(0,255,0,.08);
+    overflow: hidden;
 }
 
-.vhs-status {
+.ready-indicator {
+    position: absolute;
+    top: 90px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
+    gap: 8px;
+    z-index: 12;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 4px 10px;
+    border-radius: 3px;
+    flex-direction: row;
 }
 
-.status-light {
-    width: 10px;
-    height: 10px;
-    background: #0f0;
-    border-radius: 50%;
-    animation: blink 2s infinite;
-}
-
-.status-text {
-    color: #0f0;
-    font-family: 'VT323', monospace;
-    font-size: 1rem;
-}
-
-.track-display {
+.ready-text {
     font-family: 'VT323', monospace;
     color: #0f0;
-    font-size: 1.2rem;
-    line-height: 1.5;
+    font-size: 16px;
+    text-shadow: 0 0 5px #0f0;
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
 
-.no-selection-message {
-    text-align: center;
-    padding: 2rem;
-    opacity: 0.7;
-}
-
-.blink-cursor {
-    display: inline-block;
-    animation: blink 1s infinite;
-}
-
-.vhs-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    padding: 1rem;
-    background: #222;
-    border-radius: 10px;
-    border: 1px solid #333;
-}
-
-.control-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-}
-
-.vhs-btn {
-    background: #333;
-    border: none;
-    color: #fff;
-    padding: 0.8rem 1.5rem;
-    font-family: 'VT323', monospace;
-    font-size: 1.2rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border-radius: 5px;
-    box-shadow: 
-        0 2px 0 #222,
-        0 3px 3px rgba(0,0,0,0.2);
-}
-
-.vhs-btn:hover {
-    background: #444;
-    transform: translateY(1px);
-    box-shadow: 
-        0 1px 0 #222,
-        0 2px 2px rgba(0,0,0,0.2);
-}
-
-.vhs-btn:active {
-    transform: translateY(2px);
-    box-shadow: none;
-}
-
-.vhs-indicators {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-}
-
-.indicator {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.indicator-light {
+.ready-dot {
     width: 12px;
     height: 12px;
+    background: #0f0;
     border-radius: 50%;
-    background: #600;
-    box-shadow: 0 0 5px rgba(255,0,0,0.3);
-    transition: all 0.3s ease;
-}
-
-.indicator.active .indicator-light {
-    background: #f00;
-    box-shadow: 
-        0 0 5px #f00,
-        0 0 10px #f00,
-        0 0 15px rgba(255,0,0,0.5);
-}
-
-.indicator span {
-    font-family: 'VT323', monospace;
-    font-size: 0.8rem;
-    color: #666;
+    box-shadow: 0 0 5px #0f0;
+    animation: blink 2s infinite;
+    margin-left: 0;
+    order: -1;
 }
 
 @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
+    0%, 100% { 
+        opacity: 1;
+        box-shadow: 0 0 5px #0f0, 0 0 10px #0f0;
+    }
+    50% { 
+        opacity: 0.3;
+        box-shadow: 0 0 2px #0f0;
+    }
+}
+
+.indicator-light {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #ff9999, #aa0000 70%, #550000 100%);
+    box-shadow: inset 0 0 6px #300, 0 0 6px rgba(255,0,0,.5);
+    position: relative;
+    transition: all 0.25s ease;
+    border: 1px solid #550000;
+    flex-shrink: 0;
+    order: 1 !important; /* LED сверху */
+}
+
+.indicator-light.active {
+    background: radial-gradient(circle at 30% 30%, #fff0f0, #ff2a2a 55%, #a10000 100%);
+    box-shadow: inset 0 0 12px #ff6666, 0 0 12px #ff2222, 0 0 24px #ff2222;
+    animation: glow 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    from {
+        box-shadow: 
+            inset 0 0 10px #ff6666,
+            0 0 10px #ff0000,
+            0 0 20px #ff0000;
+    }
+    to {
+        box-shadow: 
+            inset 0 0 15px #ff9999,
+            0 0 15px #ff0000,
+            0 0 30px #ff0000;
+    }
+}
+
+/* Индикатор POWER всегда активен */
+.indicator[data-type="power"] .indicator-light {
+    background: #f00;
+    box-shadow: 
+        inset 0 0 10px #f66,
+        0 0 10px #f00,
+        0 0 20px #f00;
+    animation: glow 1s ease-in-out infinite alternate;
+}
+
+/* Индикатор PLAY активен при воспроизведении */
+.indicator[data-type="play"] .indicator-light.active {
+    background: #f00;
+    box-shadow: 
+        inset 0 0 10px #f66,
+        0 0 10px #f00,
+        0 0 20px #f00;
+    animation: glow 1s ease-in-out infinite alternate;
+}
+
+.indicator span {
+    font-family: 'VT323', monospace !important;
+    font-size: 14px !important;
+    color: #d0d0d0 !important; /* Светло-серый вместо #888 для контраста */
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    white-space: nowrap !important;
+    line-height: 18px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: inline-block !important;
+    flex-shrink: 0 !important;
+    order: 2 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 /* Эффект сканлайнов */
 .vhs-screen::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: repeating-linear-gradient(
-        0deg,
-        rgba(0, 0, 0, 0.15),
-        rgba(0, 0, 0, 0.15) 1px,
-        transparent 1px,
-        transparent 2px
-    );
-    pointer-events: none;
-    opacity: 0.3;
-    z-index: 1;
+    display: none;
 }
 
 /* Эффект глитча */
@@ -477,6 +528,24 @@
     60% { transform: translate(2px, 2px); }
     80% { transform: translate(2px, -2px); }
     100% { transform: translate(0); }
+}
+
+/* --- Scanline при выборе артиста --- */
+.vhs-display.activated::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 30%;
+    top: -30%;
+    background: linear-gradient(to bottom, rgba(0,255,0,0.25), rgba(0,255,0,0) 80%);
+    filter: blur(1px);
+    animation: scanline 420ms ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes scanline {
+    to { top: 100%; }
 }
 
 .track-display:hover {
@@ -492,16 +561,333 @@
         font-size: 1.5rem;
     }
 
-    .control-buttons {
-        flex-wrap: wrap;
-    }
-
     .vhs-btn {
         padding: 0.6rem 1rem;
         font-size: 1rem;
     }
 
     .vhs-indicators {
+        gap: 30px;
+        margin-top: 10px;
+    }
+    
+    .indicator span {
+        font-size: 10px;
+        margin-top: 9px;
+        top: 7px;
+    }
+
+    .vhs-controls {
+        height: auto;
+        padding: 0.8rem;
         gap: 1rem;
     }
+
+    .control-buttons {
+        gap: 0.5rem;
+        margin-bottom: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .vhs-player {
+        padding: 0.8rem;
+    }
+
+    .vhs-brand {
+        font-size: 1.2rem;
+    }
+
+    .vhs-btn {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.9rem;
+    }
+
+    .vhs-controls {
+        padding: 0.6rem;
+        gap: 0.8rem;
+    }
+
+    .control-buttons {
+        gap: 0.3rem;
+    }
+}
+
+@media (max-width: 450px) {
+    /* Убираем горизонтальный скролл, заставляем плеер ужиматься без потери пропорций */
+    .music-content {
+        padding-left: 4vw;
+        padding-right: 4vw;
+        padding-top: 260px;    /* уменьшили отступ сверху, контент выше */
+    }
+
+    .vhs-player {
+        max-width: 100%;        /* не шире экрана */
+        box-sizing: border-box; /* учитываем бордеры в ширине */
+    }
+
+    .vhs-screen {
+        min-height: 45vh;       /* ещё меньше, чтобы всё помещалось */
+        margin-top: 10px;       /* чуть меньше верхнего отступа */
+    }
+
+    .vhs-display {
+        min-height: 30vh;       /* ещё сильнее сжали дисплей */
+    }
+
+    /* iframe-виджет Я.Музыки: поддерживаем 16:9 без фиксированной высоты */
+    .yandex-music-widget {
+        height: auto;
+        aspect-ratio: 16 / 9;
+    }
+
+    /* немного уменьшаем элементы управления для маленьких экранов */
+    .vhs-btn {
+        padding: 0.4rem 0.7rem;
+        font-size: 0.8rem;
+    }
+}
+
+.yandex-music-widget {
+    width: 100%;
+    height: 100%; /* Заполняем весь vhs-display (480px) */
+    border: none;
+    background: #000;
+    backdrop-filter: blur(10px);
+    border-radius: 5px;
+    position: relative;
+    overflow: hidden;
+    opacity: 0.95;
+    margin: 0;
+    padding: 0;
+}
+
+/* Скрываем хедер rdmtp */
+.yandex-music-widget iframe {
+    margin-top: -110px;
+    height: calc(100% + 110px);
+}
+
+/* Добавляем эффект глитча для виджета */
+@keyframes glitch {
+    0% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+    100% { transform: translate(0); }
+}
+
+.yandex-music-widget::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.95),
+        rgba(0, 0, 0, 0.95) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+    pointer-events: none;
+    opacity: 0.5;
+    z-index: 2;
+}
+
+.yandex-music-widget::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        45deg,
+        rgba(0, 0, 0, 0.95),
+        transparent 40%,
+        transparent 60%,
+        rgba(0, 0, 0, 0.95)
+    );
+    pointer-events: none;
+    z-index: 1;
+}
+
+.loading-message {
+    text-align: center;
+    padding: 2rem;
+    color: #0f0;
+    font-family: 'VT323', monospace;
+    font-size: 1.5rem;
+    text-shadow: 0 0 5px #0f0;
+    animation: flicker 2s infinite;
+}
+
+.loading-message .blink-cursor {
+    display: inline-block;
+    animation: blink 1s infinite;
+}
+
+@keyframes flicker {
+    0% { opacity: 0.9; }
+    5% { opacity: 0.8; }
+    10% { opacity: 0.9; }
+    15% { opacity: 0.8; }
+    20% { opacity: 0.9; }
+    25% { opacity: 0.8; }
+    30% { opacity: 0.9; }
+    35% { opacity: 0.8; }
+    40% { opacity: 0.9; }
+    45% { opacity: 0.8; }
+    50% { opacity: 0.9; }
+    55% { opacity: 0.8; }
+    60% { opacity: 0.9; }
+    65% { opacity: 0.8; }
+    70% { opacity: 0.9; }
+    75% { opacity: 0.8; }
+    80% { opacity: 0.9; }
+    85% { opacity: 0.8; }
+    90% { opacity: 0.9; }
+    95% { opacity: 0.8; }
+    100% { opacity: 0.9; }
+}
+
+/* Удаляем старые стили для центрального индикатора */
+.vhs-status, .status-light, .status-text {
+    display: none;
+}
+
+.vhs-controls button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(100%);
+}
+
+.vhs-controls button:disabled {
+    pointer-events: none;
+}
+
+.vhs-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: linear-gradient(180deg,#262626 0%,#1b1b1b 100%);
+    border-radius: 12px;
+    border: 1px solid #333;
+    margin-top: auto;
+    position: relative;
+    z-index: 11;
+    height: 172px;
+    box-shadow: inset 0 2px 8px rgba(255,255,255,.05), inset 0 -6px 16px rgba(0,0,0,.6);
+}
+
+.control-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 10px;
+    flex-wrap: nowrap;
+}
+
+.vhs-btn {
+    background: linear-gradient(180deg,#3b3b3b 0%,#2a2a2a 60%,#1a1a1a 100%);
+    border: 1px solid #4a4a4a;
+    color: #d2ffd2;
+    padding: 10px 20px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-shadow: 0 0 6px rgba(0,255,0,.4);
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    box-shadow: inset 0 2px 5px rgba(255,255,255,.06), inset 0 -5px 10px rgba(0,0,0,.6);
+}
+
+.vhs-btn:hover {
+    filter: brightness(1.08);
+    text-shadow: 0 0 10px rgba(0,255,0,.6);
+}
+
+.vhs-btn.disabled {
+    background: #222;
+    color: #444;
+    cursor: not-allowed;
+    text-shadow: none;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.vhs-btn.disabled:hover {
+    background: #222;
+    text-shadow: none;
+}
+
+.vhs-indicators {
+    position: relative;
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    gap: 24px; /* равномерный отступ между парами */
+    z-index: 11;
+    height: auto;
+    margin-top: 8px;
+    flex-wrap: nowrap;
+    width: 100%;
+}
+
+.vhs-indicators .indicator,
+div.indicator,
+.indicator {
+    display: inline-flex !important; /* более надежный flex */
+    flex-direction: column !important; /* вертикально: LED сверху, текст снизу */
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important; /* отступ между LED и текстом */
+    white-space: nowrap !important;
+    min-width: fit-content !important;
+}
+
+.error-message {
+    color: #f00;
+    font-family: 'VT323', monospace;
+    font-size: 1.5rem;
+    text-shadow: 0 0 5px #f00;
+    margin-bottom: 1rem;
+    animation: flicker 2s infinite;
+}
+
+.error-details {
+    color: #f00;
+    font-family: 'VT323', monospace;
+    font-size: 1rem;
+    opacity: 0.8;
+    max-width: 80%;
+    margin: 0 auto;
+    word-wrap: break-word;
+}
+
+.status-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 100;
+}
+
+.status-text {
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    color: #0f0;
+    text-shadow: 0 0 5px #0f0;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 4px 8px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+}
+
+.status-text:empty {
+    display: none;
 } 

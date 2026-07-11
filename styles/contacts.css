@@ -1,0 +1,467 @@
+/* Стили для страницы контактов */
+body, html {
+    overflow-y: auto !important; /* Убедимся, что прокрутка возможна, если контента много */
+}
+
+.content.contacts-page-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 120px);
+    padding: 120px 5% 60px 5%;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.contacts-container {
+    text-align: center;
+    width: 100%;
+    max-width: 1200px;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
+}
+
+.contacts-container h1 {
+    font-size: 3.2rem;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    margin-bottom: 4rem;
+    text-shadow: 
+        3px 3px 0 #ff00ff,
+        -3px -3px 0 #00ffff,
+        0 0 20px rgba(255, 255, 255, 0.5);
+    animation: titleGlow 2s infinite alternate;
+}
+
+.social-links-grid {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    width: 100%;
+    padding: 0 2rem;
+}
+
+.social-card {
+    flex: 0 1 280px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 3px solid #fff;
+    border-radius: 20px;
+    padding: 4rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 
+        0 0 20px rgba(255, 255, 255, 0.2),
+        inset 0 0 30px rgba(255, 255, 255, 0.1);
+    min-height: 400px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(5px);
+}
+
+/* Визуал контактов: оставить стиль карточек как был, но без обводки */
+.vhs-card {
+    flex: 0 1 280px;
+    background: rgba(20,20,20,0.95);
+    border: none !important;
+    border-radius: 18px;
+    padding: 2.8rem 2rem 2.1rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 400px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.social-card::before, .vhs-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        45deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 100%
+    );
+    transform: rotate(45deg);
+    animation: shine 3s infinite;
+}
+
+.social-card:hover, .vhs-card:hover {
+    transform: translateY(-10px) scale(1.03);
+    border-color: #fff;
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 
+        0 15px 30px rgba(0, 0, 0, 0.2),
+        0 0 40px rgba(255, 255, 255, 0.3),
+        inset 0 0 40px rgba(255, 255, 255, 0.2);
+}
+
+.social-card h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 3rem;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    transition: all 0.3s ease;
+}
+
+.social-card:hover h2 {
+    transform: scale(1.05);
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+}
+
+.social-link {
+    display: inline-block;
+    padding: 15px 35px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid #fff;
+    border-radius: 25px;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.social-link::before {
+    content: '';
+    position: absolute;
+    top: -100%;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.8),
+        rgba(255, 255, 255, 0)
+    );
+    transition: all 0.3s ease;
+}
+
+.social-link:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.1);
+    box-shadow: 
+        0 0 20px rgba(255, 255, 255, 0.4),
+        0 0 40px rgba(255, 255, 255, 0.2);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+}
+
+.social-link:hover::before {
+    top: 0;
+    opacity: 0;
+}
+
+/* Y2K-специфичные анимации */
+@keyframes titleGlow {
+    0% {
+        text-shadow: 
+            3px 3px 0 #ff00ff,
+            -3px -3px 0 #00ffff,
+            0 0 20px rgba(255, 255, 255, 0.5);
+    }
+    100% {
+        text-shadow: 
+            5px 5px 0 #ff00ff,
+            -5px -5px 0 #00ffff,
+            0 0 30px rgba(255, 255, 255, 0.8);
+    }
+}
+
+@keyframes shine {
+    0% {
+        transform: translateX(-200%) rotate(45deg);
+    }
+    100% {
+        transform: translateX(200%) rotate(45deg);
+    }
+}
+
+/* Специфичные стили для каждой карточки */
+.vk-card {
+    background: linear-gradient(135deg, rgba(74, 118, 168, 0.3), rgba(0, 0, 0, 0.4));
+    border-color: #4A76A8;
+}
+
+.tg-card {
+    background: linear-gradient(135deg, rgba(0, 136, 204, 0.3), rgba(0, 0, 0, 0.4));
+    border-color: #0088CC;
+}
+
+.youtube-card {
+    background: linear-gradient(135deg, rgba(255, 0, 0, 0.3), rgba(0, 0, 0, 0.4));
+    border-color: #FF0000;
+}
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+    .content.contacts-page-content {
+        padding: 120px 5% 40px 5%;
+        min-height: calc(100vh - 160px);
+    }
+    
+    .social-links-grid {
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+    
+    .social-card {
+        flex: 1 1 250px;
+        min-height: 320px;
+        padding: 2.5rem 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    body, html {
+        overflow-y: auto !important; /* Разрешаем вертикальный скролл */
+    }
+    
+    .content.contacts-page-content {
+        padding: 200px 3% 40px 3%; /* Уменьшаем отступ под навигацию */
+        min-height: 100vh;
+        height: auto; /* Убираем фиксированную высоту */
+        justify-content: flex-start;
+        box-sizing: border-box;
+    }
+    
+    .contacts-container {
+        padding: 0;
+        height: auto; /* Убираем фиксированную высоту */
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start; /* Изменяем с space-between */
+    }
+    
+    /* Скрываем заголовок "КОНТАКТЫ" */
+    .contacts-container h1 {
+        display: none !important;
+    }
+    
+    /* Переопределяем .vhs-socials для мобильной версии */
+    .vhs-socials {
+        flex-direction: column !important;
+        align-items: center !important;
+        padding: 0;
+        gap: 2rem !important; /* Увеличиваем промежуток между карточками */
+        height: auto !important; /* Убираем фиксированную высоту */
+        display: flex !important;
+        justify-content: flex-start !important; /* Изменяем с space-between */
+        margin: 0 !important; /* Убираем верхний отступ */
+        width: 100%;
+    }
+    
+    .vhs-card {
+        width: 100% !important;
+        max-width: min(280px, 90vw) !important;
+        height: auto !important; /* Убираем фиксированную высоту */
+        min-height: 200px !important; /* Минимальная высота */
+        max-height: none !important; /* Убираем ограничение */
+        padding: 2rem 4vw !important;
+        border-radius: 15px;
+        transform: none !important;
+        transition: none !important;
+        animation: none !important;
+        position: static !important;
+        justify-content: space-between !important;
+        flex-shrink: 0;
+        box-sizing: border-box;
+    }
+    
+    .vhs-card::before {
+        display: none !important;
+        animation: none !important;
+    }
+    
+    .vhs-card:hover {
+        transform: none !important;
+        height: auto !important; /* Убираем фиксированную высоту при ховере */
+        min-height: 200px !important;
+        max-height: none !important;
+    }
+    
+    /* Фиксируем навигацию поверх контента */
+    .main-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2000;
+        background: rgba(0, 0, 0, 0.95);
+        backdrop-filter: blur(10px);
+    }
+}
+
+@media (max-width: 480px) {
+    .content.contacts-page-content {
+        padding: 180px 2% 40px 2% !important; /* Ещё меньше отступ */
+        min-height: 100vh;
+        height: auto;
+    }
+    
+    /* Скрываем заголовок */
+    .contacts-container h1 {
+        display: none !important;
+    }
+    
+    .vhs-socials {
+        margin: 0 !important;
+        gap: 1.5rem !important;
+    }
+    
+    .vhs-card {
+        max-width: min(260px, 95vw) !important;
+        min-height: 180px !important;
+        padding: 1.5rem 3vw !important;
+    }
+    
+    /* Навигация поверх */
+    .main-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2000;
+        background: rgba(0, 0, 0, 0.95);
+        backdrop-filter: blur(10px);
+    }
+}
+
+@media (max-width: 380px) {
+    .content.contacts-page-content {
+        padding: 160px 1% 30px 1% !important;
+        min-height: 100vh;
+        height: auto;
+    }
+    
+    /* Скрываем заголовок */
+    .contacts-container h1 {
+        display: none !important;
+    }
+    
+    .vhs-socials {
+        margin: 0 !important;
+        gap: 1rem !important;
+    }
+    
+    .vhs-card {
+        max-width: min(240px, 98vw) !important;
+        min-height: 160px !important;
+        padding: 1rem 2.5vw !important;
+        border-radius: 12px;
+    }
+} 
+
+/* Скрываем заголовок "КОНТАКТЫ" на всех разрешениях ≤1024px */
+@media (max-width: 1024px) {
+    .contacts-section h1,
+    .contacts-container h1 {
+        display: none !important;
+    }
+    
+    .vhs-socials {
+        margin: 0 !important;
+    }
+    
+    .content.contacts-page-content {
+        padding-top: 120px !important;
+    }
+}
+
+/* Old film overlay and centering for desktop */
+.old-film { position: relative; }
+.old-film::before,
+.old-film::after {
+  content:''; position:absolute; left:-5%; right:-5%; top:-5%; bottom:-5%; pointer-events:none;
+}
+.old-film::before { background: radial-gradient(circle at 50% 50%, transparent 60%, rgba(0,0,0,0.25) 100%); }
+.old-film::after {
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0 2px, rgba(0,0,0,0.03) 2px 4px);
+  mix-blend-mode: overlay; opacity: .6; animation: filmFlicker 1.2s infinite steps(2);
+}
+@keyframes filmFlicker { 0%{transform:translateY(0);opacity:.55}50%{transform:translateY(-1px);opacity:.65}100%{transform:translateY(0);opacity:.55} }
+
+/* Ensure socials centered in desktop */
+.vhs-socials { justify-content: center; }
+
+/* Промежуточная адаптация для 901-1024px */
+@media (min-width: 901px) and (max-width: 1024px) {
+    .content.contacts-page-content {
+        padding: 120px 3% 40px 3% !important;
+    }
+    
+    .vhs-socials {
+        margin: 0 !important;
+    }
+}
+
+/* Промежуточная адаптация для 769-900px */
+@media (min-width: 769px) and (max-width: 900px) {
+    body, html {
+        overflow-y: auto !important; /* Разрешаем вертикальный скролл */
+    }
+    
+    .content.contacts-page-content {
+        padding: 100px 3% 40px 3%; /* Уменьшаем отступ сверху */
+        min-height: 100vh;
+        height: auto; /* Позволяем контенту определять высоту */
+    }
+    
+    /* Скрываем заголовок "КОНТАКТЫ" */
+    .contacts-section h1 {
+        display: none !important;
+    }
+    
+    /* Переопределяем стили .vhs-socials из main.css */
+    .vhs-socials {
+        display: flex;
+        flex-direction: row !important; /* Горизонтальное размещение */
+        flex-wrap: wrap !important; /* С переносом строк */
+        align-items: flex-start !important;
+        justify-content: center !important;
+        gap: 1.5rem !important;
+        margin: 0 !important; /* Убираем весь отступ сверху */
+        width: 100%;
+    }
+    
+    .vhs-card {
+        width: calc(50% - 0.75rem) !important; /* 2 карточки в ряд */
+        max-width: 350px !important;
+        min-height: 280px !important;
+        height: auto !important;
+        flex: none !important; /* Отключаем flex-grow */
+    }
+    
+    /* Делаем навигацию зафиксированной поверх контента */
+    .main-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2000;
+        background: rgba(0, 0, 0, 0.95);
+        backdrop-filter: blur(10px);
+    }
+} 

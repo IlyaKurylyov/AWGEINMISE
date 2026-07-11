@@ -1,0 +1,4 @@
+// Supabase DEV config (anon key публичный)
+window.SUPABASE_URL = 'https://lzpesnkjffmsnigahuav.supabase.co';
+window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6cGVzbmtqZmZtc25pZ2FodWF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2NjAxOTIsImV4cCI6MjA3MDIzNjE5Mn0.hVqSKgxVhaJp6cqsp5Pdcj8EaWCL2W6JTyvi05X4JEU';
+

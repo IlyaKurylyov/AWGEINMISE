@@ -6,15 +6,56 @@
     cursor: crosshair;
 }
 
+/* КРИТИЧНЫЕ МОБИЛЬНЫЕ СТИЛИ */
+@media screen and (max-width: 768px) {
+    body.page-home .hero-content {
+        margin-top: -500px !important;
+        padding-top: 0 !important;
+        transform: none !important;
+    }
+    
+    body.page-home .video-wrapper video,
+    body.page-home .video-background video,
+    body.page-home #bgVideo {
+        object-fit: contain !important;
+        width: 100% !important;
+        height: 100% !important;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    body.page-home .hero-content {
+        margin-top: -500px !important;
+        padding-top: 0 !important;
+        transform: none !important;
+    }
+}
+
+@media screen and (max-width: 380px) {
+    body.page-home .hero-content {
+        margin-top: -500px !important;
+        padding-top: 0 !important;
+        transform: none !important;
+    }
+}
+
 body {
     font-family: 'Courier New', monospace;
     background-color: #000;
     color: #fff;
-    overflow: hidden;
     line-height: 1;
     letter-spacing: -0.02em;
     position: relative;
     min-height: 100vh;
+}
+
+/* Убираем скролл только на главной странице */
+body.page-home {
+    overflow: hidden;
+}
+
+html:has(body.page-home) {
+    overflow: hidden;
 }
 
 body::before {
@@ -25,9 +66,7 @@ body::before {
     right: 0;
     bottom: 0;
     background: 
-        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
         linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-    background-size: 100% 2px, 3px 100%;
     pointer-events: none;
     animation: flicker 0.15s infinite;
     z-index: 2;
@@ -71,7 +110,7 @@ body::before {
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyBAMAAADsEZWCAAAAGFBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANxM8mAAAACHRSTlMzABEiM0Qid4dJv+8AAACOSURBVHjaZcwxDgIxDAXRf4UbmHtwo6XlBLkB9z+CiQ0IZGVHfgW1M1+zc2bLzN5m5m3mPTN/M+eZOc/Mz8x5Zs4z85s5z8x5Zn4z55k5z8x5Zn4z55k5z8x5Zn4z55k5z8x5Zn4zB5aESPwHr8LhAAAAAElFTkSuQmCC');
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyBAMAAADsEZWCAAAAGFBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANxM8mAAAACHRSTlMzABEiM0Qid4dJv+8AAACOSURBVHjaZcwxDgIxDAXRf4UbmHtwo6XlBLkB9z+CiQ0IZGVHfgW1M1+zc2bLzN5m5m3mPTN/M+eZOc/Mz8x5Zs4z85s5z8x5Zn4z55k5z8x5Zn4z55k5z8x5Zn4zB5aESPwHr8LhAAAAAElFTkSuQmCC');
     opacity: 0.05;
     pointer-events: none;
     animation: noise 0.2s infinite;
@@ -147,90 +186,85 @@ body::before {
     justify-content: space-between;
     align-items: center;
     z-index: 100;
-    mix-blend-mode: difference;
 }
 
 .nav-logo {
-    font-size: 1.5rem;
-    font-weight: bold;
-    text-decoration: none;
-    color: #fff;
-    letter-spacing: -0.05em;
-}
-
-.nav-links {
-    display: flex;
-    gap: 1rem;
-}
-
-/* Базовые стили для ссылок навигации */
-.nav-link {
     position: fixed;
-    top: 25px;
-    padding: 13px 22px;
-    background: rgba(0, 0, 0, 0.9);
-    border: 3px solid rgba(255, 255, 255, 1);
-    border-radius: 7px;
-    color: #fff;
-    text-decoration: none;
-    font-size: 1.35rem;
-    font-weight: 900;
-    text-transform: uppercase;
-    transition: all 0.2s ease;
-    text-shadow: 
-        -1px -1px 0 #000,
-        1px -1px 0 #000,
-        -1px 1px 0 #000,
-        1px 1px 0 #000,
-        0 0 8px rgba(255, 255, 255, 0.8);
-    box-shadow: 
-        inset 0 0 15px rgba(255, 255, 255, 0.5),
-        0 0 15px rgba(255, 255, 255, 0.5),
-        0 0 20px rgba(255, 255, 255, 0.3);
-    z-index: 100;
-    min-width: max-content;
+    top: 20px;
+    left: 20px;
+    width: auto !important;
+    height: auto !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    text-decoration: none !important;
+    z-index: 1200;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.nav-link:hover {
-    background: rgba(0, 0, 0, 0.95);
-    border-color: rgba(255, 255, 255, 1);
-    transform: translateY(-2px);
-    text-shadow: 
-        -1px -1px 0 #000,
-        1px -1px 0 #000,
-        -1px 1px 0 #000,
-        1px 1px 0 #000,
-        0 0 12px rgba(255, 255, 255, 1);
-    box-shadow: 
-        inset 0 0 20px rgba(255, 255, 255, 0.6),
-        0 0 20px rgba(255, 255, 255, 0.6),
-        0 0 25px rgba(255, 255, 255, 0.4);
-}
+.nav-logo canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;}
 
-/* Подложка под текст */
-.nav-link::before {
-    content: '';
-    position: absolute;
-    top: -5px;
-    left: -5px;
-    right: -5px;
-    bottom: -5px;
-    background: radial-gradient(
-        circle at center,
-        rgba(255, 255, 255, 0.15) 0%,
-        rgba(255, 255, 255, 0.1) 30%,
-        rgba(255, 255, 255, 0.05) 60%,
-        transparent 100%
-    );
-    z-index: -1;
-    border-radius: 10px;
-}
+/* Удалены все стили, связанные с .nav-logo, .back-arrow, .back-btn, arrowBlink, arrowGlitch, dissolving, disintegrating, converging, rebuilding, focus-visible, а также все связанные keyframes и display:none для этих классов */
 
-/* Позиционирование каждой ссылки */
-.nav-link:nth-child(1) { left: 20%; }  /* РЕЛИЗЫ */
-.nav-link:nth-child(2) { left: 38%; }  /* АРТИСТЫ */
-.nav-link:nth-child(3) { left: 56%; }  /* О НАС */
-.nav-link:nth-child(4) { left: 74%; }  /* КОНТАКТЫ */
+/* Медиа-запрос для мобильных устройств */
+@media screen and (max-width: 768px) {
+    .nav-links {
+        flex-direction: column;
+        align-items: center;
+        gap: 2rem;
+        position: fixed;
+        top: 0;
+        background: rgba(0, 0, 0, 0.95);
+        padding: 15px 0;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        width: 100%;
+    }
+
+    .nav-link {
+        position: relative;
+        z-index: 1101; /* Делаем z-index ссылок навигации выше */
+    }
+
+    .work-filter {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        visibility: hidden; /* скрыт, пока не спозиционируем */
+        padding: 20px 0;
+        background: linear-gradient(
+            to bottom,
+            #000 0%,
+            #000 85%,
+            transparent 100%
+        );
+        z-index: 1000; /* Устанавливаем z-index для фильтра ниже навигации */
+        width: 100%;
+    }
+
+    .producer-switch {
+        margin-top: 40px; /* Добавляем отступ сверху */
+        width: 100%;
+        justify-content: center;
+    }
+
+    .work-section {
+        margin-top: 280px;
+        position: relative;
+        z-index: 1 !important; /* Основной контент ПОД фильтром */
+    }
+
+    .filter-buttons {
+        flex-direction: column;
+        gap: 2rem;
+        padding: 1rem;
+        position: relative;
+        z-index: 1000;
+    }
+}
 
 /* Эффект удара */
 .impact-effect {
@@ -294,6 +328,11 @@ body::before {
     min-height: 100vh;
     padding: 0 1rem;
 }
+
+/* ===== ADMIN PAGE CLEANUP ===== */
+.page-admin .main-nav, .page-admin .nav-links { display:none !important; }
+.page-admin .content { padding-top: 16px; }
+.page-admin .noise-overlay { opacity: 0.03; }
 
 .hero {
     height: 100vh;
@@ -437,7 +476,7 @@ body::before {
     }
 }
 
-/* SVG фильтр для глитч-эффекта */
+/* Убираем сетку с фона */
 body::after {
     content: '';
     position: fixed;
@@ -445,9 +484,6 @@ body::after {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
-    background-size: 2px 2px;
     pointer-events: none;
     z-index: 999;
     opacity: 0.1;
@@ -480,32 +516,18 @@ body::after {
 
 .switches-container {
     display: flex;
-    gap: 50px; /* Увеличили расстояние между переключателями */
     justify-content: center;
-    margin-top: 40px;
+    align-items: center;
+    margin-top: 60px;
+    min-height: 100px;
 }
 
-.switch {
-    width: 60px;
-    height: 90px;
-    background: linear-gradient(to bottom,
-        #000000,
-        #1a1a1a 5%,
-        #000000 10%,
-        #1a1a1a 15%,
-        #000000 20%
-    );
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: 5px;
-    position: relative;
-    cursor: pointer;
-    transition: all 0.15s ease-out;
-    box-shadow: 
-        0 0 10px rgba(255, 255, 255, 0.1),
-        inset 0 2px 5px rgba(255, 255, 255, 0.1),
-        inset 0 -2px 5px rgba(0, 0, 0, 0.5);
-    transform-style: preserve-3d;
-    transform: translateZ(0);
+/* VHS Root container for React component */
+#vhs-root {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
 }
 
 .switch:hover {
@@ -603,6 +625,15 @@ body::after {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+/* На мобильных - contain вместо cover */
+@media screen and (max-width: 768px) {
+    .video-wrapper video,
+    .video-background video,
+    #bgVideo {
+        object-fit: contain !important;
+    }
 }
 
 .video-background.active {
@@ -755,4 +786,1692 @@ body::after {
 /* Убираем старый top-light, так как теперь у нас есть лампа */
 .top-light {
     display: none;
+}
+
+/* Стили для страницы контактов */
+.contacts-section {
+    padding: 2rem;
+    text-align: center;
+}
+
+.contacts-section h1 {
+    font-size: 3rem;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+    letter-spacing: -0.05em;
+}
+
+.social-links {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: center;
+    margin-top: 2rem;
+}
+
+.social-link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 2rem;
+    background: rgba(0, 0, 0, 0.9);
+    border: 3px solid rgba(255, 255, 255, 1);
+    border-radius: 7px;
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.5rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    text-shadow: 
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000,
+        0 0 8px rgba(255, 255, 255, 0.8);
+    box-shadow: 
+        inset 0 0 15px rgba(255, 255, 255, 0.5),
+        0 0 15px rgba(255, 255, 255, 0.5),
+        0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.social-link:hover {
+    background: rgba(0, 0, 0, 0.95);
+    border-color: rgba(255, 255, 255, 1);
+    transform: translateY(-2px);
+    text-shadow: 
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000,
+        0 0 12px rgba(255, 255, 255, 1);
+    box-shadow: 
+        inset 0 0 20px rgba(255, 255, 255, 0.6),
+        0 0 20px rgba(255, 255, 255, 0.6),
+        0 0 25px rgba(255, 255, 255, 0.4);
+}
+
+.social-link img {
+    width: 32px;
+    height: 32px;
+    filter: brightness(0) invert(1);
+}
+
+/* Конец стилей */
+
+/* Трещины на боковых кнопках */
+.switch:first-child::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        linear-gradient(120deg, transparent 20%, rgba(0,0,0,0.9) 20.5%, transparent 21%) 0 0,
+        linear-gradient(-60deg, transparent 40%, rgba(0,0,0,0.9) 40.5%, transparent 41%) 0 0,
+        linear-gradient(30deg, transparent 60%, rgba(0,0,0,0.9) 60.5%, rgba(0,0,0,0.6) 61%, transparent 62%) 0 0,
+        linear-gradient(85deg, transparent 75%, rgba(0,0,0,0.8) 75.5%, transparent 76%) 0 0,
+        linear-gradient(-15deg, transparent 35%, rgba(0,0,0,0.8) 35.5%, transparent 36%) 0 0,
+        repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.3) 3px, transparent 4px) 0 0 / 10px 10px;
+    opacity: 1;
+    pointer-events: none;
+    box-shadow: 
+        inset 4px 4px 8px rgba(0,0,0,0.7),
+        inset -2px -2px 4px rgba(0,0,0,0.5);
+    clip-path: polygon(
+        0 0, 100% 0, 100% 100%, 0 100%,
+        20% 40%, 40% 60%, 60% 40%, 80% 60%,
+        70% 80%, 50% 70%, 30% 90%, 10% 70%
+    );
+}
+
+.switch:last-child::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        linear-gradient(-120deg, transparent 30%, rgba(0,0,0,0.9) 30.5%, transparent 31%) 0 0,
+        linear-gradient(60deg, transparent 50%, rgba(0,0,0,0.9) 50.5%, transparent 51%) 0 0,
+        linear-gradient(-30deg, transparent 70%, rgba(0,0,0,0.9) 70.5%, rgba(0,0,0,0.6) 71%, transparent 72%) 0 0,
+        linear-gradient(-85deg, transparent 45%, rgba(0,0,0,0.8) 45.5%, transparent 46%) 0 0,
+        linear-gradient(15deg, transparent 65%, rgba(0,0,0,0.8) 65.5%, transparent 66%) 0 0,
+        repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(0,0,0,0.3) 3px, transparent 4px) 0 0 / 10px 10px;
+    opacity: 1;
+    pointer-events: none;
+    box-shadow: 
+        inset -4px 4px 8px rgba(0,0,0,0.7),
+        inset 2px -2px 4px rgba(0,0,0,0.5);
+    clip-path: polygon(
+        0 0, 100% 0, 100% 100%, 0 100%,
+        80% 30%, 60% 50%, 40% 30%, 20% 50%,
+        30% 70%, 50% 60%, 70% 80%, 90% 60%
+    );
+}
+
+/* Дополнительные эффекты разбитости */
+.switch:first-child {
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+    background: linear-gradient(135deg,
+        #000000,
+        #1a1a1a 30%,
+        #000000 31%,
+        #1a1a1a 50%,
+        #000000 51%,
+        #1a1a1a 70%,
+        #000000 71%
+    );
+    transform: perspective(200px) rotateY(-5deg) rotateX(2deg);
+}
+
+.switch:last-child {
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    background: linear-gradient(-135deg,
+        #000000,
+        #1a1a1a 30%,
+        #000000 31%,
+        #1a1a1a 50%,
+        #000000 51%,
+        #1a1a1a 70%,
+        #000000 71%
+    );
+    transform: perspective(200px) rotateY(5deg) rotateX(-2deg);
+}
+
+/* Тени от трещин */
+.switch:first-child::after,
+.switch:last-child::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 30% 40%, rgba(0,0,0,0.6) 0%, transparent 40%),
+        radial-gradient(circle at 70% 60%, rgba(0,0,0,0.6) 0%, transparent 40%),
+        radial-gradient(circle at 20% 20%, rgba(0,0,0,0.4) 0%, transparent 30%),
+        radial-gradient(circle at 80% 80%, rgba(0,0,0,0.4) 0%, transparent 30%),
+        repeating-radial-gradient(circle at 50% 50%, transparent, transparent 5px, rgba(0,0,0,0.2) 6px, transparent 7px);
+    pointer-events: none;
+    mix-blend-mode: multiply;
+}
+
+/* Оставляем среднюю кнопку без изменений */
+.switch:nth-child(2)::before,
+.switch:nth-child(2)::after {
+    display: none;
+}
+
+/* Эффект при нажатии на разбитые кнопки */
+.switch:first-child.pressed {
+    transform: perspective(200px) rotateY(-5deg) rotateX(2deg) translateY(4px);
+}
+
+.switch:last-child.pressed {
+    transform: perspective(200px) rotateY(5deg) rotateX(-2deg) translateY(4px);
+}
+
+/* Стили для искр - должны быть в самом конце файла */
+@keyframes spark {
+    0% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+        opacity: 1;
+        filter: brightness(1.5);
+    }
+    20% {
+        opacity: 1;
+        filter: brightness(1.2);
+    }
+    100% {
+        transform: 
+            translate(var(--tx), var(--ty)) 
+            rotate(var(--rotate)) 
+            scale(0.1);
+        opacity: 0;
+        filter: brightness(1);
+    }
+}
+
+@keyframes sparkFlash {
+    0% { 
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.8;
+        transform: scale(1.1);
+    }
+    100% { 
+        opacity: 0;
+        transform: scale(1);
+    }
+}
+
+.spark {
+    position: absolute;
+    width: var(--width, 3px);
+    height: var(--height, 12px);
+    background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.8) 0%,
+        rgba(255, 255, 255, 0.8) 20%,
+        rgba(255, 220, 100, 1) 60%,
+        rgba(255, 160, 20, 0.8) 100%
+    );
+    border-radius: 1px;
+    transform-origin: center bottom;
+    animation: spark 0.4s ease-out forwards;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10000;
+    mix-blend-mode: screen;
+    box-shadow: 
+        0 0 1px rgba(255, 255, 255, 0.8),
+        0 0 2px rgba(255, 220, 100, 0.4),
+        0 0 3px rgba(255, 160, 20, 0.2);
+    bottom: -2px;
+    left: 50%;
+}
+
+/* Разные типы искр */
+.spark-1 { 
+    --width: 2px;
+    --height: 15px;
+    --tx: 40px;
+    --ty: 30px;
+    --rotate: 45deg;
+}
+.spark-2 { 
+    --width: 3px;
+    --height: 10px;
+    --tx: -35px;
+    --ty: 25px;
+    --rotate: -60deg;
+}
+.spark-3 { 
+    --width: 2px;
+    --height: 12px;
+    --tx: 30px;
+    --ty: 35px;
+    --rotate: 30deg;
+}
+.spark-4 { 
+    --width: 2.5px;
+    --height: 8px;
+    --tx: -25px;
+    --ty: 20px;
+    --rotate: -45deg;
+}
+.spark-5 { 
+    --width: 2px;
+    --height: 14px;
+    --tx: 20px;
+    --ty: 28px;
+    --rotate: 15deg;
+}
+
+/* Эффект при нажатии на разбитые кнопки */
+.switch:first-child.pressed,
+.switch:last-child.pressed {
+    overflow: visible !important;
+    z-index: 9999;
+}
+
+/* Вспышка при нажатии */
+.switch:first-child.pressed::after,
+.switch:last-child.pressed::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    background: radial-gradient(
+        circle at var(--spark-x, 50%) calc(100% - 2px), 
+        rgba(255, 255, 255, 0.8) 0%,
+        rgba(255, 220, 100, 0.6) 15%,
+        rgba(255, 180, 0, 0.3) 30%,
+        transparent 45%
+    );
+    animation: sparkFlash 0.15s ease-out;
+    z-index: 9998;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    opacity: 0.6;
+}
+
+/* Анимация пульсации для средней кнопки */
+@keyframes buttonPulse {
+    0% {
+        box-shadow: 
+            0 0 5px rgba(255, 255, 255, 0.2),
+            0 0 10px rgba(255, 255, 255, 0.1),
+            inset 0 0 2px rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+    50% {
+        box-shadow: 
+            0 0 8px rgba(255, 255, 255, 0.3),
+            0 0 15px rgba(255, 255, 255, 0.2),
+            0 0 25px rgba(255, 255, 255, 0.1),
+            inset 0 0 3px rgba(255, 255, 255, 0.4);
+        border-color: rgba(255, 255, 255, 0.5);
+    }
+    100% {
+        box-shadow: 
+            0 0 5px rgba(255, 255, 255, 0.2),
+            0 0 10px rgba(255, 255, 255, 0.1),
+            inset 0 0 2px rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+}
+
+@keyframes buttonGlow {
+    0% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.6;
+        transform: scale(1.02);
+    }
+    100% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+}
+
+/* Специальные стили для средней кнопки */
+.switch:nth-child(2) {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 
+        0 0 5px rgba(255, 255, 255, 0.2),
+        0 0 10px rgba(255, 255, 255, 0.1),
+        inset 0 0 2px rgba(255, 255, 255, 0.3);
+    transition: all 0.2s ease;
+    animation: buttonPulse 2s infinite ease-in-out;
+    position: relative;
+    overflow: visible;
+}
+
+.switch:nth-child(2)::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    background: radial-gradient(
+        circle at center,
+        rgba(255, 255, 255, 0.15) 0%,
+        rgba(255, 255, 255, 0.1) 30%,
+        rgba(255, 255, 255, 0.05) 60%,
+        transparent 100%
+    );
+    z-index: -1;
+    animation: buttonGlow 2s infinite ease-in-out;
+    pointer-events: none;
+}
+
+.switch:nth-child(2):hover {
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 
+        0 0 10px rgba(255, 255, 255, 0.4),
+        0 0 20px rgba(255, 255, 255, 0.2),
+        0 0 30px rgba(255, 255, 255, 0.1),
+        inset 0 0 4px rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px) scale(1.02);
+}
+
+.switch:nth-child(2):hover::before {
+    animation: none;
+    opacity: 0.8;
+}
+
+.switch:nth-child(2).pressed {
+    animation: none;
+    transform: translateY(2px) scale(0.98);
+    border-color: rgba(255, 255, 255, 0.7);
+    box-shadow: 
+        0 0 15px rgba(255, 255, 255, 0.3),
+        inset 0 0 8px rgba(255, 255, 255, 0.4);
+    transition: all 0.1s ease-out;
+}
+
+/* Убираем конфликтующие стили */
+.switch:nth-child(2)::after {
+    display: none;
+}
+
+/* === Пиксельный распад всей кнопки === */
+.nav-logo::after { display:none; }
+
+@keyframes rainShift {
+    0%   { background-position: 0 0, 0 0; }
+    100% { background-position: 0 0, 0 8px; }
+}
+
+@keyframes logoBlink {
+    0%, 75% { opacity: 1; }
+    80%, 85% { opacity: 0; }
+    90%, 100% { opacity: 1; }
+}
+
+@keyframes arrowFade {
+    0%   { opacity: 1; }
+    60%  { opacity: 0; }
+    100% { opacity: 0; }
+}
+
+/* --- WORK PAGE --- */
+.work-section {
+    margin-top: 160px;
+    padding: 0 5% 100px;
+    color: #fff;
+    height: calc(100vh - 160px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #333 #111;
+}
+
+.work-section::-webkit-scrollbar {
+    width: 8px;
+}
+
+.work-section::-webkit-scrollbar-track {
+    background: #111;
+}
+
+.work-section::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+
+.work-section::-webkit-scrollbar-thumb:hover {
+    background: #444;
+}
+
+.work-section h1 {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 20px #fff, 0 0 40px #fff2;
+}
+
+.work-filter {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 90;
+    display: flex;
+    justify-content: center;
+    padding: 0 5%;
+    background: linear-gradient(
+        to bottom,
+        #000 0%,
+        #000 70%,
+        transparent 100%
+    );
+    padding-bottom: 2rem;
+}
+
+.filter-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4rem;
+    width: 100%;
+    max-width: 800px;
+    padding: 1rem;
+}
+
+.producer-switch {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.producer-switch:hover .btn-indicator {
+    border-color: #444;
+}
+
+.producer-switch:hover .producer-name {
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+}
+
+.btn-indicator {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    background: #000;
+    border-radius: 50%;
+    border: 2px solid #333;
+    overflow: hidden;
+    box-shadow:
+        inset 0 2px 4px rgba(0, 0, 0, 0.8),
+        0 1px 2px rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+/* Эти стили ТОЛЬКО для producer-switch на странице /work */
+.producer-switch .indicator-light,
+.btn-indicator .indicator-light {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    background: #1a1a1a;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.producer-switch .indicator-glow,
+.btn-indicator .indicator-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle at center,
+        rgba(255, 255, 0, 0) 0%,
+        rgba(255, 255, 0, 0) 50%,
+        rgba(255, 255, 0, 0) 100%
+    );
+    transition: all 0.3s ease;
+    opacity: 0;
+}
+
+.filter-checkbox {
+    position: absolute;
+    opacity: 0;
+    cursor: crosshair;
+}
+
+.filter-checkbox:checked ~ .btn-indicator .indicator-light {
+    background: #9fff00;
+    box-shadow: 
+        0 0 10px #9fff00,
+        0 0 20px #9fff00,
+        0 0 30px #9fff00;
+}
+
+.filter-checkbox:checked ~ .btn-indicator .indicator-glow {
+    opacity: 0.5;
+    background: radial-gradient(
+        circle at center,
+        rgba(159, 255, 0, 0.8) 0%,
+        rgba(159, 255, 0, 0.3) 50%,
+        rgba(159, 255, 0, 0) 100%
+    );
+}
+
+.producer-name {
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+    cursor: crosshair;
+}
+
+.beat-card {
+    display: flex;
+    align-items: center;
+    background: rgba(20,20,20,0.95);
+    border: 2px solid #333;
+    border-radius: 12px;
+    padding: 1rem;
+    color: #fff;
+    transition: transform 0.2s, box-shadow 0.2s;
+    gap: 1.5rem;
+}
+
+.beat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px #fff3, 0 2px 12px #000c;
+    border-color: #fff5;
+}
+
+.beat-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.beat-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+}
+
+.beat-seller {
+    font-size: 1rem;
+    color: #aaa;
+}
+
+.beat-price {
+    font-size: 1.1rem;
+    color: #fffa;
+}
+
+.beat-audio {
+    flex: 2;
+    margin: 0;
+}
+
+.beat-buy {
+    display: inline-block;
+    background: #fff;
+    color: #111;
+    border-radius: 6px;
+    padding: 8px 18px;
+    font-weight: bold;
+    text-decoration: none;
+    box-shadow: 0 0 10px #fff5;
+    transition: background 0.2s, color 0.2s;
+    white-space: nowrap;
+}
+
+.beat-buy:hover {
+    background: #111;
+    color: #fff;
+    box-shadow: 0 0 20px #fff8;
+}
+
+.beats-grid {
+    padding-top: 1rem;
+}
+
+/* Рассеянное свечение от центрального текста */
+.hero::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120vw;
+    height: 120vh;
+    background: radial-gradient(circle at center,
+        rgba(255, 255, 255, 0.28) 0%,
+        rgba(255, 255, 255, 0.18) 15%,
+        rgba(255, 255, 255, 0.08) 35%,
+        rgba(255, 255, 255, 0.03) 60%,
+        transparent 80%
+    );
+    pointer-events: none;
+    filter: blur(120px);
+    mix-blend-mode: screen;
+    z-index: -1;
+}
+
+@keyframes darkShift {
+    0%   { border-color:#550000; box-shadow:0 0 4px 1px #330000,0 0 10px 3px #33000055; }
+    50%  { border-color:#880011; box-shadow:0 0 6px 2px #550000,0 0 14px 4px #55000077; }
+    100% { border-color:#550000; box-shadow:0 0 4px 1px #330000,0 0 10px 3px #33000055; }
+}
+
+@keyframes arrowGlow {
+    0%   { filter: drop-shadow(0 0 2px #550000); opacity:0.7; }
+    100% { filter: drop-shadow(0 0 6px #ff0022); opacity:1; }
+}
+
+/* === Навигационное меню (desktop) === */
+.nav-links {
+    display: flex;
+    justify-content: center;
+    gap: 8rem;
+    width: 100%;
+    padding: 0 1rem;
+    position: fixed;
+    top: 25px;
+    left: 0;
+    z-index: 100;
+}
+
+.nav-link {
+    position: relative;
+    padding: 13px 22px;
+    background: transparent;
+    border: 3px solid rgba(255, 255, 255, 1);
+    border-radius: 7px;
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.35rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    text-shadow:
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000,
+        0 0 15px rgba(255, 255, 255, 1),
+        0 0 25px rgba(255, 255, 255, 0.8);
+    box-shadow:
+        inset 0 0 30px rgba(255, 255, 255, 0.8),
+        0 0 30px rgba(255, 255, 255, 0.8),
+        0 0 40px rgba(255, 255, 255, 0.6);
+    z-index: 1000;
+    min-width: max-content;
+}
+
+.nav-link:hover {
+    background: rgba(0, 0, 0, 0.95);
+    border-color: #fff;
+    transform: translateY(-3px);
+    text-shadow:
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000,
+        0 0 20px rgba(255, 255, 255, 1),
+        0 0 30px rgba(255, 255, 255, 0.9);
+    box-shadow:
+        inset 0 0 35px rgba(255, 255, 255, 0.9),
+        0 0 35px rgba(255, 255, 255, 0.9),
+        0 0 45px rgba(255, 255, 255, 0.7);
+}
+
+.nav-link::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    background: radial-gradient(
+        circle at center,
+        rgba(255, 255, 255, 0.35) 0%,
+        rgba(255, 255, 255, 0.25) 30%,
+        rgba(255, 255, 255, 0.15) 60%,
+        transparent 100%
+    );
+    z-index: -1;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover::before {
+    background: radial-gradient(
+        circle at center,
+        rgba(255, 255, 255, 0.45) 0%,
+        rgba(255, 255, 255, 0.35) 30%,
+        rgba(255, 255, 255, 0.25) 60%,
+        transparent 100%
+    );
+}
+
+/* === HOME: только буквы в навигации — такой же контраст, как на других страницах === */
+.page-home .nav-link .nav-text{
+    display:inline-block;
+    color:#fff;
+    text-shadow:
+        -1px -1px 0 #000,
+         1px -1px 0 #000,
+        -1px  1px 0 #000,
+         1px  1px 0 #000,
+         0 0 15px rgba(255,255,255,1),
+         0 0 25px rgba(255,255,255,0.8);
+}
+.page-home .nav-link:hover .nav-text{
+    text-shadow:
+        -1px -1px 0 #000,
+         1px -1px 0 #000,
+        -1px  1px 0 #000,
+         1px  1px 0 #000,
+         0 0 20px rgba(255,255,255,1),
+         0 0 30px rgba(255,255,255,0.9);
+}
+
+/* лёгкий асинхронный flicker только для букв */
+.page-home .nav-links .nav-link:nth-child(1) .nav-text{ animation: none; }
+.page-home .nav-links .nav-link:nth-child(2) .nav-text{ animation: none; }
+.page-home .nav-links .nav-link:nth-child(3) .nav-text{ animation: none; }
+.page-home .nav-links .nav-link:nth-child(4) .nav-text{ animation: none; }
+/* жёсткий оверрайд на случай кэшированных стилей */
+.page-home .nav-links .nav-link .nav-text{ animation: none !important; }
+
+/* на всякий случай поднимаем только текст над шумом/рамкой */
+.page-home .nav-link .nav-text{ position:relative; z-index: 10050; }
+
+/* === HOME: убрать "пелену" с кнопок, оставить только свет от галогена === */
+/* опускаем шумовой оверлей ниже навигации и уменьшаем его влияние */
+.page-home .noise-overlay{ z-index: 50; opacity: 0.02; }
+/* поднимаем контейнер навигации выше шумов, но ниже галогена/рамки */
+.page-home .main-nav, .page-home .nav-links, .page-home .nav-link{ position: relative; z-index: 9998; }
+/* убираем внутренний дымчатый градиент у самих кнопок на главной */
+.page-home .nav-link::before{ display: none; }
+
+/* === HOME: кинематографический неон — быстрое мерцание и "вырубание" одной вывески === */
+@keyframes neonSignBurst {
+  0% { opacity: 1; filter: none; }
+  10% { opacity: 0.2; filter: none; }
+  15% { opacity: 1; }
+  22% { opacity: 0.15; }
+  28% { opacity: 1; }
+  35% { opacity: 0.1; }
+  42% { opacity: 1; }
+  50% { opacity: 0.2; }
+  58% { opacity: 1; }
+  70% { opacity: 0.12; }
+  100% { opacity: 0.12; }
+}
+
+/* Вспышка мерцания у букв (только текст, контейнер не трогаем) */
+.page-home .nav-link .nav-text.neon-burst{
+  animation: neonSignBurst 1.1s linear both;
+  /* во время вспышки убираем неоновый glow, оставляем только форму */
+  text-shadow: none !important;
+}
+
+/* Состояние "выключено" — гасим свет, оставляем слабую читаемость */
+.page-home .nav-link .nav-text.neon-off{
+  color: #a0a0a0;
+  opacity: 0.45;
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000 !important;
+}
+
+/* === LEGACY NAV-LOGO FULLY DISABLED === */
+.nav-logo{display:none!important}
+
+/* === BACK BUTTON 3D SVG STYLE === */
+.back-btn{display:none!important}
+
+/* === BACK BUTTON HEADPHONE JACK === */
+.back-btn svg .plug{transition:transform .4s ease;}
+.back-btn:hover svg .plug{transform:translateX(6px);}
+
+.home-switch-btn {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 140px;
+  height: 64px;
+  background: none;
+  border: none;
+  outline: none;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.home-switch-btn svg { display: block; }
+.home-switch-btn .rew-arrows polygon { filter: drop-shadow(0 0 4px #fff8); }
+.home-switch-btn .rew-label { text-shadow: 0 0 6px #fff, 0 0 12px #fff6; }
+.home-switch-btn .rew-led { filter: drop-shadow(0 0 4px #3fff3c); }
+
+/* Worn + slightly recessed arrows (without changing layout) */
+.home-switch-btn .rew-arrows {
+  opacity: 0.92;
+  filter: url(#rew-worn-inset);
+}
+.home-switch-btn .rew-arrows polygon {
+  filter: none; /* override previous glow for a worn look */
+  stroke: #e6e6e6;
+  stroke-width: 1;
+  paint-order: stroke fill;
+}
+
+/* VHS REW animations on click */
+.home-switch-btn.switch-animating .rew-arrows { animation: rew-shift 0.1s linear infinite alternate, rew-arrow-blink 0.18s steps(1) infinite; }
+.home-switch-btn.switch-animating .rew-led { animation: rew-led-flicker 0.2s steps(1) infinite; }
+
+@keyframes rew-shift { 0% { transform: translateX(0); } 100% { transform: translateX(-3px); } }
+@keyframes rew-arrow-blink { 0% { opacity: 1; } 50% { opacity: 0.45; } 100% { opacity: 1; } }
+@keyframes rew-led-flicker { 0% { opacity: 1; } 50% { opacity: 0.35; } 100% { opacity: 1; } }
+
+@media (max-width: 600px) {
+  .home-switch-btn {
+    top: 6px;
+    left: 6px;
+    width: 120px;
+    height: 56px;
+  }
+}
+
+.home-switch-btn .indicator-on {
+  opacity: 1;
+  transition: opacity 0.2s;
+}
+
+.home-switch-btn .indicator-off {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.home-switch-btn.switch-animating .indicator-on {
+  opacity: 0;
+}
+
+.home-switch-btn.switch-animating .indicator-off {
+  opacity: 1;
+}
+
+.home-switch-btn.switch-animating svg .switch-lever {
+  transform: translateY(40px);
+  transition: transform 0.1s ease-in;
+}
+
+.home-switch-btn svg .switch-lever {
+  transition: transform 0.1s ease-out;
+}
+
+.home-switch-btn.switch-animating .switch-lever {
+  transform: translateY(40px);
+}
+
+@keyframes glitch-line {
+  0% {
+    clip-path: inset(5% 0 80% 0);
+    transform: translate(-2px);
+  }
+  10% {
+    clip-path: inset(40% 0 43% 0);
+    transform: translate(1px);
+  }
+  20% {
+    clip-path: inset(20% 0 70% 0);
+    transform: translate(-1px);
+  }
+  30% {
+    clip-path: inset(60% 0 25% 0);
+    transform: translate(3px);
+  }
+  40% {
+    clip-path: inset(15% 0 75% 0);
+    transform: translate(-3px);
+  }
+  50% {
+    clip-path: inset(55% 0 30% 0);
+    transform: translate(2px);
+  }
+  60% {
+    clip-path: inset(25% 0 65% 0);
+    transform: translate(-2px);
+  }
+  70% {
+    clip-path: inset(75% 0 15% 0);
+    transform: translate(3px);
+  }
+  80% {
+    clip-path: inset(45% 0 45% 0);
+    transform: translate(-1px);
+  }
+  90% {
+    clip-path: inset(10% 0 85% 0);
+    transform: translate(2px);
+  }
+  100% {
+    clip-path: inset(5% 0 80% 0);
+    transform: translate(-2px);
+  }
+}
+
+.screen-static {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background-image: 
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.1) 0px,
+      rgba(255, 255, 255, 0.1) 1px,
+      rgba(0, 0, 0, 0.1) 1px,
+      rgba(0, 0, 0, 0.1) 2px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.1) 0px,
+      rgba(255, 255, 255, 0.1) 1px,
+      rgba(0, 0, 0, 0.1) 1px,
+      rgba(0, 0, 0, 0.1) 2px
+    );
+  background-size: 2px 2px;
+  opacity: 0.9;
+  animation: glitch-line 0.4s steps(1) infinite;
+}
+
+.screen-static::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.1) 0px,
+      rgba(255, 255, 255, 0.1) 1px,
+      rgba(0, 0, 0, 0.1) 1px,
+      rgba(0, 0, 0, 0.1) 2px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.1) 0px,
+      rgba(255, 255, 255, 0.1) 1px,
+      rgba(0, 0, 0, 0.1) 1px,
+      rgba(0, 0, 0, 0.1) 2px
+    );
+  background-size: 3px 3px;
+  opacity: 0.8;
+}
+
+.screen-static::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    repeating-radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 1px,
+      rgba(0, 0, 0, 0.05) 1px,
+      rgba(0, 0, 0, 0.05) 2px
+    );
+  background-size: 4px 4px;
+  opacity: 0.9;
+  mix-blend-mode: overlay;
 } 
+
+.tv-static-overlay {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  opacity: 0;
+  transition: opacity 0.25s;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.08) 0px,
+    rgba(255,255,255,0.08) 2px,
+    transparent 2px,
+    transparent 8px
+  ),
+  repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.08) 0px,
+    rgba(0,0,0,0.08) 1px,
+    transparent 1px,
+    transparent 4px
+  ),
+  linear-gradient(0deg, rgba(40,40,40,0.18) 0%, rgba(0,0,0,0.22) 100%);
+  filter: url(#tv-wave);
+  mix-blend-mode: lighten;
+  animation: none;
+}
+
+.tv-static-overlay.active {
+  opacity: 1;
+}
+
+@keyframes tv-static-shake {
+  0%   { transform: translate(0,0) scaleX(1); }
+  20%  { transform: translate(-0.6px,0.6px) scaleX(1.003); }
+  40%  { transform: translate(0.6px,-0.6px) scaleX(0.997); }
+  60%  { transform: translate(-0.8px,0.8px) scaleX(1.002); }
+  80%  { transform: translate(0.8px,-0.8px) scaleX(0.998); }
+  100% { transform: translate(0,0) scaleX(1); }
+}
+
+@media (max-width: 600px) {
+  .tv-static-overlay {
+    background-size: 100% 8px, 100% 4px, 100% 100%;
+  }
+} 
+
+.vhs-socials {
+  display: flex;
+  flex-direction: row;
+  gap: 2.5rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: 3rem 0 0 0;
+  flex-wrap: nowrap;
+}
+
+.vhs-card {
+  min-width: 320px;
+  max-width: 420px;
+  width: 100%;
+  height: 400px;
+  background: linear-gradient(180deg, rgba(20,20,20,0.98) 80%, rgba(40,40,40,0.92) 100%), repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0 2px, transparent 2px 6px);
+  border-radius: 18px;
+  box-shadow: 0 0 32px 2px #fff2, 0 2px 24px #000b;
+  border: none;
+  padding: 2.8rem 2rem 2.1rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.2s, border 0.2s;
+  filter: drop-shadow(0 0 8px #fff3);
+  animation: vhs-card-glitch 2.5s infinite linear alternate;
+}
+
+.vhs-card:hover {
+  transform: scale(1.04) rotate(-1deg);
+  z-index: 2;
+}
+
+.vhs-card:nth-child(1):hover {
+  box-shadow: 0 0 40px 8px #2AABEEcc, 0 0 32px #fff2, 0 2px 24px #000b;
+  border: 2px solid #2AABEE;
+}
+.vhs-card:nth-child(2):hover {
+  box-shadow: 0 0 40px 8px #4C75A3cc, 0 0 32px #fff2, 0 2px 24px #000b;
+  border: 2px solid #4C75A3;
+}
+.vhs-card:nth-child(3):hover {
+  box-shadow: 0 0 40px 8px #FF0000cc, 0 0 32px #fff2, 0 2px 24px #000b;
+  border: 2px solid #FF0000;
+}
+
+@media (max-width: 900px) {
+  .vhs-socials {
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .vhs-card {
+    height: auto;
+    min-width: 0;
+    max-width: 98vw;
+    padding: 1.2rem 0.5rem 1.2rem 0.5rem;
+  }
+}
+
+.vhs-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 8px;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0 2px, transparent 2px 8px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.vhs-icon {
+  margin-bottom: 1.2rem;
+}
+.vhs-icon img {
+  width: 54px;
+  height: 54px;
+  filter: brightness(0.9) invert(1) drop-shadow(0 0 8px #fff8);
+}
+
+.vhs-title {
+  font-size: 2.1rem;
+  font-weight: 900;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 8px #fff, 0 0 2px #fff, 0 0 18px #fff2;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.vhs-socials .vhs-btn, .vhs-card .vhs-btn {
+  display: inline-block;
+  font-size: 1.2rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(90deg, #fff 0%, #aaa 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  padding: 0.7em 2.2em;
+  border: 2px solid #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 18px #fff7, 0 0 2px #fff, 0 0 8px #fff2;
+  letter-spacing: 0.12em;
+  margin-top: 0.5rem;
+  transition: box-shadow 0.18s, border 0.18s, transform 0.18s;
+  animation: vhs-btn-flicker 1.2s infinite alternate;
+  text-align: center;
+}
+.vhs-socials .vhs-btn:hover, .vhs-card .vhs-btn:hover {
+  box-shadow: 0 0 32px #fff, 0 0 8px #fff, 0 0 24px #fff7;
+  border: 2px solid #fff;
+  transform: scale(1.04) rotate(-1deg);
+  animation: vhs-btn-flicker-fast 0.18s infinite alternate;
+}
+
+@keyframes vhs-card-glitch {
+  0% { filter: none; }
+  2% { filter: blur(0.5px) brightness(1.05); }
+  4% { filter: none; }
+  8% { filter: blur(0.7px) brightness(1.1); }
+  10% { filter: none; }
+  12% { filter: blur(0.3px) brightness(1.08); }
+  14% { filter: none; }
+  100% { filter: none; }
+}
+@keyframes vhs-btn-flicker {
+  0% { text-shadow: 0 0 8px #fff, 0 0 2px #fff, 0 0 18px #fff2; }
+  50% { text-shadow: 0 0 16px #fff, 0 0 8px #fff, 0 0 24px #fff7; }
+  100% { text-shadow: 0 0 8px #fff, 0 0 2px #fff, 0 0 18px #fff2; }
+}
+@keyframes vhs-btn-flicker-fast {
+  0% { text-shadow: 0 0 16px #fff, 0 0 8px #fff, 0 0 24px #fff7; }
+  100% { text-shadow: 0 0 8px #fff, 0 0 2px #fff, 0 0 18px #fff2; }
+}
+@media (max-width: 600px) {
+  .vhs-card {
+    min-width: 0;
+    max-width: 98vw;
+    padding: 1.2rem 0.5rem 1.2rem 0.5rem;
+  }
+  .vhs-title {
+    font-size: 1.2rem;
+  }
+  .vhs-btn {
+    font-size: 1rem;
+    padding: 0.6em 1.2em;
+  }
+} 
+
+/* Скрываем кнопку Home на экранах <1250px */
+@media (max-width: 1249px) {
+  .home-switch-btn {
+    display: none !important;
+  }
+}
+
+/* === page-work overrides (2025-07-17) === */
+.page-work .work-filter{
+    padding-bottom:0.5rem; /* минимально, только чтобы не прижималось */
+    background: rgba(0,0,0,0.9); /* без длинного градиента */
+}
+
+.page-work .filter-buttons{
+    gap:2rem; /* компактнее */
+    flex-wrap:wrap;
+    justify-content:center;
+}
+
+.page-work .producer-switch{
+    margin:0 1rem 0 0;
+}
+
+/* page-work sticky reflow */
+.page-work{
+  --glowPad: 160px; /* высота меню + свечение, подбирается один раз */
+}
+
+.page-work .work-filter{
+  position: sticky;
+  top: var(--glowPad);
+  background: rgba(0,0,0,0.9);
+  padding: 0.5rem 5% 0.5rem; /* вернули компактную высоту */
+  z-index: 90;
+}
+
+.page-work .filter-buttons{
+  gap:2rem;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+.page-work .producer-switch{margin:0 1rem 0 0;}
+
+.page-work .work-section{
+  margin-top:0;
+  height:auto;
+  padding-top:0;
+}
+
+.page-work .work-filter{
+  position: sticky;
+  top: var(--glowPad);
+  background: rgba(0,0,0,0.9);
+  padding: 1.5rem 5% 0.5rem; /* добавили 1.5rem сверху */
+  z-index: 90;
+}
+
+.page-work .filter-buttons{
+  margin-top:1.5rem;    /* опускаем чекбоксы визуально */
+  margin-bottom:-1.5rem; /* не увеличиваем высоту блока */
+}
+
+/* --- page-work sticky layout --- */
+.page-work {
+  /* desktop glow height; mobile переопределяется ниже */
+  --glowPad: 180px;
+}
+
+.page-work .work-filter {
+  position: sticky;
+  top: var(--glowPad);
+  background: rgba(0, 0, 0, 0.9);
+  /* создаём визуальный зазор между навигацией и чекбоксами */
+  padding: 1rem 5% 0.5rem;
+  z-index: 90;
+}
+
+.page-work .filter-buttons {
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  /* убрали margin-хак, высота блока = real */
+}
+
+.page-work .producer-switch {
+  margin: 0 1rem 0 0;
+}
+
+@media (max-width: 768px) {
+  .page-work {
+    --glowPad: 260px; /* высота мобильного меню + свечение */
+  }
+}
+
+/* CLEAN overrides */
+
+.page-work .work-filter, .page-work .filter-buttons, .page-work .producer-switch, .page-work .work-section { /* remove invalid duplicates */ }
+
+.page-work {
+  --glowPad: 200px;
+}
+
+.page-work .work-filter {
+  position: sticky;
+  top: var(--glowPad);
+  background: rgba(0,0,0,0.9);
+  padding: 1rem 5% 0.5rem;
+  z-index: 90;
+}
+
+.page-work .filter-buttons {
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.page-work .producer-switch { margin: 0 1rem 0 0; }
+
+.page-work .work-section { margin-top: 0 !important; padding-top: 0 !important; }
+
+@media (max-width:768px){
+  .page-work { --glowPad: 260px; }
+}
+
+/* === clean overrides for page-work === */
+.page-work .work-filter {
+  position: sticky;
+  top: 200px;            /* desktop: меню + свечение */
+  background: rgba(0,0,0,0.9);
+  padding: 1rem 5% 0.5rem; /* 1rem зазор сверху */
+  z-index: 90;
+}
+
+@media (max-width: 768px) {
+  .page-work .work-filter { top: 260px; } /* mobile */
+}
+
+.page-work .filter-buttons {
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.page-work .producer-switch { margin: 0 1rem 0 0; }
+
+.page-work .work-section {
+  margin-top: 0 !important;
+  padding-top: 72px !important; /* увеличенный отступ под фильтр */
+  height: calc(100vh - var(--navH-desktop) - 72px);
+  overflow-y: auto;
+}
+
+.page-work .filter-buttons{
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.page-work .work-section {
+  margin-top: 260px !important;      /* пространство под фильтр */
+  height: calc(100vh - 260px);       /* скроллим только список битов */
+  overflow-y: auto;
+}
+
+/* === FINAL—compact layout for page-work (filters under nav, beats right below) === */
+.page-work{
+  /* Approximate nav+glow heights, tweak if needed */
+  --navH-desktop: 110px;   /* width >768px */
+  --navH-mobile: 340px;    /* stacked menu on small screens */
+}
+
+/* sticky filter sits right under navigation */
+.page-work .work-filter{
+  position: sticky;
+  top: var(--navH-desktop);
+  padding: 0.5rem 5%;
+  background: rgba(0,0,0,0.9);
+  z-index: 90;
+}
+
+@media (max-width: 768px){
+  .page-work .work-filter{ top: var(--navH-mobile); }
+}
+
+/* checkboxes compactly arranged */
+.page-work .filter-buttons{
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* beats list starts immediately, internal scroll preserved */
+.page-work .work-section{
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  height: calc(100vh - var(--navH-desktop) - 80px); /* 80 ≈ filter own height */
+  overflow-y: auto;
+}
+@media (max-width: 768px){
+  .page-work .work-section{
+    height: calc(100vh - var(--navH-mobile) - 80px);
+  }
+}
+
+/* === refine page-work layout: ensure beats below filter === */
+.page-work{
+  --filterH-desktop: 90px;  /* высота фильтра (desktop) */
+  --filterH-mobile: 120px;  /* высота фильтра (mobile) */
+}
+.page-work .work-filter{
+  /* разместить под навигацией */
+  margin-top: var(--navH-desktop);
+}
+@media (max-width:768px){
+  .page-work .work-filter{ margin-top: var(--navH-mobile); }
+}
+/* биты начинаются после фильтра */
+.page-work .work-section{
+  margin-top: var(--filterH-desktop) !important;
+  height: calc(100vh - var(--navH-desktop) - var(--filterH-desktop));
+}
+@media (max-width:768px){
+  .page-work .work-section{
+    margin-top: var(--filterH-mobile) !important;
+    height: calc(100vh - var(--navH-mobile) - var(--filterH-mobile));
+  }
+}
+
+.page-work .work-filter {
+  position: sticky;
+  top: var(--navH-desktop);
+  background: rgba(0,0,0,0.9);
+  padding: 0.7rem 5% 0.7rem; /* нормальный паддинг сверху и снизу */
+  margin-top: 0;
+  min-height: unset;
+  height: unset;
+  z-index: 90;
+  box-shadow: none;
+}
+
+.page-work .filter-buttons {
+  gap: 1.2rem;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.page-work .producer-switch {
+  margin: 0 0.5rem 0 0;
+  padding: 0.3rem 0.7rem;
+}
+
+.page-work .work-section {
+  margin-top: 0 !important;
+  padding-top: 56px !important; /* высота фильтра, чтобы не перекрывал */
+  height: auto;
+}
+
+/* --- ЧИСТЫЙ ФИНАЛЬНЫЙ ОВЕРРАЙД ДЛЯ СТРАНИЦЫ СОТРУДНИЧЕСТВА --- */
+.page-work {
+  --navH-desktop: 110px;
+  --filterH-desktop: 90px;
+}
+
+.page-work .work-filter {
+  position: sticky;
+  top: var(--navH-desktop);
+  background: rgba(0,0,0,0.95) !important;
+  padding: 0.7rem 5% 0.7rem;
+  margin-top: 0;
+  min-height: unset;
+  height: unset;
+  z-index: 95 !important; /* выше, чтобы точно перекрывать */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important; /* тень для визуального разделения */
+}
+
+.page-work .work-section {
+  margin-top: var(--filterH-desktop) !important;
+  padding-top: 0 !important;
+  height: calc(100vh - var(--navH-desktop) - var(--filterH-desktop));
+  overflow-y: auto;
+  position: relative !important;
+  z-index: 1 !important; /* точно ниже фильтра */
+}
+
+/* Lock outer scroll on Cooperation page: scroll only the list */
+.page-work { overflow: hidden; }
+.page-work .content { height: 100vh; overflow: hidden; }
+@media (max-width: 950px) {
+  .page-work .work-section { height: calc(100vh - var(--navH-mobile) - var(--filterH-mobile)); }
+}
+
+/* Удаляю все дублирующие и конфликтующие правила ниже */
+/* === УДАЛЕНО: .page-work .work-section ... === */
+/* === УДАЛЕНО: .page-work .work-filter ... === */
+
+@media (max-width: 950px) {
+  .page-work {
+    --navH-mobile: 340px;
+    --filterH-mobile: 110px;
+  }
+  .page-work .work-filter {
+    position: sticky;
+    top: var(--navH-mobile);
+    left: 0;
+    right: 0;
+    width: 100vw;
+    padding: 0.7rem 2vw 0.7rem;
+    margin-top: 0;
+    z-index: 95 !important; /* выше битов */
+    background: rgba(0,0,0,0.97) !important;
+    min-height: unset;
+    height: auto;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
+    overflow: visible;
+    visibility: visible;
+  }
+  .page-work .filter-buttons {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    background: none;
+  }
+  .page-work .producer-switch {
+    display: flex;
+    align-items: center;
+    min-width: 120px;
+    max-width: 220px;
+    margin: 0.3rem 0.3rem 0 0;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.95rem;
+    background: none;
+    color: #fff;
+    border: none;
+    box-sizing: border-box;
+  }
+  .page-work .filter-checkbox {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    margin-right: 0.5rem;
+    accent-color: #9fff00;
+    background: #222;
+    border-radius: 50%;
+    border: 2px solid #333;
+  }
+  .page-work .btn-indicator {
+    width: 22px;
+    height: 22px;
+    background: #111;
+    border-radius: 50%;
+    border: 2px solid #333;
+    margin-right: 0.5rem;
+  }
+}
+
+/* ===== МОБИЛЬНЫЕ ИСПРАВЛЕНИЯ ДЛЯ INMISE И ВИДЕО ===== */
+
+/* ≤768px - планшеты/мобильные */
+@media screen and (max-width: 768px) {
+    /* Для главной страницы - убираем padding, чтобы hero был по центру */
+    body.page-home .content {
+        padding-top: 0 !important;
+    }
+
+    /* Hero на весь экран минус навигация */
+    body.page-home .hero {
+        height: 100vh !important;
+        padding-top: 0 !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    body.page-home .hero-content {
+        margin-top: -500px !important;
+        padding-top: 0 !important;
+        transform: none !important;
+    }
+
+    /* Видео влезает целиком на мобильных */
+    body.page-home .video-background video,
+    body.page-home #bgVideo {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain !important;
+    }
+    
+    body.page-home .video-background {
+        background: #000 !important;
+    }
+}
+
+/* ≤480px - маленькие мобильные */
+@media screen and (max-width: 480px) {
+    body.page-home .hero-content {
+        margin-top: -500px !important;
+        padding-top: 0 !important;
+        transform: none !important;
+    }
+}
+
+/* ≤380px - очень маленькие экраны */
+@media screen and (max-width: 380px) {
+    body.page-home .hero-content {
+        margin-top: -500px !important;
+        padding-top: 0 !important;
+        transform: none !important;
+    }
+}

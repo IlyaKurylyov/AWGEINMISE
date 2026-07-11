@@ -1,0 +1,79 @@
+/* Admin responsive (VHS cabinet)
+   - Desktop-first; overrides for <=1024, <=768, <=480
+*/
+
+/* ====== <=1024px (tablets / small laptops) ====== */
+@media screen and (max-width: 1024px) {
+  body.page-admin { filter: sepia(0.22) contrast(1.03) brightness(0.96); overflow-x: hidden; }
+
+  .admin-header, .auth-panel, #admin-status { display: none !important; }
+
+  .page-admin .content { padding-top: 0 !important; }
+
+  .page-admin .admin-wrap {
+    height: auto !important;
+    min-height: 100vh !important;
+    padding: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  .page-admin .admin-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto !important;
+    row-gap: 10px !important;
+    column-gap: 0 !important;
+    height: auto !important;
+    align-content: start !important;
+    width: 100% !important;
+  }
+
+  .page-admin .panel { height: auto !important; overflow: visible !important; padding: 10px !important; box-sizing: border-box !important; min-width: 0 !important; width: 100% !important; }
+  .page-admin .admin-card { margin: 0 !important; position: relative !important; display: block !important; width: 100% !important; }
+
+  .admin-h { letter-spacing: .06em; }
+
+  .admin-input, .admin-textarea { font-size: 15px; padding: 10px; }
+
+  .admin-avatar { max-width: 100%; }
+  .admin-avatar img { height: 240px; width: 100%; }
+
+  .admin-actions { justify-content: stretch; }
+  .admin-actions .admin-btn { width: 100%; }
+
+  .beat-row { gap: 6px; }
+  .beat-row-head { gap: 8px; }
+  .vhs-progress { height: 6px; }
+}
+
+/* ====== <=768px (phones) ====== */
+@media screen and (max-width: 768px) {
+  .page-admin .content { padding-top: 0 !important; }
+  .page-admin .admin-wrap { padding: 8px !important; }
+
+  .admin-h { font-size: 18px; }
+  .admin-label { font-size: 13px; }
+
+  .file-switch { width: 100%; justify-content: space-between; padding: 10px 12px; }
+
+  .admin-btn { padding: 12px 14px; font-size: 14px; }
+  .vhs-btn { width: 32px; height: 32px; }
+
+  .bit-indicator { width: 10px; height: 10px; }
+
+  .audio-wrap { padding: 6px; }
+  .admin-textarea { min-height: 160px; }
+}
+
+/* ====== <=480px (small phones) ====== */
+@media screen and (max-width: 480px) {
+  .admin-h { font-size: 16px; letter-spacing: .04em; }
+  .admin-input, .admin-textarea { font-size: 14px; }
+
+  .admin-avatar img { height: 210px; }
+
+  .vhs-progress { height: 5px; }
+  .vhs-btn { width: 34px; height: 34px; }
+
+  /* Avoid horizontal overflow */
+  .page-admin .admin-wrap, .page-admin .admin-grid, .page-admin .panel { max-width: 100% !important; overflow-x: hidden !important; }
+}
