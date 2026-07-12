@@ -1,117 +1,107 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INMISE - Релизы</title>
-    <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/music.css">
-    <link rel="stylesheet" href="styles/responsive.css">
-    <link rel="stylesheet" href="styles/desktop-protection.css">
-    <script src="https://music.yandex.ru/api/audio/dist/index.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>INMISE — Releases</title>
+  <link rel="stylesheet" href="styles/releases-vhs.css">
 </head>
-<body class="page-music">
-  <div class="noise-overlay"></div>
-  <div class="tv-static-overlay"></div>
-  <svg style="display:none;">
-    <filter id="tv-wave" x="0" y="0">
-      <feTurbulence id="turb" type="turbulence" baseFrequency="0.02 0.08" numOctaves="2" result="turb" seed="2"/>
-      <feDisplacementMap in2="turb" in="SourceGraphic" scale="18" xChannelSelector="R" yChannelSelector="G"/>
-    </filter>
-    <filter id="rew-worn-inset" x="-15%" y="-15%" width="130%" height="130%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="0.7" result="blur"/>
-      <feOffset dx="0" dy="0.6" result="offsetBlur"/>
-      <feComposite in="offsetBlur" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="innerShadow"/>
-      <feColorMatrix in="innerShadow" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0" result="shadow"/>
-      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="2" seed="3" result="noise"/>
-      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -0.88 0" result="grainAlpha"/>
-      <feComposite in="grainAlpha" in2="SourceAlpha" operator="in" result="grainMasked"/>
-      <feMerge>
-        <feMergeNode in="SourceGraphic"/>
-        <feMergeNode in="shadow"/>
-        <feMergeNode in="grainMasked"/>
-      </feMerge>
-    </filter>
-  </svg>
-    <a id="home-switch-btn" class="home-switch-btn" title="На главный экран">
-      <svg width="120" height="56" viewBox="0 0 120 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <g class="rew-arrows" fill="#fff">
-          <polygon points="36,18 22,28 36,38"/>
-          <polygon points="54,18 40,28 54,38"/>
-        </g>
-      </svg>
-    </a>
-    <nav class="main-nav">
-        <div class="nav-links">
-            <a href="music" class="nav-link active">РЕЛИЗЫ</a>
-            <a href="artists" class="nav-link">АРТИСТЫ</a>
-            <a href="work" class="nav-link">СОТРУДНИЧЕСТВО</a>
-            <a href="contacts" class="nav-link">КОНТАКТЫ</a>
-        </div>
-    </nav>
+<body class="releases-page">
+  <main class="vhs-console" aria-label="INMISE releases player">
+    <span class="case-screw case-screw--tl" aria-hidden="true"></span>
+    <span class="case-screw case-screw--tr" aria-hidden="true"></span>
+    <span class="case-screw case-screw--bl" aria-hidden="true"></span>
+    <span class="case-screw case-screw--br" aria-hidden="true"></span>
+    <header class="console-header">
+      <a class="console-brand" href="index.html"><span class="status-dot"></span> INMISE RELEASES</a>
+      <nav class="console-nav" aria-label="Main navigation">
+        <a class="console-nav__item is-active" href="music"><i></i>RELEASES</a>
+        <a class="console-nav__item" href="artists"><i></i>ARTISTS</a>
+        <a class="console-nav__item" href="work"><i></i>COLLABORATION</a>
+        <a class="console-nav__item" href="contacts"><i></i>CONTACTS</a>
+      </nav>
+    </header>
 
-    <main class="content music-content">
-        <div class="vhs-player">
-            <div class="vhs-top">
-                <div class="vhs-brand">INMISE AUDIO</div>
-                <div class="vhs-model">MODEL VHS-2024</div>
-            </div>
-            
-            <div class="vhs-screen">
-                <div class="vhs-select-wrapper">
-                    <select id="artist-selector" class="vhs-select">
-                        <option value="" disabled selected>ВЫБЕРИТЕ АРТИСТА</option>
-                        <option value="website">СЛУШАТЬ НА САЙТЕ</option>
-                        <option value="hahahap">HAHAHAP</option>
-                        <option value="kodik">KODIK</option>
-                        <option value="shibvri">SHIBVRI</option>
-                        <option value="dope">DOPE THE PRODUCER</option>
-                        <option value="xan">XAN</option>
-                        <option value="namusorill">NAMUSORILL</option>
-                        <option value="febb">FEBB TUFOE</option>
-                    </select>
-                </div>
-                
-                <div class="vhs-display">
-                    <div class="ready-indicator">
-                        <span class="ready-text">READY</span>
-                        <div class="ready-dot"></div>
-                    </div>
-                    <div id="track-display" class="track-display">
-                        <div class="no-selection-message">
-                            ВСТАВЬТЕ КАССЕТУ
-                            <div class="blink-cursor">_</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="vhs-controls">
-                <div class="control-buttons">
-                    <button class="vhs-btn" id="prev-btn">◄◄</button>
-                    <button class="vhs-btn" id="play-btn">►</button>
-                    <button class="vhs-btn" id="stop-btn">■</button>
-                    <button class="vhs-btn" id="next-btn">►►</button>
-                </div>
-                <div class="vhs-indicators">
-                    <div class="indicator" data-type="power">
-                        <span>POWER</span>
-                        <div class="indicator-light"></div>
-                    </div>
-                    <div class="indicator" data-type="play">
-                        <span>PLAY</span>
-                        <div class="indicator-light"></div>
-                    </div>
-                    <div class="indicator" data-type="rec">
-                        <span>REC</span>
-                        <div class="indicator-light"></div>
-                    </div>
-                </div>
-            </div>
+    <section class="crt-shell" aria-live="polite">
+      <div class="crt-display" id="crt-display">
+        <div class="signal-stage">
+          <img class="artist-visual" id="artist-visual" alt="" hidden>
+          <div class="crt-message" id="crt-message">
+            <span class="crt-message__led"></span>
+            <strong>READY FOR INPUT</strong>
+            <p>SELECT AN ARTIST TO LOAD THEIR RELEASES</p>
+          </div>
+          <div class="clip-stage" id="clip-stage" hidden>
+            <video id="clip-video" controls playsinline preload="metadata">
+              <source src="assets/videos/background.mp4" type="video/mp4">
+            </video>
+            <button class="clip-stage__return" id="clip-return" type="button">RETURN TO RELEASES</button>
+          </div>
         </div>
-    </main>
+        <aside class="track-console" aria-label="Artist releases">
+          <div class="screen-toolbar">
+            <label class="artist-picker" for="artist-selector">
+              <span class="artist-picker__legend">ARTIST TAPE DECK</span>
+              <span class="cassette-mouth" aria-hidden="true">
+                <span class="artist-cassette" id="artist-cassette">
+                  <i></i><strong id="cassette-artist-name">SELECT ARTIST</strong><i></i>
+                </span>
+                <span class="cassette-door"><strong id="cassette-door-label">SELECT ARTIST</strong></span>
+              </span>
+              <select id="artist-selector">
+                <option value="" selected>INSERT TAPE</option>
+                <option value="hahahap">HAHAHAP</option>
+                <option value="kodik">KODIK</option>
+                <option value="shibvri">SHIBVRI</option>
+                <option value="dope">DOPE THE PRODUCER</option>
+                <option value="xan">XAN</option>
+                <option value="namusorill">NAMUSORILL</option>
+                <option value="febb">FEBB TUFOE</option>
+              </select>
+            </label>
+            <span class="screen-status" id="deck-status">STANDBY</span>
+          </div>
+          <div class="track-console__empty" id="track-console-empty">
+            <span>TRACK LIBRARY</span>
+            <strong>NO TAPE</strong>
+          </div>
+          <div class="widget-loader" id="widget-loader" hidden>LOADING TAPE…</div>
+          <div class="widget-stage" id="widget-stage"></div>
+        </aside>
+      </div>
+    </section>
 
-    <script src="scripts/app.js"></script>
-    <script src="scripts/music.js"></script>
+    <section class="control-deck" aria-label="VHS control deck">
+      <div class="deck-left">
+        <span class="deck-rec"><i></i> REC</span>
+        <div class="deck-volume">
+          <span>VOLUME <output id="volume-value">72</output></span>
+          <button class="volume-knob" id="volume-knob" type="button" role="slider" aria-label="Clip volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="72">
+            <i></i>
+          </button>
+          <b>−</b><b>+</b>
+        </div>
+      </div>
+      <div class="deck-transport">
+        <button type="button" class="transport-btn" data-deck-action="rew">◀◀<small>REW</small></button>
+        <button type="button" class="transport-btn" data-deck-action="play">▶<small>PLAY</small></button>
+        <button type="button" class="transport-btn" data-deck-action="stop">■<small>STOP</small></button>
+        <button type="button" class="transport-btn" data-deck-action="ff">▶▶<small>FF</small></button>
+      </div>
+      <div class="tape-readout">
+        <div><span>TAPE COUNTER</span><strong id="tape-counter">00:00:00</strong><em>SP</em></div>
+        <div class="waveform" aria-hidden="true"></div>
+      </div>
+      <button type="button" class="clip-button" id="clip-button"><span>▶</span> PLAY CLIP</button>
+    </section>
+
+    <footer class="cassette-bay" aria-hidden="true">
+      <span class="cover-screw cover-screw--left"></span>
+      <span class="cover-mark">INMISE · VHS PROFESSIONAL · MODEL 26</span>
+      <span class="cover-screw cover-screw--right"></span>
+    </footer>
+  </main>
+
+  <script src="scripts/releases-vhs.js"></script>
 </body>
-</html> 
+</html>
