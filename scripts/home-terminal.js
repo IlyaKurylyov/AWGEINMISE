@@ -2,9 +2,24 @@
   const body = document.body;
   const video = document.getElementById('home-signal');
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let glitchTimer;
 
   function revealTerminal() {
-    window.setTimeout(() => body.classList.remove('is-booting'), reduceMotion ? 0 : 420);
+    window.setTimeout(() => {
+      body.classList.remove('is-booting');
+      if (!reduceMotion) scheduleGlitch();
+    }, reduceMotion ? 0 : 420);
+  }
+
+  function scheduleGlitch() {
+    const delay = 2600 + Math.random() * 4300;
+    glitchTimer = window.setTimeout(() => {
+      body.classList.add('is-glitching');
+      window.setTimeout(() => {
+        body.classList.remove('is-glitching');
+        scheduleGlitch();
+      }, 430);
+    }, delay);
   }
 
   if (!video) {
@@ -27,4 +42,6 @@
   }
 
   revealTerminal();
+
+  window.addEventListener('pagehide', () => window.clearTimeout(glitchTimer), { once: true });
 })();
