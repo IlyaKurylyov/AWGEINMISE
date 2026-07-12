@@ -1,95 +1,60 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INMISE</title>
-    <link rel="preload" href="/src/vhs-main.jsx" as="script" crossorigin>
-    <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/music-widget.css">
-    <link rel="stylesheet" href="styles/responsive.css">
-    <link rel="stylesheet" href="styles/desktop-protection.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#050706">
+  <title>INMISE — Independent Audio / Video Label</title>
+  <link rel="stylesheet" href="styles/home-terminal.css">
 </head>
-<body class="page-home">
-    <style>
-        /* КРИТИЧНО: Максимальный приоритет - загружается последним в body */
-        @media screen and (max-width: 768px) {
-            body.page-home .hero-content { 
-                margin-top: -500px !important; 
-                padding-top: 0 !important; 
-                transform: none !important; 
-            }
-            body.page-home .video-wrapper video, 
-            body.page-home .video-background video, 
-            body.page-home #bgVideo { 
-                object-fit: contain !important; 
-                width: 100% !important; 
-                height: 100% !important; 
-            }
-            body.page-home .video-background { 
-                background: #000 !important; 
-            }
-        }
-        @media screen and (max-width: 480px) {
-            body.page-home .hero-content { 
-                margin-top: -500px !important; 
-                padding-top: 0 !important; 
-                transform: none !important; 
-            }
-        }
-        @media screen and (max-width: 380px) {
-            body.page-home .hero-content { 
-                margin-top: -500px !important; 
-                padding-top: 0 !important; 
-                transform: none !important; 
-            }
-        }
-    </style>
-    <!-- Эффекты телевизора -->
-    <div class="tv-frame"></div>
-    <div class="noise"></div>
-    <div class="top-light"></div>
+<body class="terminal-home is-booting">
+  <main class="home-console" aria-label="INMISE master terminal">
+    <header class="terminal-header">
+      <a class="terminal-brand" href="index.html"><span></span> INMISE SYSTEM</a>
+      <nav class="terminal-nav" aria-label="Main navigation">
+        <a href="music"><i></i>RELEASES</a>
+        <a href="artists"><i></i>ARTISTS</a>
+        <a href="work"><i></i>COLLABORATION</a>
+        <a href="contacts"><i></i>CONTACTS</a>
+      </nav>
+    </header>
 
-    <div class="loading-screen">
-        <div class="loading-text" data-text="INMISE">INMISE</div>
-    </div>
+    <section class="master-screen" aria-labelledby="home-title">
+      <video id="home-signal" muted loop playsinline preload="metadata" aria-hidden="true">
+        <source src="assets/videos/background.mp4" type="video/mp4">
+      </video>
+      <div class="signal-shade" aria-hidden="true"></div>
+      <div class="signal-noise" aria-hidden="true"></div>
 
-    <div class="noise-overlay"></div>
+      <span class="screen-index screen-index--left">MASTER TERMINAL / CHANNEL 01</span>
+      <span class="screen-index screen-index--right"><i></i> SIGNAL ONLINE</span>
 
-    <!-- Галогеновая лампа -->
-    <div class="halogen-lamp"></div>
+      <div class="boot-copy">
+        <span class="boot-code">INDEPENDENT AUDIO / VIDEO LABEL</span>
+        <h1 id="home-title" data-text="INMISE">INMISE</h1>
+        <p>MOSCOW · EST. 2024 · NETWORK 01</p>
+        <a class="archive-entry" href="music">
+          <i></i>
+          <span>ENTER THE ARCHIVE</span>
+          <b>→</b>
+        </a>
+      </div>
 
-    <!-- Фоновое видео -->
-    <div class="video-background">
-        <div class="video-wrapper">
-            <video id="bgVideo" muted loop playsinline preload="none">
-                <source src="assets/videos/background.mp4" type="video/mp4">
-            </video>
-        </div>
-    </div>
+      <div class="screen-footer" aria-hidden="true">
+        <span>PROPERTY OF INMISE</span>
+        <span>NO SIGNAL IS EVER LOST</span>
+      </div>
+    </section>
 
-    <nav class="main-nav">
-        <div class="nav-links">
-            <a href="music" class="nav-link"><span class="nav-text">РЕЛИЗЫ</span></a>
-            <a href="artists" class="nav-link"><span class="nav-text">АРТИСТЫ</span></a>
-            <a href="work" class="nav-link"><span class="nav-text">СОТРУДНИЧЕСТВО</span></a>
-            <a href="contacts" class="nav-link"><span class="nav-text">КОНТАКТЫ</span></a>
-        </div>
-    </nav>
+    <footer class="system-rail">
+      <div class="rail-status"><i class="rail-led rail-led--red"></i><span>POWER</span><b>ON</b></div>
+      <div class="rail-status"><i class="rail-led rail-led--green"></i><span>SIGNAL</span><b>STABLE</b></div>
+      <div class="rail-status rail-status--archive"><span>ARCHIVE</span><b>ONLINE</b></div>
+      <div class="rail-meter" aria-hidden="true"><i></i></div>
+      <span class="rail-model">INMISE MASTER SYSTEM · MODEL 26</span>
+    </footer>
+  </main>
 
-    <main class="content">
-        <section class="hero">
-            <div class="hero-content">
-                <h1 class="glitch-text" data-text="INMISE">INMISE</h1>
-                <div class="switches-container">
-                    <div id="vhs-root"></div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <script type="module" src="/src/vhs-main.jsx"></script>
-    <script src="scripts/app.js"></script>
-    <script src="scripts/main.js"></script>
+  <script src="scripts/home-terminal.js"></script>
 </body>
-</html> 
+</html>
