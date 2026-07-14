@@ -1,8 +1,72 @@
 (function () {
   const body = document.body;
   const video = document.getElementById('home-signal');
+  const railWave = document.getElementById('rail-wave');
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let glitchTimer;
+  let waveFrame;
+
+  function startRailWave() {
+    if (!railWave) return;
+
+    const context = railWave.getContext('2d');
+    let width = 0;
+    let height = 0;
+    let lastPaint = 0;
+
+    function resizeWave() {
+      const rect = railWave.getBoundingClientRect();
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      width = Math.max(1, rect.width);
+      height = Math.max(1, rect.height);
+      railWave.width = Math.round(width * ratio);
+      railWave.height = Math.round(height * ratio);
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+
+    function drawWave(time) {
+      const phase = time * 0.001;
+      const middle = height * 0.5;
+
+      context.clearRect(0, 0, width, height);
+      context.beginPath();
+      context.lineWidth = 1;
+      context.strokeStyle = 'rgba(128, 151, 113, .72)';
+      context.shadowColor = 'rgba(113, 139, 99, .28)';
+      context.shadowBlur = 3;
+
+      for (let x = 0; x <= width; x += 1.5) {
+        const progress = x / width;
+        const carrier = Math.sin(x * 0.078 + phase * 2.3) * 0.55;
+        const hiss = Math.sin(x * 0.31 - phase * 3.1) * Math.sin(x * 0.047 + phase) * 0.8;
+        const burstA = Math.exp(-Math.pow((progress - 0.18) / 0.035, 2)) * Math.sin(x * 0.62 + phase * 4.2) * 3.2;
+        const burstB = Math.exp(-Math.pow((progress - 0.47) / 0.025, 2)) * Math.sin(x * 0.84 - phase * 3.4) * 2.4;
+        const burstC = Math.exp(-Math.pow((progress - 0.76) / 0.045, 2)) * Math.sin(x * 0.55 + phase * 2.8) * 2.8;
+        const drift = Math.sin(progress * Math.PI * 8 + phase * 0.7) * 0.5;
+        const y = middle + carrier + hiss + burstA + burstB + burstC + drift;
+
+        if (x === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      }
+
+      context.stroke();
+      context.shadowBlur = 0;
+    }
+
+    function animateWave(time) {
+      if (time - lastPaint > 45) {
+        drawWave(time);
+        lastPaint = time;
+      }
+      waveFrame = window.requestAnimationFrame(animateWave);
+    }
+
+    resizeWave();
+    window.addEventListener('resize', resizeWave, { passive: true });
+
+    if (reduceMotion) drawWave(0);
+    else waveFrame = window.requestAnimationFrame(animateWave);
+  }
 
   function revealTerminal() {
     window.setTimeout(() => {
@@ -21,6 +85,8 @@
       }, 430);
     }, delay);
   }
+
+  if (window.matchMedia('(min-width: 901px)').matches) startRailWave();
 
   if (!video) {
     revealTerminal();
@@ -43,5 +109,8 @@
 
   revealTerminal();
 
-  window.addEventListener('pagehide', () => window.clearTimeout(glitchTimer), { once: true });
+  window.addEventListener('pagehide', () => {
+    window.clearTimeout(glitchTimer);
+    window.cancelAnimationFrame(waveFrame);
+  }, { once: true });
 })();

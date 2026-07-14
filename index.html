@@ -9,46 +9,59 @@
 </head>
 <body class="terminal-home is-booting">
   <main class="home-console" aria-label="INMISE master terminal">
-    <header class="terminal-header">
-      <a class="terminal-brand" href="index.html"><span></span> INMISE SYSTEM</a>
-      <nav class="terminal-nav" aria-label="Main navigation">
-        <a href="music"><i></i>RELEASES</a>
-        <a href="artists"><i></i>ARTISTS</a>
-        <a href="work"><i></i>COLLABORATION</a>
-        <a href="contacts"><i></i>CONTACTS</a>
-      </nav>
-    </header>
+    <div class="screen-well">
+      <section class="master-screen" aria-labelledby="home-title">
+        <video id="home-signal" muted loop playsinline preload="metadata" aria-hidden="true">
+          <source src="assets/videos/background.mp4" type="video/mp4">
+        </video>
+        <div class="signal-shade" aria-hidden="true"></div>
+        <div class="signal-noise" aria-hidden="true"></div>
 
-    <section class="master-screen" aria-labelledby="home-title">
-      <video id="home-signal" muted loop playsinline preload="metadata" aria-hidden="true">
-        <source src="assets/videos/background.mp4" type="video/mp4">
-      </video>
-      <div class="signal-shade" aria-hidden="true"></div>
-      <div class="signal-noise" aria-hidden="true"></div>
+        <header class="terminal-header">
+          <nav class="terminal-nav" aria-label="Main navigation">
+            <a href="music">RELEASES</a>
+            <a href="artists">ARTISTS</a>
+            <a href="work">COLLABORATION</a>
+            <a href="contacts">CONTACTS</a>
+          </nav>
+        </header>
 
-      <span class="screen-index screen-index--left">MASTER TERMINAL / CHANNEL 01</span>
-      <span class="screen-index screen-index--right"><i></i> SIGNAL ONLINE</span>
+        <span class="screen-index screen-index--left">MASTER TERMINAL / CHANNEL 01</span>
+        <span class="screen-index screen-index--right"><i></i> SIGNAL ONLINE</span>
 
-      <div class="boot-copy">
-        <span class="boot-code">INDEPENDENT AUDIO / VIDEO LABEL</span>
-        <h1 id="home-title" data-text="INMISE">INMISE</h1>
+        <div class="boot-copy">
+          <span class="boot-code">INDEPENDENT AUDIO / VIDEO LABEL</span>
+          <h1 id="home-title" data-text="INMISE">INMISE</h1>
+        </div>
+
+        <div class="screen-footer" aria-hidden="true">
+          <span>PROPERTY OF INMISE</span>
+          <span>NO SIGNAL IS EVER LOST</span>
+        </div>
+      </section>
+
+      <img
+        class="bezel-overlay"
+        src="assets/ui/home-bezel.png"
+        alt=""
+        aria-hidden="true"
+      >
+
+      <div class="archive-port">
+        <a class="archive-handle" href="music" aria-label="Open releases archive">
+          <img src="assets/ui/archive-cartridge-tight.png" alt="" aria-hidden="true">
+          <span class="archive-title">OPEN ARCHIVE</span>
+          <span class="archive-arrow" aria-hidden="true">▼</span>
+        </a>
       </div>
-
-      <a class="archive-handle" href="music" aria-label="Open releases archive">
-        <i></i>
-        <span>OPEN ARCHIVE</span>
-        <b>▸</b>
-      </a>
-
-      <div class="screen-footer" aria-hidden="true">
-        <span>PROPERTY OF INMISE</span>
-        <span>NO SIGNAL IS EVER LOST</span>
-      </div>
-    </section>
+    </div>
 
     <footer class="system-rail">
       <div class="rail-power"><i></i><span>POWER</span></div>
-      <div class="signal-trace" aria-hidden="true"><i></i></div>
+      <div class="signal-trace" aria-hidden="true">
+        <canvas id="rail-wave"></canvas>
+        <i></i>
+      </div>
       <span class="rail-model">INMISE VX–1984 · MASTER SYSTEM</span>
     </footer>
   </main>
