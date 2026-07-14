@@ -3,103 +3,107 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#050605">
   <title>INMISE — Releases</title>
   <link rel="stylesheet" href="styles/releases-vhs.css">
 </head>
 <body class="releases-page">
-  <main class="vhs-console" aria-label="INMISE releases player">
-    <span class="case-screw case-screw--tl" aria-hidden="true"></span>
-    <span class="case-screw case-screw--tr" aria-hidden="true"></span>
-    <span class="case-screw case-screw--bl" aria-hidden="true"></span>
-    <span class="case-screw case-screw--br" aria-hidden="true"></span>
+  <main class="vhs-console" aria-label="INMISE releases archive">
+    <img
+      class="approved-console-art"
+      src="assets/ui/releases-console-approved.png"
+      alt=""
+      aria-hidden="true"
+    >
+
     <header class="console-header">
-      <a class="console-brand" href="index.html"><span class="status-dot"></span> INMISE RELEASES</a>
+      <a class="console-brand" href="index.html" aria-label="INMISE home">INMISE RELEASES</a>
       <nav class="console-nav" aria-label="Main navigation">
-        <a class="console-nav__item is-active" href="music"><i></i>RELEASES</a>
-        <a class="console-nav__item" href="artists"><i></i>ARTISTS</a>
-        <a class="console-nav__item" href="work"><i></i>COLLABORATION</a>
-        <a class="console-nav__item" href="contacts"><i></i>CONTACTS</a>
+        <a class="console-nav__item is-active" href="music" data-label="RELEASES">RELEASES</a>
+        <a class="console-nav__item" href="artists" data-label="ARTISTS">ARTISTS</a>
+        <a class="console-nav__item" href="work" data-label="COLLABORATION">COLLABORATION</a>
+        <a class="console-nav__item" href="contacts" data-label="CONTACTS">CONTACTS</a>
       </nav>
     </header>
 
-    <section class="crt-shell" aria-live="polite">
-      <div class="crt-display" id="crt-display">
-        <div class="signal-stage">
-          <img class="artist-visual" id="artist-visual" alt="" hidden>
-          <div class="crt-message" id="crt-message">
-            <span class="crt-message__led"></span>
-            <strong>READY FOR INPUT</strong>
-            <p>SELECT AN ARTIST TO LOAD THEIR RELEASES</p>
-          </div>
-          <div class="clip-stage" id="clip-stage" hidden>
-            <video id="clip-video" controls playsinline preload="metadata">
-              <source src="assets/videos/background.mp4" type="video/mp4">
-            </video>
-            <button class="clip-stage__return" id="clip-return" type="button">RETURN TO RELEASES</button>
-          </div>
-        </div>
-        <aside class="track-console" aria-label="Artist releases">
-          <div class="screen-toolbar">
-            <label class="artist-picker" for="artist-selector">
-              <span class="artist-picker__legend">ARTIST TAPE DECK</span>
-              <span class="cassette-mouth" aria-hidden="true">
-                <span class="artist-cassette" id="artist-cassette">
-                  <i></i><strong id="cassette-artist-name">SELECT ARTIST</strong><i></i>
-                </span>
-                <span class="cassette-door"><strong id="cassette-door-label">SELECT ARTIST</strong></span>
-              </span>
-              <select id="artist-selector">
-                <option value="" selected>INSERT TAPE</option>
-                <option value="hahahap">HAHAHAP</option>
-                <option value="kodik">KODIK</option>
-                <option value="shibvri">SHIBVRI</option>
-                <option value="dope">DOPE THE PRODUCER</option>
-                <option value="xan">XAN</option>
-                <option value="namusorill">NAMUSORILL</option>
-                <option value="febb">FEBB TUFOE</option>
-              </select>
-            </label>
-            <span class="screen-status" id="deck-status">STANDBY</span>
-          </div>
-          <div class="track-console__empty" id="track-console-empty">
-            <span>TRACK LIBRARY</span>
-            <strong>NO TAPE</strong>
-          </div>
-          <div class="widget-loader" id="widget-loader" hidden>LOADING TAPE…</div>
-          <div class="widget-stage" id="widget-stage"></div>
-        </aside>
+    <section class="signal-stage" aria-live="polite">
+      <img class="artist-visual" id="artist-visual" alt="" hidden>
+      <div class="crt-message" id="crt-message" aria-hidden="true">
+        <span class="crt-message__led"></span>
+        <strong>READY FOR INPUT</strong>
+        <p>SELECT AN ARTIST CASSETTE</p>
+      </div>
+      <div class="clip-stage" id="clip-stage" hidden>
+        <video id="clip-video" controls playsinline preload="metadata">
+          <source src="assets/videos/background.mp4" type="video/mp4">
+        </video>
+        <button class="clip-stage__return" id="clip-return" type="button">RETURN TO ARCHIVE</button>
       </div>
     </section>
+
+    <aside class="track-console" aria-label="Artist releases">
+      <label class="artist-picker has-tape is-placeholder" for="artist-selector">
+        <span class="artist-picker__legend">ARTIST CASSETTE</span>
+        <span class="cassette-mouth" aria-hidden="true">
+          <span class="cassette-door"><strong id="cassette-door-label">SELECT ARTIST</strong></span>
+          <span class="artist-cassette" id="artist-cassette">
+            <img src="assets/ui/releases-cassette-approved.png" alt="">
+            <strong id="cassette-artist-name">SELECT ARTIST</strong>
+          </span>
+        </span>
+        <select id="artist-selector" aria-label="Select artist cassette">
+          <option value="" selected>SELECT ARTIST</option>
+          <option value="hahahap">HAHAHAP</option>
+          <option value="kodik">KODIK</option>
+          <option value="shibvri">SHIBVRI</option>
+          <option value="dope">DOPE THE PRODUCER</option>
+          <option value="xan">XAN</option>
+          <option value="namusorill">NAMUSORILL</option>
+          <option value="febb">FEBB TUFOE</option>
+        </select>
+        <span class="screen-status" id="deck-status">STANDBY</span>
+      </label>
+
+      <section class="track-archive" aria-label="Yandex Music track archive">
+        <span class="track-archive__legend">TRACK ARCHIVE</span>
+        <div class="track-console__empty" id="track-console-empty">
+          <span>TRACK LIBRARY</span>
+          <strong>NO TAPE</strong>
+        </div>
+        <div class="widget-loader" id="widget-loader" hidden>LOADING TAPE…</div>
+        <div class="widget-stage" id="widget-stage"></div>
+      </section>
+    </aside>
 
     <section class="control-deck" aria-label="VHS control deck">
-      <div class="deck-left">
-        <span class="deck-rec"><i></i> REC</span>
-        <div class="deck-volume">
-          <span>VOLUME <output id="volume-value">72</output></span>
-          <button class="volume-knob" id="volume-knob" type="button" role="slider" aria-label="Clip volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="72">
-            <i></i>
-          </button>
-          <b>−</b><b>+</b>
-        </div>
-      </div>
-      <div class="deck-transport">
-        <button type="button" class="transport-btn" data-deck-action="rew">◀◀<small>REW</small></button>
-        <button type="button" class="transport-btn" data-deck-action="play">▶<small>PLAY</small></button>
-        <button type="button" class="transport-btn" data-deck-action="stop">■<small>STOP</small></button>
-        <button type="button" class="transport-btn" data-deck-action="ff">▶▶<small>FF</small></button>
-      </div>
-      <div class="tape-readout">
-        <div><span>TAPE COUNTER</span><strong id="tape-counter">00:00:00</strong><em>SP</em></div>
-        <div class="waveform" aria-hidden="true"></div>
-      </div>
-      <button type="button" class="clip-button" id="clip-button"><span>▶</span> PLAY CLIP</button>
-    </section>
+      <button
+        class="volume-knob"
+        id="volume-knob"
+        type="button"
+        role="slider"
+        aria-label="Clip volume"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="72"
+      ><output id="volume-value">72</output></button>
 
-    <footer class="cassette-bay" aria-hidden="true">
-      <span class="cover-screw cover-screw--left"></span>
-      <span class="cover-mark">INMISE · VHS PROFESSIONAL · MODEL 26</span>
-      <span class="cover-screw cover-screw--right"></span>
-    </footer>
+      <div class="deck-transport">
+        <button type="button" class="transport-btn" data-deck-action="rew" aria-label="Previous artist"></button>
+        <button type="button" class="transport-btn" data-deck-action="play" aria-label="Load random artist"></button>
+        <button type="button" class="transport-btn" data-deck-action="stop" aria-label="Stop and eject artist cassette"></button>
+        <button type="button" class="transport-btn" data-deck-action="ff" aria-label="Next artist"></button>
+      </div>
+
+      <div class="tape-readout" aria-label="Tape counter">
+        <span class="signal-mode" id="signal-mode">STANDBY</span>
+        <canvas class="signal-waveform" id="signal-waveform" aria-hidden="true"></canvas>
+        <strong id="tape-counter">00:00:00</strong>
+      </div>
+
+      <button type="button" class="clip-button" id="clip-button" aria-label="Play clip">
+        <span>PLAY CLIP</span>
+      </button>
+    </section>
   </main>
 
   <script src="scripts/releases-vhs.js"></script>
