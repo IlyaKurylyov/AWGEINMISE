@@ -1,47 +1,49 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
-import { copyFileSync, mkdirSync, readdirSync, statSync } from 'fs'
-import { join } from 'path'
+import { resolve, join } from 'path'
+import { copyFileSync, cpSync, existsSync, mkdirSync } from 'fs'
 
-// Плагин для копирования scripts и .htaccess
-function copyScripts() {
+const runtimeScripts = [
+  'admin.js',
+  'app.js',
+  'artists-signal.js',
+  'beats.js',
+  'config.js',
+  'config.local.js',
+  'home-terminal.js',
+  'releases-vhs.js',
+  'work-dynamic.js',
+]
+
+function copyRuntimeFiles() {
   return {
-    name: 'copy-scripts',
+    name: 'copy-runtime-files',
     closeBundle() {
-      const srcDir = 'scripts'
-      const destDir = 'dist/scripts'
-      
-      try {
-        mkdirSync(destDir, { recursive: true })
-        
-        const files = readdirSync(srcDir)
-        files.forEach(file => {
-          const srcPath = join(srcDir, file)
-          const destPath = join(destDir, file)
-          
-          if (statSync(srcPath).isFile()) {
-            copyFileSync(srcPath, destPath)
-            console.log(`Copied: ${file}`)
-          }
-        })
-        
-        // Копируем .htaccess
-        try {
-          copyFileSync('.htaccess', 'dist/.htaccess')
-          console.log('Copied: .htaccess')
-        } catch (err) {
-          console.warn('Warning: .htaccess not found or could not be copied')
+      const destination = 'dist/scripts'
+      mkdirSync(destination, { recursive: true })
+
+      runtimeScripts.forEach((file) => {
+        const source = join('scripts', file)
+        if (existsSync(source)) {
+          copyFileSync(source, join(destination, file))
         }
-      } catch (err) {
-        console.error('Error copying scripts:', err)
+      })
+
+      ;['beats', 'icons', 'images'].forEach((directory) => {
+        const source = join('assets', directory)
+        if (existsSync(source)) {
+          cpSync(source, join('dist', 'assets', directory), { recursive: true })
+        }
+      })
+
+      if (existsSync('.htaccess')) {
+        copyFileSync('.htaccess', 'dist/.htaccess')
       }
-    }
+    },
   }
 }
 
 export default defineConfig({
-  plugins: [react(), copyScripts()],
+  plugins: [copyRuntimeFiles()],
   build: {
     rollupOptions: {
       input: {
@@ -51,31 +53,18 @@ export default defineConfig({
         contacts: resolve(__dirname, 'contacts.html'),
         work: resolve(__dirname, 'work.html'),
         admin: resolve(__dirname, 'admin.html'),
-        vhsMain: resolve(__dirname, 'src/vhs-main.jsx'),
       },
       output: {
-        // Принудительное изменение хэша при каждой сборке
-        assetFileNames: (assetInfo) => {
-          const info = assetInfo.name.split('.');
-          const ext = info[info.length - 1];
-          if (/css/i.test(ext)) {
-            // Добавляем timestamp для CSS
-            return `assets/[name]-[hash]-${Date.now()}[extname]`;
-          }
-          return `assets/[name]-[hash][extname]`;
-        },
+        assetFileNames: 'assets/[name]-[hash][extname]',
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
-      }
+      },
     },
     outDir: 'dist',
     assetsDir: 'assets',
     emptyOutDir: true,
-    // Гарантируем минификацию CSS
     cssMinify: true,
-    // Обновляем target для лучшей совместимости
     target: 'es2015',
   },
-  publicDir: 'assets',
+  publicDir: false,
 })
-

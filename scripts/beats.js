@@ -8,61 +8,61 @@ const beats = [
         title: 'Vetreno (134 bpm, F♯m)',
         seller: '@DopeTheProduce',
         price: '2000₽',
-        audio: '@DopeTheProduce - Vetreno (134 bpm, F♯m).mp3',
+        audio: '@DopeTheProducer - Vetreno (134 bpm, F♯m).mp3',
         link: '#'
     },
     {
         title: 'Mi Vida (128 bpm, Bbm)',
         seller: '@DopeTheProduce',
         price: '2000₽',
-        audio: '@DopeTheProduce - Mi Vida (128 bpm, Bbm).mp3',
+        audio: '@DopeTheProducer - Mi Vida (128 bpm, Bbm).mp3',
         link: '#'
     },
     {
         title: 'long night (115 bpm, G♯m)',
         seller: '@DopeTheProduce',
         price: '2000₽',
-        audio: '@DopeTheProduce - long night (115 bpm, G♯m).mp3',
+        audio: '@DopeTheProducer - long night (115 bpm, G♯m).mp3',
         link: '#'
     },
     {
         title: 'rBilly [115bpm, D♯m]',
         seller: '@DopeTheProduce',
         price: '2000₽',
-        audio: '@DopeTheProduce - rBilly [115bpm, D♯m].mp3',
+        audio: '@DopeTheProducer - rBilly [115bpm, D♯m].mp3',
         link: '#'
     },
     {
         title: 'So sad (85bpm, Gm)',
         seller: '@DopeTheProduce',
         price: '2000₽',
-        audio: '@DopeTheProduce - So sad (85bpm, Gm).mp3',
+        audio: '@DopeTheProducer - So sad (85bpm, Gm).mp3',
         link: '#'
     },
     {
         title: 'Olivera (141 Fmin)',
         seller: '@SHIBVRI',
         price: '2000₽',
-        audio: '@prod.shibvri - Olivera (141 Fmin).mp3',
+        audio: '@SHIBVRI - Olivera (141 Fmin).mp3',
         link: '#'
     },
     {
         title: 'Out the head (142bpm Amin)',
         seller: '@SHIBVRI',
         price: '2000₽',
-        audio: '@prod.shibvri - Out the head (142bpm Amin).mp3'
+        audio: '@SHIBVRI - Out the head (142bpm Amin).mp3'
     },
     {
         title: 'Yokai (142bpm Dmin)',
         seller: '@SHIBVRI',
         price: '2000₽',
-        audio: '@prod.shibvri - Yokai (142bpm Dmin).mp3'
+        audio: '@SHIBVRI -  Yokai (142bpm Dmin).mp3'
     },
     {
         title: '2XL (110bpm F)',
         seller: '@SHIBVRI',
         price: '2000₽',
-        audio: '@prod.shibvri - 2XL (110bpm F).mp3'
+        audio: '@SHIBVRI- 2XL (110bpm F).mp3'
     },
     {
         title: 'All Girls Are The Same (164bpm, B)',
@@ -104,7 +104,7 @@ const beats = [
 
 const sellerLinks = {
     '@DopeTheProduce': 'https://band.link/uUu9g',
-    '@prod.shibvri': 'https://t.me/prod_shibvri',
+    '@SHIBVRI': 'https://t.me/prod_shibvri',
     '@Namusorill': 'https://t.me/namusorill'
 };
 
