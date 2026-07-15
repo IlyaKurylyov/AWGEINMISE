@@ -86,7 +86,7 @@
     }, delay);
   }
 
-  if (window.matchMedia('(min-width: 901px)').matches) startRailWave();
+  startRailWave();
 
   if (!video) {
     revealTerminal();
