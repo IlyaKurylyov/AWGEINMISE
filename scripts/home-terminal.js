@@ -2,9 +2,40 @@
   const body = document.body;
   const video = document.getElementById('home-signal');
   const railWave = document.getElementById('rail-wave');
+  const logoLetters = [...document.querySelectorAll('.logo-letter[data-echo]')];
+  const acronymEchoes = new Map(
+    [...document.querySelectorAll('.acronym-echo[data-echo-id]')]
+      .map((echo) => [echo.dataset.echoId,echo])
+  );
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let glitchTimer;
   let waveFrame;
+  let activeLetter = null;
+
+  function revealAcronym(letter) {
+    const echo = acronymEchoes.get(letter.dataset.echo);
+    if (!echo) return;
+    if (activeLetter && activeLetter !== letter) concealAcronym(activeLetter);
+    activeLetter = letter;
+    letter.classList.add('is-decoding');
+    echo.classList.remove('is-visible');
+    void echo.offsetWidth;
+    echo.classList.add('is-visible');
+  }
+
+  function concealAcronym(letter) {
+    const echo = acronymEchoes.get(letter.dataset.echo);
+    letter.classList.remove('is-decoding');
+    echo?.classList.remove('is-visible');
+    if (activeLetter === letter) activeLetter = null;
+  }
+
+  logoLetters.forEach((letter) => {
+    letter.addEventListener('pointerenter',() => revealAcronym(letter));
+    letter.addEventListener('pointerleave',() => concealAcronym(letter));
+    letter.addEventListener('focus',() => revealAcronym(letter));
+    letter.addEventListener('blur',() => concealAcronym(letter));
+  });
 
   function startRailWave() {
     if (!railWave) return;

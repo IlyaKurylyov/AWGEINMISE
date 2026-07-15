@@ -1,76 +1,140 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INMISE - Контакты</title>
-    <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/contacts.css">
-    <link rel="stylesheet" href="styles/responsive.css">
-    <link rel="stylesheet" href="styles/desktop-protection.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#030403">
+  <title>INMISE — Contacts</title>
+  <link rel="stylesheet" href="styles/contacts.css">
+  <link rel="stylesheet" href="styles/console-home.css">
+  <script src="scripts/contacts-console.js" defer></script>
 </head>
-<body class="page-contacts">
-  <div class="noise-overlay"></div>
-  <div class="tv-static-overlay"></div>
-  <svg style="display:none;">
-    <filter id="tv-wave" x="0" y="0">
-      <feTurbulence id="turb" type="turbulence" baseFrequency="0.02 0.08" numOctaves="2" result="turb" seed="2"/>
-      <feDisplacementMap in2="turb" in="SourceGraphic" scale="18" xChannelSelector="R" yChannelSelector="G"/>
-    </filter>
-    <filter id="rew-worn-inset" x="-15%" y="-15%" width="130%" height="130%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="0.7" result="blur"/>
-      <feOffset dx="0" dy="0.6" result="offsetBlur"/>
-      <feComposite in="offsetBlur" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="innerShadow"/>
-      <feColorMatrix in="innerShadow" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0" result="shadow"/>
-      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="2" seed="3" result="noise"/>
-      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -0.88  0" result="grainAlpha"/>
-      <feComposite in="grainAlpha" in2="SourceAlpha" operator="in" result="grainMasked"/>
-      <feMerge>
-        <feMergeNode in="SourceGraphic"/>
-        <feMergeNode in="shadow"/>
-        <feMergeNode in="grainMasked"/>
-      </feMerge>
-    </filter>
-  </svg>
-    <a id="home-switch-btn" class="home-switch-btn" title="На главный экран">
-      <svg width="120" height="56" viewBox="0 0 120 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <g class="rew-arrows" fill="#fff">
-          <polygon points="36,18 22,28 36,38"/>
-          <polygon points="54,18 40,28 54,38"/>
-        </g>
-      </svg>
+<body class="contacts-page">
+  <main class="contacts-console" aria-label="INMISE contact link console">
+    <img
+      class="contacts-console__art"
+      src="assets/ui/contacts-rotary-approved.png"
+      alt=""
+      aria-hidden="true"
+    >
+
+    <a class="console-home" href="index.html" aria-label="Return to master terminal">
+      <i aria-hidden="true"></i><span>MASTER</span>
     </a>
-    <nav class="main-nav">
-        <div class="nav-links">
-            <a href="music" class="nav-link">РЕЛИЗЫ</a>
-            <a href="artists" class="nav-link">АРТИСТЫ</a>
-            <a href="work" class="nav-link">СОТРУДНИЧЕСТВО</a>
-            <a href="contacts" class="nav-link active">КОНТАКТЫ</a>
-        </div>
+
+    <nav class="console-nav" aria-label="Main navigation">
+      <a class="console-nav__item" href="music" data-label="RELEASES">RELEASES</a>
+      <a class="console-nav__item" href="artists" data-label="ARTISTS">ARTISTS</a>
+      <a class="console-nav__item" href="work" data-label="COLLABORATION">COLLABORATION</a>
+      <a class="console-nav__item is-active" href="contacts" data-label="CONTACTS" aria-current="page">CONTACTS</a>
     </nav>
 
-    <main class="content contacts-page-content">
-      <section class="contacts-section">
-        <div class="vhs-socials old-film">
-          <div class="vhs-card">
-            <div class="vhs-icon"><img src="assets/icons/telegram.svg" alt="Telegram"></div>
-            <div class="vhs-title">TELEGRAM</div>
-            <a href="https://t.me/inmise" target="_blank" class="vhs-btn">ПЕРЕЙТИ</a>
-          </div>
-          <div class="vhs-card">
-            <div class="vhs-icon"><img src="assets/icons/vk.svg" alt="VK"></div>
-            <div class="vhs-title">VK</div>
-            <a href="https://vk.com/inmise" target="_blank" class="vhs-btn">ПЕРЕЙТИ</a>
-          </div>
-          <div class="vhs-card">
-            <div class="vhs-icon"><img src="assets/icons/youtube.svg" alt="YouTube"></div>
-            <div class="vhs-title">YOUTUBE</div>
-            <a href="https://www.youtube.com/@inmiseofficial" target="_blank" class="vhs-btn">ПЕРЕЙТИ</a>
-          </div>
-        </div>
-      </section>
-    </main>
+    <section class="contact-crt" id="contact-crt" aria-live="polite">
+      <div class="contact-crt__content">
+        <p class="contact-crt__eyebrow">INMISE CONTACT LINK</p>
+        <h1 class="contact-crt__status" id="contact-status">SELECT CHANNEL</h1>
+        <div class="contact-crt__rule" aria-hidden="true"></div>
 
-    <script src="scripts/app.js"></script>
+        <ol class="contact-crt__stages" aria-label="Connection status">
+          <li data-stage="routing">ROUTING SIGNAL</li>
+          <li data-stage="handshake">HANDSHAKE</li>
+          <li data-stage="open">CHANNEL OPEN</li>
+        </ol>
+
+        <div class="contact-crt__channel" id="contact-channel">TELEGRAM</div>
+        <div class="contact-crt__result" id="contact-result" hidden>
+          <small id="contact-service">TELEGRAM / DIRECT LINK</small>
+          <strong id="contact-handle">@INMISE</strong>
+          <p id="contact-details">NEWS · RELEASES · DIRECT CONTACT</p>
+          <span>PRESS CONNECT TO OPEN</span>
+        </div>
+        <p class="contact-crt__hint" id="contact-hint">SELECT A CHANNEL · ROTATE THE DIAL</p>
+
+        <div class="contact-wave" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+      </div>
+    </section>
+
+    <section class="dial-deck" aria-label="Channel rotary selector">
+      <div
+        class="rotary-dial"
+        id="rotary-dial"
+        role="slider"
+        tabindex="0"
+        aria-label="Rotate to call selected channel"
+        aria-valuemin="0"
+        aria-valuemax="210"
+        aria-valuenow="0"
+      ></div>
+
+      <div class="dial-channels" aria-label="Contact channel">
+        <button class="dial-channel dial-channel--telegram is-selected" type="button" data-channel="telegram">TELEGRAM</button>
+        <button class="dial-channel dial-channel--vk" type="button" data-channel="vk">VK</button>
+        <button class="dial-channel dial-channel--youtube" type="button" data-channel="youtube">YOUTUBE</button>
+      </div>
+    </section>
+
+    <svg class="dial-rotor" viewBox="0 0 430 430" aria-hidden="true" focusable="false">
+      <defs>
+        <mask id="dial-ring-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="430" height="430">
+          <rect x="0" y="0" width="430" height="430" fill="#000"></rect>
+          <circle cx="215" cy="215" r="202" fill="#fff"></circle>
+          <circle cx="215" cy="215" r="120" fill="#000"></circle>
+        </mask>
+        <mask id="dial-annulus-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="430" height="430">
+          <rect x="0" y="0" width="430" height="430" fill="#000"></rect>
+          <circle cx="215" cy="215" r="202" fill="#fff"></circle>
+          <circle cx="215" cy="215" r="120" fill="#000"></circle>
+        </mask>
+        <clipPath id="dial-stop-fill-clip" clipPathUnits="userSpaceOnUse">
+          <path d="M396 311 A205 205 0 0 1 324 389 L279 317 A120 120 0 0 0 321 271 Z"></path>
+        </clipPath>
+        <mask id="dial-stop-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="430" height="430">
+          <rect x="0" y="0" width="430" height="430" fill="#000"></rect>
+          <ellipse cx="342" cy="333" rx="74" ry="39" transform="rotate(42 342 333)" fill="#fff"></ellipse>
+        </mask>
+      </defs>
+      <g class="dial-rotor__image" id="dial-rotor">
+        <g mask="url(#dial-ring-mask)">
+          <image href="assets/ui/contacts-rotary-approved.png" x="-1126" y="-140" width="1671" height="941"></image>
+        </g>
+        <g mask="url(#dial-annulus-mask)" clip-path="url(#dial-stop-fill-clip)">
+          <g transform="rotate(-36 215 215)">
+            <image href="assets/ui/contacts-rotary-approved.png" x="-1126" y="-140" width="1671" height="941"></image>
+          </g>
+        </g>
+      </g>
+      <g mask="url(#dial-stop-mask)">
+        <image href="assets/ui/contacts-rotary-approved.png" x="-1126" y="-140" width="1671" height="941"></image>
+      </g>
+    </svg>
+
+    <output class="pulse-counter" id="pulse-counter" aria-label="Pulse count">000</output>
+    <div class="call-lamps" aria-hidden="true">
+      <i class="call-lamp call-lamp--dial" data-lamp="dial"></i>
+      <i class="call-lamp call-lamp--link" data-lamp="link"></i>
+      <i class="call-lamp call-lamp--open" data-lamp="open"></i>
+    </div>
+
+    <div class="signal-meter" aria-hidden="true"><i id="signal-needle"></i></div>
+
+    <section class="contact-controls" aria-label="Contact controls">
+      <button class="console-button console-button--reset" id="contact-reset" type="button">
+        <span class="console-button__cap" aria-hidden="true"></span><span class="sr-only">Reset contact link</span>
+      </button>
+      <button class="console-button console-button--hold" id="contact-hold" type="button">
+        <span class="console-button__cap" aria-hidden="true"></span><span class="sr-only">Hold contact link</span>
+      </button>
+      <button class="console-button console-button--redial" id="contact-redial" type="button">
+        <span class="console-button__cap" aria-hidden="true"></span><span class="sr-only">Redial selected channel</span>
+      </button>
+      <button class="console-button console-button--connect" id="contact-connect" type="button">
+        <span class="console-button__cap" aria-hidden="true"></span><span class="sr-only">Connect to selected channel</span>
+      </button>
+    </section>
+  </main>
 </body>
 </html>
