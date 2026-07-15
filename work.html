@@ -1,97 +1,88 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INMISE - Биты</title>
-    <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/work.css">
-    <link rel="stylesheet" href="styles/responsive.css">
-    <link rel="stylesheet" href="styles/work-responsive.css">
-    <link rel="stylesheet" href="styles/desktop-protection.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#030403">
+  <title>INMISE — Collaboration</title>
+  <link rel="stylesheet" href="styles/work.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="scripts/config.local.js" defer></script>
+  <script src="scripts/config.js" defer></script>
+  <script src="scripts/work-dynamic.js" defer></script>
 </head>
-<body class="page-work">
-  <div class="noise-overlay"></div>
-  <div class="tv-static-overlay"></div>
-  <svg style="display:none;">
-    <filter id="tv-wave" x="0" y="0">
-      <feTurbulence id="turb" type="turbulence" baseFrequency="0.02 0.08" numOctaves="2" result="turb" seed="2"/>
-      <feDisplacementMap in2="turb" in="SourceGraphic" scale="18" xChannelSelector="R" yChannelSelector="G"/>
-    </filter>
-    <filter id="rew-worn-inset" x="-15%" y="-15%" width="130%" height="130%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="0.7" result="blur"/>
-      <feOffset dx="0" dy="0.6" result="offsetBlur"/>
-      <feComposite in="offsetBlur" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="innerShadow"/>
-      <feColorMatrix in="innerShadow" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0" result="shadow"/>
-      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="2" seed="3" result="noise"/>
-      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -0.88 0" result="grainAlpha"/>
-      <feComposite in="grainAlpha" in2="SourceAlpha" operator="in" result="grainMasked"/>
-      <feMerge>
-        <feMergeNode in="SourceGraphic"/>
-        <feMergeNode in="shadow"/>
-        <feMergeNode in="grainMasked"/>
-      </feMerge>
-    </filter>
-  </svg>
-    <a id="home-switch-btn" class="home-switch-btn" title="На главный экран">
-      <svg width="120" height="56" viewBox="0 0 120 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <g class="rew-arrows" fill="#fff">
-          <polygon points="36,18 22,28 36,38"/>
-          <polygon points="54,18 40,28 54,38"/>
-        </g>
-      </svg>
-    </a>
-    <nav class="main-nav">
-        <div class="nav-links">
-            <a href="music" class="nav-link">РЕЛИЗЫ</a>
-            <a href="artists" class="nav-link">АРТИСТЫ</a>
-            <a href="work" class="nav-link active">СОТРУДНИЧЕСТВО</a>
-            <a href="contacts" class="nav-link">КОНТАКТЫ</a>
-        </div>
+<body class="collaboration-page">
+  <main class="collaboration-console" aria-label="INMISE collaboration tape market">
+    <img
+      class="collaboration-console__art"
+      src="assets/ui/collaboration-console-approved.png"
+      alt=""
+      aria-hidden="true"
+    >
+
+    <nav class="console-nav" aria-label="Main navigation">
+      <a class="console-nav__item" href="music" data-label="RELEASES">RELEASES</a>
+      <a class="console-nav__item" href="artists" data-label="ARTISTS">ARTISTS</a>
+      <a class="console-nav__item is-active" href="work" data-label="COLLABORATION" aria-current="page">COLLABORATION</a>
+      <a class="console-nav__item" href="contacts" data-label="CONTACTS">CONTACTS</a>
     </nav>
 
-    <div class="work-filter">
-        <div class="filter-buttons">
-            <label class="producer-switch" for="dope">
-                <input type="checkbox" value="@DopeTheProduce" class="filter-checkbox" id="dope">
-                <div class="btn-indicator">
-                    <div class="indicator-light"></div>
-                    <div class="indicator-glow"></div>
-                </div>
-                <span class="producer-name">@DopeTheProduce</span>
-            </label>
-            <label class="producer-switch" for="shibvri">
-                <input type="checkbox" value="@SHIBVRI" class="filter-checkbox" id="shibvri">
-                <div class="btn-indicator">
-                    <div class="indicator-light"></div>
-                    <div class="indicator-glow"></div>
-                </div>
-                <span class="producer-name">@SHIBVRI</span>
-            </label>
-            <label class="producer-switch" for="namusorill">
-                <input type="checkbox" value="@Namusorill" class="filter-checkbox" id="namusorill">
-                <div class="btn-indicator">
-                    <div class="indicator-light"></div>
-                    <div class="indicator-glow"></div>
-                </div>
-                <span class="producer-name">@Namusorill</span>
-            </label>
-        </div>
-    </div>
+    <fieldset class="producer-bank" aria-label="Select producer">
+      <legend class="sr-only">Select producer</legend>
+      <label class="producer-toggle producer-toggle--dope">
+        <input type="checkbox" value="@DopeTheProduce">
+        <span class="producer-toggle__lamp" aria-hidden="true"></span>
+        <span class="producer-toggle__name">@DOPE<br>THE PRODUCER</span>
+        <span class="producer-toggle__lever" aria-hidden="true"></span>
+      </label>
+      <label class="producer-toggle producer-toggle--shibvri">
+        <input type="checkbox" value="@SHIBVRI">
+        <span class="producer-toggle__lamp" aria-hidden="true"></span>
+        <span class="producer-toggle__name">@SHIBVRI</span>
+        <span class="producer-toggle__lever" aria-hidden="true"></span>
+      </label>
+      <label class="producer-toggle producer-toggle--namusorill">
+        <input type="checkbox" value="@Namusorill" checked>
+        <span class="producer-toggle__lamp" aria-hidden="true"></span>
+        <span class="producer-toggle__name">@NAMUSORILL</span>
+        <span class="producer-toggle__lever" aria-hidden="true"></span>
+      </label>
+    </fieldset>
 
-    <main class="content">
-        <section class="work-section">
-            <div class="beats-grid">
-                <!-- Здесь будут карточки битов -->
-            </div>
-        </section>
-    </main>
+    <section class="tape-library" aria-label="Available beat tapes">
+      <div class="tape-library__rows" id="tape-library-rows"></div>
+      <p class="tape-library__status" id="tape-library-status" role="status">SCANNING TAPE LIBRARY…</p>
+    </section>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="scripts/config.local.js"></script>
-  <script src="scripts/config.js"></script>
-    <script src="scripts/app.js"></script>
-    <script src="scripts/beats.js"></script>
-    <script src="scripts/work-dynamic.js"></script>
+    <section class="routing-overlay" aria-hidden="true">
+      <i class="vu-needle vu-needle--input"></i>
+      <i class="vu-needle vu-needle--bus"></i>
+      <i class="vu-needle vu-needle--output"></i>
+    </section>
+
+    <section class="producer-readout" aria-live="polite">
+      <strong id="selected-producer">@NAMUSORILL</strong>
+    </section>
+
+    <section class="price-readout" aria-live="polite">
+      <strong id="selected-price">2 000 ₽</strong>
+      <span>WAV 24-BIT / 48KHZ</span>
+    </section>
+
+    <a class="buy-tape" id="buy-tape" href="https://t.me/namusorill" target="_blank" rel="noopener noreferrer">
+      <span class="buy-tape__cap">BUY TAPE</span>
+    </a>
+
+    <section class="transport-bank" aria-label="Tape transport">
+      <button class="transport-button transport-button--prev" id="tape-prev" type="button"><span class="transport-button__cap" aria-hidden="true"></span><span class="sr-only">Previous tape</span></button>
+      <button class="transport-button transport-button--play" id="tape-play" type="button"><span class="transport-button__cap" aria-hidden="true"></span><span class="sr-only">Play selected tape</span></button>
+      <button class="transport-button transport-button--stop" id="tape-stop" type="button"><span class="transport-button__cap" aria-hidden="true"></span><span class="sr-only">Stop tape</span></button>
+      <button class="transport-button transport-button--next" id="tape-next" type="button"><span class="transport-button__cap" aria-hidden="true"></span><span class="sr-only">Next tape</span></button>
+    </section>
+
+    <div class="waveform-monitor" id="waveform-monitor" aria-hidden="true"></div>
+    <time class="tape-counter" id="tape-counter">00:00:00:00</time>
+    <audio id="tape-audio" preload="metadata"></audio>
+  </main>
 </body>
-</html> 
+</html>
