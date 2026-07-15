@@ -272,6 +272,21 @@
   }
 
   function bindControls() {
+    const pulsePress = (button) => {
+      window.clearTimeout(button._pressTimer);
+      button.classList.remove('is-pressed');
+      void button.offsetWidth;
+      button.classList.add('is-pressed');
+      button._pressTimer = window.setTimeout(() => button.classList.remove('is-pressed'), 220);
+    };
+
+    [els.prev, els.scan, els.random, els.next].forEach((button) => {
+      button.addEventListener('pointerdown', () => pulsePress(button));
+      button.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') pulsePress(button);
+      });
+    });
+
     els.prev.addEventListener('click', () => selectArtist(activeIndex - 1));
     els.next.addEventListener('click', () => selectArtist(activeIndex + 1));
     els.random.addEventListener('click', () => selectArtist(randomIndex(activeIndex)));

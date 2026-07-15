@@ -33,6 +33,13 @@
   const volumeValue = document.getElementById('volume-value');
 
   const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+  const pulseMechanicalPress = (button) => {
+    clearTimeout(button._pressTimer);
+    button.classList.remove('is-pressed');
+    void button.offsetWidth;
+    button.classList.add('is-pressed');
+    button._pressTimer = setTimeout(() => button.classList.remove('is-pressed'), 230);
+  };
   const signalLabels = {
     standby: 'STANDBY',
     loading: 'LOADING',
@@ -190,6 +197,10 @@
   selector.addEventListener('change', () => { void loadArtist(selector.value); });
 
   document.querySelectorAll('[data-deck-action]').forEach((button) => {
+    button.addEventListener('pointerdown', () => pulseMechanicalPress(button));
+    button.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') pulseMechanicalPress(button);
+    });
     button.addEventListener('click', () => {
       const action = button.dataset.deckAction;
 
@@ -240,6 +251,10 @@
     }
   }
 
+  clipButton.addEventListener('pointerdown', () => pulseMechanicalPress(clipButton));
+  clipButton.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') pulseMechanicalPress(clipButton);
+  });
   clipButton.addEventListener('click', () => {
     if (clipIsOpen) closeClip();
     else void openClip();

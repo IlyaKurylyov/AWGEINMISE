@@ -611,33 +611,43 @@ button, select { font: inherit; }
   top: 17%;
   bottom: 18%;
   pointer-events: none;
-  opacity: 0;
-  border: 0;
   border-radius: 2px;
-  background: transparent;
-  box-shadow: none;
-  transition: opacity 45ms linear,background 45ms linear,box-shadow 45ms linear;
+  background: #050605;
+  box-shadow: inset 0 8px 10px rgba(0,0,0,.9),inset 0 -1px rgba(210,201,178,.04);
 }
-.transport-btn:hover::before {
-  opacity: 0;
+
+.transport-btn__cap {
+  position: absolute;
+  z-index: 2;
+  left: var(--press-left);
+  right: var(--press-right);
+  top: 17%;
+  bottom: 18%;
+  display: block;
+  overflow: hidden;
+  border-radius: 2px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  pointer-events: none;
+  transform: scale(1);
+  transform-origin: center;
+  transition: transform 180ms cubic-bezier(.2,.78,.25,1),filter 150ms ease,box-shadow 180ms ease;
 }
-.transport-btn:active::before {
-  opacity: 1;
-  -webkit-backdrop-filter: brightness(.78) saturate(.9);
-  backdrop-filter: brightness(.78) saturate(.9);
-  background:
-    radial-gradient(circle at 50% 52%,rgba(225,218,195,.13) 0 8%,rgba(225,218,195,.04) 17%,transparent 34%),
-    rgba(0,0,0,.035);
-  box-shadow:
-    inset 0 7px 8px rgba(0,0,0,.74),
-    inset 3px 0 5px rgba(0,0,0,.28),
-    inset -3px 0 5px rgba(0,0,0,.28),
-    inset 0 -1px rgba(205,199,181,.045);
-}
-.transport-btn[data-deck-action="play"]:active::before {
-  background:
-    radial-gradient(circle at 50% 52%,rgba(112,241,96,.23) 0 8%,rgba(89,221,75,.085) 18%,transparent 37%),
-    rgba(0,0,0,.035);
+
+.transport-btn:nth-child(1) .transport-btn__cap { background-image: url('../assets/ui/control-sprites/releases-rew.png'); }
+.transport-btn:nth-child(2) .transport-btn__cap { background-image: url('../assets/ui/control-sprites/releases-play.png'); }
+.transport-btn:nth-child(3) .transport-btn__cap { background-image: url('../assets/ui/control-sprites/releases-stop.png'); }
+.transport-btn:nth-child(4) .transport-btn__cap { background-image: url('../assets/ui/control-sprites/releases-ff.png'); }
+
+.transport-btn:hover .transport-btn__cap,
+.transport-btn:focus-visible .transport-btn__cap { filter: brightness(1.035); }
+
+.transport-btn:active .transport-btn__cap,
+.transport-btn.is-pressed .transport-btn__cap {
+  transform: scale(.955);
+  filter: brightness(.7) contrast(.94);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.76);
 }
 .transport-btn:focus-visible,
 .clip-button:focus-visible,
@@ -646,7 +656,7 @@ button, select { font: inherit; }
   outline-offset: -3px;
 }
 .transport-btn:focus-visible { outline: 0; }
-.transport-btn:focus-visible::before { box-shadow: inset 0 0 0 1px rgba(210,198,166,.38); }
+.transport-btn:focus-visible::before { box-shadow: inset 0 8px 10px rgba(0,0,0,.9),inset 0 0 0 1px rgba(210,198,166,.28); }
 
 .tape-readout {
   position: absolute;
@@ -702,8 +712,46 @@ button, select { font: inherit; }
   width: 16.1%;
   height: 71%;
 }
-.clip-button span { opacity: 0; }
+.clip-button > span:not(.clip-button__cap) { opacity: 0; }
 .clip-button:hover { box-shadow: inset 0 0 22px rgba(255,67,48,.12),0 0 12px rgba(255,45,30,.12); }
+
+.clip-button::before,
+.clip-button__cap {
+  position: absolute;
+  inset: 9% 4% 11%;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.clip-button::before {
+  content: "";
+  z-index: 1;
+  background: #140201;
+  box-shadow: inset 0 10px 12px rgba(0,0,0,.82),inset 0 -1px rgba(255,150,126,.06);
+}
+
+.clip-button__cap {
+  z-index: 2;
+  display: block;
+  overflow: hidden;
+  background-image: url('../assets/ui/control-sprites/releases-clip.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  transform: scale(1);
+  transform-origin: center;
+  transition: transform 180ms cubic-bezier(.2,.78,.25,1),filter 150ms ease,box-shadow 180ms ease;
+}
+
+.clip-button:hover .clip-button__cap,
+.clip-button:focus-visible .clip-button__cap { filter: brightness(1.04); }
+
+.clip-button:active .clip-button__cap,
+.clip-button.is-pressed .clip-button__cap {
+  transform: scale(.96);
+  filter: brightness(.66) contrast(.94);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.74);
+}
 
 @media (max-aspect-ratio: 4 / 3) {
   .vhs-console { width: 100vw; height: calc(100vw / 1.7768); }

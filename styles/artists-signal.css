@@ -159,6 +159,12 @@ button { color: inherit; }
 .console-nav__hotspot:hover .console-nav__label,
 .console-nav__hotspot:focus-visible .console-nav__label { color: #c5c7b9; }
 
+.console-nav__hotspot:hover::before,
+.console-nav__hotspot:focus-visible::before {
+  background: #78ee6a;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,.42),0 0 4px #62e95a,0 0 9px rgba(84,231,76,.48);
+}
+
 .console-nav__hotspot[aria-current="page"]::before {
   background: #78ee6a;
   box-shadow: inset 0 1px 2px rgba(255,255,255,.42),0 0 4px #62e95a,0 0 10px rgba(84,231,76,.62);
@@ -240,7 +246,7 @@ button { color: inherit; }
   height: 86%;
   object-fit: cover;
   object-position: var(--strip-position, center 34%);
-  filter: grayscale(1) sepia(.08) contrast(1.08) brightness(.72);
+  filter: grayscale(.68) sepia(.1) saturate(.68) contrast(1.08) brightness(.72);
   transform: scale(1.015);
   transition: filter 180ms ease, transform 220ms ease;
 }
@@ -270,7 +276,7 @@ button { color: inherit; }
 
 .contact-frame:hover .contact-frame__image,
 .contact-frame:focus-visible .contact-frame__image {
-  filter: grayscale(1) sepia(.1) contrast(1.13) brightness(.95);
+  filter: grayscale(.48) sepia(.1) saturate(.78) contrast(1.12) brightness(.92);
   transform: scale(1.04);
 }
 
@@ -279,7 +285,7 @@ button { color: inherit; }
 }
 
 .contact-frame.is-active .contact-frame__image {
-  filter: grayscale(1) sepia(.08) contrast(1.12) brightness(.92);
+  filter: grayscale(.55) sepia(.09) saturate(.74) contrast(1.12) brightness(.88);
 }
 
 .contact-frame.is-active .contact-frame__label {
@@ -323,7 +329,7 @@ button { color: inherit; }
 .artist-monitor__image--back {
   object-fit: cover;
   object-position: var(--hero-position, center 30%);
-  filter: grayscale(1) contrast(1.16) brightness(.32) blur(4px);
+  filter: grayscale(.72) sepia(.08) saturate(.58) contrast(1.16) brightness(.3) blur(4px);
   transform: scale(1.055);
 }
 
@@ -332,8 +338,8 @@ button { color: inherit; }
   width: 73%;
   object-fit: contain;
   object-position: var(--hero-position, center 30%);
-  filter: grayscale(1) sepia(.04) contrast(1.14) brightness(.74);
-  mix-blend-mode: screen;
+  filter: grayscale(.58) sepia(.08) saturate(.72) contrast(1.12) brightness(.7);
+  mix-blend-mode: normal;
   transform: translateX(2.3%);
 }
 
@@ -407,28 +413,32 @@ button { color: inherit; }
 .signal-meters {
   position: absolute;
   z-index: 4;
-  top: 43.4%;
-  left: 62.38%;
-  width: 31.55%;
-  height: 16.55%;
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 4.45%;
-  padding: 1.5% 2.25% 0;
+  inset: 0;
   pointer-events: none;
 }
 
 .signal-meter {
-  position: relative;
-  height: 100%;
+  position: absolute;
+  top: 44.45%;
+  width: 1.32%;
+  height: 15.55%;
+  background: rgba(2,3,2,.95);
 }
+
+.signal-meter:nth-child(1) { left: 63.64%; }
+.signal-meter:nth-child(2) { left: 68.24%; }
+.signal-meter:nth-child(3) { left: 72.79%; }
+.signal-meter:nth-child(4) { left: 77.33%; }
+.signal-meter:nth-child(5) { left: 81.94%; }
+.signal-meter:nth-child(6) { left: 86.48%; }
+.signal-meter:nth-child(7) { left: 91.03%; }
 
 .signal-meter::before {
   content: "";
   position: absolute;
-  right: 35%;
-  bottom: 11%;
-  left: 35%;
+  right: 17%;
+  bottom: 16%;
+  left: 17%;
   height: var(--meter-level, 28%);
   background: repeating-linear-gradient(to top,var(--amber) 0 3px,transparent 3px 6px);
   filter: drop-shadow(0 0 2px rgba(229,164,61,.38));
@@ -439,9 +449,9 @@ button { color: inherit; }
 .signal-meter::after {
   content: "";
   position: absolute;
-  right: 41%;
-  bottom: 2.4%;
-  left: 41%;
+  right: 29%;
+  bottom: 2.8%;
+  left: 29%;
   aspect-ratio: 1;
   border-radius: 50%;
   background: #0e2a12;
@@ -548,22 +558,56 @@ button { color: inherit; }
   cursor: pointer;
   outline: none;
   pointer-events: auto;
+  overflow: visible;
 }
 
-.transport-control::after { inset: 7%; }
-
-.transport-control:hover::after,
-.transport-control:focus-visible::after {
-  border-color: rgba(113,255,100,.4);
-  box-shadow: inset 0 0 15px rgba(88,255,81,.12), 0 0 9px rgba(88,255,81,.14);
-  opacity: 1;
+.transport-control::before,
+.transport-control__cap {
+  position: absolute;
+  inset: var(--press-top,24%) var(--press-right,16%) var(--press-bottom,17%) var(--press-left,16%);
+  border-radius: 2px;
+  pointer-events: none;
 }
 
-.transport-control:active { transform: translateY(.25%); }
-.transport-control--prev { top: 84.5%; left: 2.5%; width: 8.15%; height: 9.6%; }
-.transport-control--scan { top: 84.3%; left: 48.4%; width: 7.65%; height: 9.8%; }
-.transport-control--select { top: 84.3%; left: 73.9%; width: 10.3%; height: 9.8%; }
-.transport-control--next { top: 84.3%; right: 2.55%; width: 8.45%; height: 9.8%; }
+.transport-control::before {
+  content: "";
+  z-index: 1;
+  background: #050605;
+  box-shadow: inset 0 3px 7px rgba(0,0,0,.92),inset 0 -1px rgba(216,207,184,.035);
+}
+
+.transport-control::after { display: none; }
+
+.transport-control__cap {
+  z-index: 2;
+  display: block;
+  overflow: hidden;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  transform: scale(1);
+  transform-origin: center;
+  transition: transform 135ms cubic-bezier(.2,.72,.25,1),filter 120ms ease,box-shadow 135ms ease;
+}
+
+.transport-control:hover .transport-control__cap,
+.transport-control:focus-visible .transport-control__cap { filter: brightness(1.035); }
+
+.transport-control:active .transport-control__cap,
+.transport-control.is-pressed .transport-control__cap {
+  transform: scale(.98);
+  filter: brightness(.82) contrast(.97);
+  box-shadow: 0 0 5px rgba(0,0,0,.72);
+}
+
+.transport-control--prev { --press-top: 30.8%; --press-right: 10.3%; --press-bottom: 6.1%; --press-left: 11.2%; top: 84.5%; left: 2.5%; width: 8.15%; height: 9.6%; }
+.transport-control--prev .transport-control__cap { background-image: url('../assets/ui/control-sprites/artists-prev.png'); }
+.transport-control--scan { --press-top: 32.2%; --press-right: 14.2%; --press-bottom: 6%; --press-left: 1.4%; top: 84.3%; left: 48.4%; width: 7.65%; height: 9.8%; }
+.transport-control--scan .transport-control__cap { background-image: url('../assets/ui/control-sprites/artists-scan.png'); }
+.transport-control--select { --press-top: 32.2%; --press-right: 21.9%; --press-bottom: 4.9%; --press-left: 12.4%; top: 84.3%; left: 73.9%; width: 10.3%; height: 9.8%; }
+.transport-control--select .transport-control__cap { background-image: url('../assets/ui/control-sprites/artists-select.png'); }
+.transport-control--next { --press-top: 32.2%; --press-right: 15.8%; --press-bottom: 4.9%; --press-left: 10.6%; top: 84.3%; right: 2.55%; width: 8.45%; height: 9.8%; }
+.transport-control--next .transport-control__cap { background-image: url('../assets/ui/control-sprites/artists-next.png'); }
 
 .signal-wave {
   position: absolute;
@@ -592,10 +636,15 @@ button { color: inherit; }
 .signal-timecode {
   position: absolute;
   z-index: 5;
-  top: 86.15%;
+  top: 85.8%;
   left: 58.1%;
   width: 13.7%;
+  height: 4.2%;
+  display: grid;
+  place-items: center;
   color: #5cdb5a;
+  background: linear-gradient(180deg,rgba(3,10,4,.98),rgba(1,6,2,.98));
+  box-shadow: inset 0 0 9px rgba(0,0,0,.88);
   font-size: clamp(8px, 1.42vw, 25px);
   letter-spacing: .13em;
   line-height: 1;
