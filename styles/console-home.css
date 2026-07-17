@@ -43,3 +43,33 @@
 
 .console-home:active { transform:translateY(1px); color:#77766d; }
 .console-home:active i { transform:scale(.86); filter:brightness(.7); }
+
+@media (max-width:700px) and (orientation:portrait) {
+  .releases-page .console-home,
+  .artists-signal-page .console-home,
+  .collaboration-page .console-home,
+  .contacts-page .console-home {
+    z-index:80;
+    color:transparent;
+    font-size:0;
+  }
+
+  .releases-page .console-home { top:3.55%; left:8.85%; width:14.5%; height:4.1%; }
+  .artists-signal-page .console-home { top:2.45%; left:12.55%; width:36.3%; height:4.25%; }
+  .collaboration-page .console-home { top:3.1%; left:13.05%; width:36.7%; height:4.25%; }
+  .contacts-page .console-home { top:4.25%; left:17.65%; width:31.75%; height:3.85%; }
+
+  .releases-page .console-home i,
+  .artists-signal-page .console-home i,
+  .collaboration-page .console-home i,
+  .contacts-page .console-home i { opacity:0; }
+
+  .releases-page .console-home:hover i,
+  .releases-page .console-home:focus-visible i,
+  .artists-signal-page .console-home:hover i,
+  .artists-signal-page .console-home:focus-visible i,
+  .collaboration-page .console-home:hover i,
+  .collaboration-page .console-home:focus-visible i,
+  .contacts-page .console-home:hover i,
+  .contacts-page .console-home:focus-visible i { opacity:1; }
+}

@@ -160,6 +160,7 @@
     frame.className = 'yandex-music-widget';
     frame.title = `${selectedArtistName} releases on Yandex Music`;
     frame.allow = 'autoplay';
+    frame.scrolling = 'yes';
     frame.src = `https://music.yandex.ru/iframe/#artist/${artist.musicId}/tracks?visual-style=headerCompact`;
     frame.addEventListener('load', () => {
       widgetReady = true;

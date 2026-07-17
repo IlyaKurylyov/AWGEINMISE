@@ -65,6 +65,8 @@
   let activeIndex = -1;
   let switchTimer = 0;
   let timecodeStart = performance.now();
+  let stripDrag = null;
+  let suppressStripClick = false;
 
   function normalizeName(value) {
     return String(value || '')
@@ -246,11 +248,19 @@
     els.channel.textContent = `CHANNEL ${String(normalizedIndex + 1).padStart(2, '0')}`;
     els.description.textContent = artist.description || artist.matrix_text || 'INMISE ARTIST CHANNEL';
     els.readout.value = String(normalizedIndex + 1).padStart(2, '0');
-    els.readout.textContent = String(normalizedIndex + 1).padStart(2, '0');
+    els.readout.textContent = `CHANNEL ${String(normalizedIndex + 1).padStart(2, '0')}`;
     updateSocialLink('.artist-social--vk', artist.vk_url);
     updateSocialLink('.artist-social--tg', artist.tg_url);
     updateSocialLink('.artist-social--inst', artist.inst_url);
     updateActiveState(normalizedIndex);
+
+    if (window.matchMedia('(max-width: 700px) and (orientation: portrait)').matches && options.reveal !== false) {
+      els.strip.querySelector(`[data-index="${normalizedIndex}"]`)?.scrollIntoView({
+        behavior: options.immediate ? 'auto' : 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }
 
     switchTimer = window.setTimeout(() => els.monitor.classList.remove('is-switching'), 260);
     els.monitor.classList.add('is-ready');
@@ -296,6 +306,55 @@
       if (event.key === 'ArrowLeft') selectArtist(activeIndex - 1, { focus: true });
       if (event.key === 'ArrowRight') selectArtist(activeIndex + 1, { focus: true });
     });
+
+    els.strip.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) return;
+      if (event.pointerType === 'touch') return;
+      stripDrag = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startScrollLeft: els.strip.scrollLeft,
+        moved: false
+      };
+      els.strip.setPointerCapture(event.pointerId);
+      els.strip.classList.add('is-dragging');
+      event.preventDefault();
+    });
+
+    els.strip.addEventListener('pointermove', (event) => {
+      if (!stripDrag || stripDrag.pointerId !== event.pointerId) return;
+      const distance = event.clientX - stripDrag.startX;
+      if (Math.abs(distance) > 4) stripDrag.moved = true;
+      if (!stripDrag.moved) return;
+      suppressStripClick = true;
+      els.strip.scrollLeft = stripDrag.startScrollLeft - distance;
+      event.preventDefault();
+    });
+
+    const finishStripDrag = (event) => {
+      if (!stripDrag || stripDrag.pointerId !== event.pointerId) return;
+      if (els.strip.hasPointerCapture(event.pointerId)) els.strip.releasePointerCapture(event.pointerId);
+      suppressStripClick = stripDrag.moved;
+      stripDrag = null;
+      els.strip.classList.remove('is-dragging');
+      window.setTimeout(() => { suppressStripClick = false; }, 140);
+    };
+
+    els.strip.addEventListener('pointerup', finishStripDrag);
+    els.strip.addEventListener('pointercancel', finishStripDrag);
+    els.strip.addEventListener('click', (event) => {
+      if (!suppressStripClick) return;
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
+
+    els.strip.addEventListener('wheel', (event) => {
+      if (!window.matchMedia('(max-width: 700px) and (orientation: portrait)').matches) return;
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (!delta) return;
+      els.strip.scrollLeft += delta;
+      event.preventDefault();
+    }, { passive: false });
   }
 
   async function fetchArtists() {
@@ -339,7 +398,7 @@
     roster = shuffle(artists.map(mergeArtist));
     renderStrip();
     renderMeters();
-    selectArtist(randomIndex());
+    selectArtist(randomIndex(), { immediate: true });
     els.status.textContent = 'SIGNAL ONLINE';
     window.setTimeout(() => els.status.classList.add('is-hidden'), 900);
     window.requestAnimationFrame(updateTimecode);

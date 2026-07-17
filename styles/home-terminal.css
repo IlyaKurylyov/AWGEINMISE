@@ -1094,7 +1094,11 @@ body { margin: 0; min-width: 320px; background: #040504; color: #d2d0c8; font-fa
   }
 
   .boot-copy { left: 46.5%; top: 53%; width: 72%; }
-  .boot-copy h1 { margin-top: 12px; font-size: clamp(46px,16.5vw,68px); }
+  .boot-copy h1 {
+    margin-top: 12px;
+    font-size: clamp(44px,14.4vw,60px);
+    white-space: nowrap;
+  }
   .boot-code { font-size: clamp(6px,1.9vw,8px); letter-spacing: .13em; white-space: nowrap; }
 
   .archive-port {

@@ -48,6 +48,8 @@ button, select { font: inherit; }
   user-select: none;
 }
 
+.approved-console-art--mobile { display: none; }
+
 /* The approved mockup supplies the pixels. These are only interactive hit areas. */
 .console-header {
   position: absolute;
@@ -755,6 +757,203 @@ button, select { font: inherit; }
 
 @media (max-aspect-ratio: 4 / 3) {
   .vhs-console { width: 100vw; height: calc(100vw / 1.7768); }
+}
+
+@media (max-width: 700px) and (orientation: portrait) {
+  html,
+  body {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .releases-page { height: 100svh; }
+
+  .vhs-console {
+    width: 100vw;
+    height: 100svh;
+    aspect-ratio: auto;
+  }
+
+  .approved-console-art--desktop { display: none; }
+  .approved-console-art--mobile { display: block; }
+
+  .console-home {
+    top: 3.55%;
+    left: 8.85%;
+    width: 14.5%;
+    height: 4.1%;
+    color: transparent;
+  }
+
+  .console-home i {
+    position: absolute;
+    left: 12%;
+    width: 7%;
+    min-width: 0;
+    opacity: .05;
+  }
+
+  .console-home:hover i,
+  .console-home:focus-visible i { opacity: 1; }
+
+  .console-header {
+    left: 23.75%;
+    top: 3.55%;
+    width: 67.65%;
+    height: 4.1%;
+  }
+
+  .console-brand { display: none; }
+
+  .console-nav { gap: .45%; }
+
+  .console-nav__item {
+    overflow: visible;
+    background: transparent;
+    filter: none;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .console-nav__item::after { content: none; }
+  .console-nav__item::before {
+    left: 11%;
+    width: 6.5%;
+    opacity: 0;
+  }
+
+  .console-nav__item:hover::before,
+  .console-nav__item:focus-visible::before,
+  .console-nav__item.is-active::before { opacity: .95; }
+
+  .console-nav__item:active {
+    transform: scale(.985);
+    background: rgba(0,0,0,.18);
+    filter: brightness(.78);
+  }
+
+  .signal-stage {
+    left: 10.05%;
+    top: 9.75%;
+    width: 79.85%;
+    height: 30.05%;
+    border-radius: 8% / 7%;
+  }
+
+  .artist-visual { object-position: center 28%; }
+
+  .artist-picker {
+    left: 7.35%;
+    top: 42.55%;
+    width: 85.35%;
+    height: 14.1%;
+  }
+
+  .cassette-mouth {
+    left: 6%;
+    right: 6%;
+    top: 11%;
+    bottom: 4%;
+  }
+
+  .artist-cassette strong {
+    top: 3%;
+    height: 16%;
+    font-size: clamp(8px,2.7vw,14px);
+  }
+
+  .track-archive {
+    left: 7.25%;
+    top: 58.15%;
+    width: 85.65%;
+    height: 29.35%;
+    padding: 6.4% 3.7% 3.1%;
+    border: 0;
+    background: rgba(2,7,3,.92);
+    box-shadow: inset 0 0 22px #000;
+  }
+
+  .track-archive__legend { display: none; }
+
+  .track-console__empty,
+  .widget-loader,
+  .widget-stage {
+    left: 3.7%;
+    right: 3.7%;
+    top: 7%;
+    bottom: 3%;
+  }
+
+  .track-console__empty {
+    gap: 7px;
+    font-size: clamp(7px,2.1vw,11px);
+  }
+
+  .track-console__empty strong { font-size: clamp(17px,5vw,27px); }
+
+  .widget-stage {
+    overflow: hidden;
+    background: #060706;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+  }
+
+  .yandex-music-widget {
+    position: absolute;
+    left: 0;
+    top: -43%;
+    width: 100%;
+    height: 149%;
+    touch-action: pan-y;
+  }
+
+  .control-deck {
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .volume-knob,
+  .tape-readout { display: none; }
+
+  .deck-transport {
+    left: 11.85%;
+    top: 91.25%;
+    width: 56.95%;
+    height: 4.25%;
+    gap: 4.2%;
+  }
+
+  .transport-btn,
+  .transport-btn:nth-child(n) {
+    --press-left: 0;
+    --press-right: 0;
+  }
+
+  .transport-btn::before,
+  .transport-btn__cap {
+    top: 0;
+    bottom: 0;
+  }
+
+  .clip-button {
+    left: 71.9%;
+    top: 91.05%;
+    width: 15.6%;
+    height: 4.55%;
+  }
+
+  .clip-button::before,
+  .clip-button__cap { inset: 0; }
+
+  .clip-stage__return {
+    top: 4%;
+    right: 4%;
+    padding: 7px 9px;
+    font-size: 9px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

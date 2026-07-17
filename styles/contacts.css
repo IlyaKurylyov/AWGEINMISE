@@ -56,6 +56,9 @@ button { color: inherit; }
   pointer-events: none;
 }
 
+.contacts-console__art--mobile,
+.dial-source--mobile { display: none; }
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -531,6 +534,176 @@ button { color: inherit; }
 @keyframes crt-roll { from { transform:translateY(-80%); } to { transform:translateY(80%); } }
 @keyframes wave-pulse { from { transform:scaleY(.18); } to { transform:scaleY(var(--wave-scale,1)); } }
 @keyframes hold-blink { 50% { opacity:.32; } }
+
+@media (max-width: 700px) and (orientation: portrait) {
+  html,
+  body {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .contacts-page { min-height: 100svh; }
+
+  .contacts-console {
+    width: 100vw;
+    height: 100svh;
+    aspect-ratio: auto;
+    box-shadow: none;
+  }
+
+  .contacts-console__art--desktop,
+  .dial-source--desktop { display: none; }
+
+  .contacts-console__art--mobile,
+  .dial-source--mobile { display: block; }
+
+  .console-home {
+    top: 4.25%;
+    left: 17.65%;
+    width: 31.75%;
+    height: 3.85%;
+    color: transparent;
+  }
+
+  .console-home i { opacity: 0; }
+
+  .console-nav {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+  }
+
+  .console-nav__item {
+    position: absolute;
+    width: 31.75%;
+    height: 3.85%;
+    overflow: visible;
+    background: transparent;
+    filter: none;
+    transform: none;
+    box-shadow: none;
+    pointer-events: auto;
+  }
+
+  .console-nav__item:nth-child(1) { top: 4.25%; left: 50.7%; }
+  .console-nav__item:nth-child(2) { top: 8.55%; left: 17.65%; }
+  .console-nav__item:nth-child(3) { top: 8.55%; left: 50.7%; }
+  .console-nav__item:nth-child(4) { top: 12.75%; left: 17.65%; width: 64.8%; }
+
+  .console-nav__item::after { content: none; }
+  .console-nav__item::before {
+    left: 8.5%;
+    width: 4.3%;
+    opacity: 0;
+  }
+
+  .console-nav__item:hover::before,
+  .console-nav__item:focus-visible::before,
+  .console-nav__item.is-active::before { opacity: .95; }
+
+  .console-nav__item:active {
+    transform: scale(.988);
+    background: rgba(0,0,0,.2);
+    filter: brightness(.8);
+  }
+
+  .contact-crt {
+    top: 16.45%;
+    left: 11.55%;
+    width: 76.95%;
+    height: 27.95%;
+    border-radius: 10% / 12%;
+  }
+
+  .contact-crt__content { inset: 8% 7% 5%; }
+  .contact-crt__eyebrow { font-size: clamp(7px,2.45vw,13px); }
+  .contact-crt__status {
+    margin: 7% 0 1.5%;
+    font-size: clamp(24px,7.3vw,40px);
+    letter-spacing: .08em;
+  }
+  .contact-crt__rule { width: 68%; }
+  .contact-crt__stages {
+    gap: .26em;
+    margin-top: 4%;
+    font-size: clamp(7px,2.15vw,11px);
+  }
+  .contact-crt__channel {
+    width: 54%;
+    min-height: 8%;
+    margin-top: 2.4%;
+    font-size: clamp(8px,2.6vw,14px);
+  }
+  .contact-crt__result {
+    top: 43%;
+    width: 84%;
+    min-height: 34%;
+  }
+  .contact-crt__result small { font-size: clamp(6px,1.85vw,10px); }
+  .contact-crt__result strong { font-size: clamp(13px,4.3vw,23px); }
+  .contact-crt__result p { font-size: clamp(6px,1.9vw,10px); }
+  .contact-crt__result span { font-size: clamp(6px,1.6vw,9px); }
+  .contact-crt__hint { bottom: 0; font-size: clamp(5px,1.55vw,8px); }
+  .contact-wave { bottom: 4%; height: 10%; }
+
+  .dial-deck,
+  .dial-rotor {
+    top: 45.7%;
+    left: 15.15%;
+    width: 69.7%;
+    height: 39.25%;
+    aspect-ratio: auto;
+  }
+
+  .rotary-dial {
+    height: 100%;
+    aspect-ratio: auto;
+  }
+
+  .dial-channels { inset: 26%; }
+  .rotary-dial:focus-visible { box-shadow: none; }
+
+  .pulse-counter,
+  .call-lamps { display: none; }
+
+  .signal-meter {
+    left: 66.2%;
+    top: 88.5%;
+    width: 21.1%;
+    height: 7.25%;
+  }
+
+  .signal-meter i {
+    left: 51%;
+    bottom: -42%;
+    height: 136%;
+  }
+
+  .console-button::before {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .console-button__cap {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .console-button:active .console-button__cap,
+  .console-button.is-pressed .console-button__cap {
+    background: rgba(0,0,0,.2);
+    box-shadow: inset 0 5px 9px rgba(0,0,0,.76);
+    filter: brightness(.72);
+  }
+
+  .console-button--reset { left: 12.3%; top: 88.65%; width: 8.9%; height: 7.35%; }
+  .console-button--hold { left: 22.1%; top: 88.65%; width: 8.9%; height: 7.35%; }
+  .console-button--redial { left: 31.9%; top: 88.65%; width: 8.9%; height: 7.35%; }
+  .console-button--connect { left: 42.5%; top: 88.35%; width: 22.6%; height: 8%; }
+}
 
 @media (prefers-reduced-motion:reduce) {
   *,*::before,*::after {

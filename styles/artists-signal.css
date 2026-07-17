@@ -53,6 +53,8 @@ button { color: inherit; }
   pointer-events: none;
 }
 
+.artists-console__art--mobile { display: none; }
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -691,6 +693,228 @@ button { color: inherit; }
 
 @keyframes waveform-run {
   to { transform: translateX(20%); }
+}
+
+@media (max-width: 700px) and (orientation: portrait) {
+  html,
+  body {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .artists-signal-page { min-height: 100svh; }
+
+  .artists-console {
+    width: 100vw;
+    height: 100svh;
+    aspect-ratio: auto;
+    box-shadow: none;
+  }
+
+  .artists-console__art--desktop { display: none; }
+  .artists-console__art--mobile { display: block; }
+
+  .console-home {
+    top: 2.45%;
+    left: 12.55%;
+    width: 36.3%;
+    height: 4.25%;
+    color: transparent;
+  }
+
+  .console-home i { opacity: 0; }
+
+  .console-nav {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+  }
+
+  .console-nav__hotspot {
+    position: absolute;
+    width: 36.35%;
+    height: 4.25%;
+    overflow: visible;
+    color: transparent;
+    background: transparent;
+    filter: none;
+    transform: none;
+    box-shadow: none;
+    pointer-events: auto;
+  }
+
+  .console-nav__hotspot--releases { top: 2.45%; left: 50.65%; }
+  .console-nav__hotspot--artists { top: 7.25%; left: 12.55%; }
+  .console-nav__hotspot--work { top: 7.25%; left: 50.65%; }
+  .console-nav__hotspot--contacts { top: 12.05%; left: 12.55%; }
+
+  .console-nav__label,
+  .console-nav__hotspot::after { display: none; }
+
+  .console-nav__hotspot::before {
+    left: 7.5%;
+    width: 3.8%;
+    opacity: 0;
+  }
+
+  .console-nav__hotspot:hover::before,
+  .console-nav__hotspot:focus-visible::before,
+  .console-nav__hotspot[aria-current="page"]::before { opacity: .95; }
+
+  .console-nav__hotspot:active {
+    transform: scale(.988);
+    background: rgba(0,0,0,.2);
+    filter: brightness(.8);
+  }
+
+  .contact-strip {
+    top: 17.05%;
+    right: 12.3%;
+    left: 12.3%;
+    height: 13.65%;
+    display: flex;
+    gap: 1.05%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: none;
+    scrollbar-width: none;
+    background: #030403;
+    touch-action: pan-x pinch-zoom;
+    cursor: grab;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .contact-strip::-webkit-scrollbar { display: none; }
+  .contact-strip.is-dragging {
+    cursor: grabbing;
+    scroll-behavior: auto;
+    scroll-snap-type: none;
+  }
+
+  .contact-frame {
+    flex: 0 0 32.6%;
+    scroll-snap-align: center;
+  }
+
+  .contact-frame__label { font-size: clamp(7px,2.25vw,12px); }
+
+  .artist-monitor {
+    top: 32.55%;
+    left: 13.05%;
+    width: 73.95%;
+    height: 28.4%;
+    border-radius: 7% / 6%;
+  }
+
+  .artist-monitor__image--front {
+    left: 0;
+    width: 100%;
+    object-fit: cover;
+    transform: none;
+  }
+
+  .artist-monitor__image--back { opacity: .28; }
+
+  .artist-monitor__identity {
+    top: 66%;
+    left: 8%;
+    width: 48%;
+  }
+
+  .artist-monitor__identity h1 { font-size: clamp(27px,9vw,48px); }
+  .artist-monitor__identity p { font-size: clamp(8px,2.5vw,13px); }
+
+  .signal-meter {
+    top: 64.25%;
+    width: 3.25%;
+    height: 10.9%;
+  }
+
+  .signal-meter:nth-child(1) { left: 18.6%; }
+  .signal-meter:nth-child(2) { left: 28.4%; }
+  .signal-meter:nth-child(3) { left: 38.2%; }
+  .signal-meter:nth-child(4) { left: 48%; }
+  .signal-meter:nth-child(5) { left: 57.8%; }
+  .signal-meter:nth-child(6) { left: 67.6%; }
+  .signal-meter:nth-child(7) { left: 77.4%; }
+
+  .artist-description-panel {
+    top: 78.35%;
+    left: 14.65%;
+    width: 32.2%;
+    height: 6.25%;
+    padding: 1.6% 2%;
+  }
+
+  .artist-description-panel p {
+    font-size: clamp(7px,2vw,10px);
+    line-height: 1.42;
+    -webkit-line-clamp: 4;
+  }
+
+  .artist-socials {
+    top: 78.1%;
+    left: 50.4%;
+    width: 34.15%;
+    height: 6.7%;
+  }
+
+  .channel-readout {
+    top: 93.55%;
+    right: auto;
+    left: 38.5%;
+    width: 23%;
+    height: 2.65%;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    color: #5c9d57;
+    background: #020703;
+    font-size: clamp(6px,1.7vw,9px);
+    letter-spacing: .11em;
+  }
+
+  .transport-control--prev {
+    --press-top: 23%; --press-right: 12%; --press-bottom: 10%; --press-left: 12%;
+    top: 88.15%; left: 12.65%; width: 11.45%; height: 7.25%;
+  }
+
+  .transport-control--scan {
+    --press-top: 23%; --press-right: 12%; --press-bottom: 10%; --press-left: 12%;
+    top: 88.15%; left: 25.25%; width: 11.45%; height: 7.25%;
+  }
+
+  .transport-control--select {
+    --press-top: 23%; --press-right: 12%; --press-bottom: 10%; --press-left: 12%;
+    top: 88.15%; left: 62.25%; width: 11.45%; height: 7.25%;
+  }
+
+  .transport-control--next {
+    --press-top: 23%; --press-right: 12%; --press-bottom: 10%; --press-left: 12%;
+    top: 88.15%; right: 12.6%; width: 11.45%; height: 7.25%;
+  }
+
+  .signal-wave { display: none; }
+
+  .signal-timecode {
+    top: 88.7%;
+    left: 38.5%;
+    width: 23%;
+    height: 5.05%;
+    background: linear-gradient(180deg,#030a04,#010602);
+    box-shadow: inset 0 0 8px #000;
+    font-size: clamp(10px,3.25vw,18px);
+    letter-spacing: .08em;
+  }
+
+  .load-status {
+    top: 31.2%;
+    left: 14%;
+    font-size: clamp(6px,1.7vw,9px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

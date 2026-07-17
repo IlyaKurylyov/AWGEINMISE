@@ -12,8 +12,14 @@
 <body class="contacts-page">
   <main class="contacts-console" aria-label="INMISE contact link console">
     <img
-      class="contacts-console__art"
+      class="contacts-console__art contacts-console__art--desktop"
       src="assets/ui/contacts-rotary-approved.png"
+      alt=""
+      aria-hidden="true"
+    >
+    <img
+      class="contacts-console__art contacts-console__art--mobile"
+      src="assets/ui/contacts-rotary-mobile-approved.png"
       alt=""
       aria-hidden="true"
     >
@@ -77,7 +83,7 @@
       </div>
     </section>
 
-    <svg class="dial-rotor" viewBox="0 0 430 430" aria-hidden="true" focusable="false">
+    <svg class="dial-rotor" viewBox="0 0 430 430" preserveAspectRatio="none" aria-hidden="true" focusable="false">
       <defs>
         <mask id="dial-ring-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="430" height="430">
           <rect x="0" y="0" width="430" height="430" fill="#000"></rect>
@@ -99,16 +105,19 @@
       </defs>
       <g class="dial-rotor__image" id="dial-rotor">
         <g mask="url(#dial-ring-mask)">
-          <image href="assets/ui/contacts-rotary-approved.png" x="-1126" y="-140" width="1671" height="941"></image>
+          <image class="dial-source dial-source--desktop" href="assets/ui/contacts-rotary-approved.png" x="-1126" y="-140" width="1671" height="941"></image>
+          <image class="dial-source dial-source--mobile" href="assets/ui/contacts-rotary-mobile-approved.png" x="-111" y="-532" width="648" height="1152"></image>
         </g>
         <g mask="url(#dial-annulus-mask)" clip-path="url(#dial-stop-fill-clip)">
           <g transform="rotate(-36 215 215)">
-            <image href="assets/ui/contacts-rotary-approved.png" x="-1126" y="-140" width="1671" height="941"></image>
+            <image class="dial-source dial-source--desktop" href="assets/ui/contacts-rotary-approved.png" x="-1126" y="-140" width="1671" height="941"></image>
+            <image class="dial-source dial-source--mobile" href="assets/ui/contacts-rotary-mobile-approved.png" x="-111" y="-532" width="648" height="1152"></image>
           </g>
         </g>
       </g>
       <g mask="url(#dial-stop-mask)">
-        <image href="assets/ui/contacts-rotary-approved.png" x="-1126" y="-140" width="1671" height="941"></image>
+        <image class="dial-source dial-source--desktop" href="assets/ui/contacts-rotary-approved.png" x="-1126" y="-140" width="1671" height="941"></image>
+        <image class="dial-source dial-source--mobile" href="assets/ui/contacts-rotary-mobile-approved.png" x="-111" y="-532" width="648" height="1152"></image>
       </g>
     </svg>
 

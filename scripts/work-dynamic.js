@@ -135,7 +135,10 @@
     const meta = document.createElement('small');
     meta.className = 'tape-row__meta';
     meta.textContent = parsed.meta;
-    identity.append(title,meta);
+    const seller = document.createElement('small');
+    seller.className = 'tape-row__seller';
+    seller.textContent = SELLER_LABELS[beat.seller] || String(beat.seller || '').toUpperCase();
+    identity.append(title,meta,seller);
 
     const wave = document.createElement('span');
     wave.className = 'tape-row__wave';
@@ -145,8 +148,15 @@
     time.className = 'tape-row__time';
     time.textContent = displayDuration(beat);
 
-    row.append(channel,identity,wave,time);
-    row.addEventListener('click',() => selectBeat(index));
+    const price = document.createElement('span');
+    price.className = 'tape-row__price';
+    price.textContent = displayPrice(beat.price);
+
+    row.append(channel,identity,wave,price,time);
+    row.addEventListener('click',() => {
+      selectBeat(index);
+      if (window.matchMedia('(max-width: 700px) and (orientation: portrait)').matches) playSelected();
+    });
     row.addEventListener('dblclick',() => playSelected());
     return row;
   }

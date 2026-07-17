@@ -122,8 +122,8 @@
 
   function pointerAngle(event) {
     const rect = dial.getBoundingClientRect();
-    const x = event.clientX - rect.left - rect.width / 2;
-    const y = event.clientY - rect.top - rect.height / 2;
+    const x = (event.clientX - rect.left - rect.width / 2) / (rect.width / 2);
+    const y = (event.clientY - rect.top - rect.height / 2) / (rect.height / 2);
     return Math.atan2(y,x) * 180 / Math.PI;
   }
 

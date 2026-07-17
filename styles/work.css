@@ -58,6 +58,8 @@ a { -webkit-tap-highlight-color: transparent; }
   pointer-events: none;
 }
 
+.collaboration-console__art--mobile { display: none; }
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -381,6 +383,9 @@ a { -webkit-tap-highlight-color: transparent; }
   text-transform: uppercase;
 }
 
+.tape-row__seller,
+.tape-row__price { display: none; }
+
 .tape-row__wave {
   position: relative;
   height: 45%;
@@ -673,6 +678,259 @@ a { -webkit-tap-highlight-color: transparent; }
 
 @keyframes waveform-run { to { transform: translateX(20%); } }
 @keyframes signal-pulse { 50% { filter: brightness(1.35) drop-shadow(0 0 3px rgba(89,241,80,.72)); } }
+
+@media (max-width: 700px) and (orientation: portrait) {
+  html,
+  body {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .collaboration-page { min-height: 100svh; }
+
+  .collaboration-console {
+    width: 100vw;
+    height: 100svh;
+    aspect-ratio: auto;
+    box-shadow: none;
+  }
+
+  .collaboration-console__art--desktop { display: none; }
+  .collaboration-console__art--mobile { display: block; }
+
+  .console-home {
+    top: 3.1%;
+    left: 13.05%;
+    width: 36.7%;
+    height: 4.25%;
+    color: transparent;
+  }
+
+  .console-home i { opacity: 0; }
+
+  .console-nav {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+  }
+
+  .console-nav__item {
+    position: absolute;
+    width: 36.7%;
+    height: 4.25%;
+    overflow: visible;
+    background: transparent;
+    filter: none;
+    transform: none;
+    box-shadow: none;
+    pointer-events: auto;
+  }
+
+  .console-nav__item:nth-child(1) { top: 3.1%; left: 50.25%; }
+  .console-nav__item:nth-child(2) { top: 7.95%; left: 13.05%; }
+  .console-nav__item:nth-child(3) { top: 7.95%; left: 50.25%; }
+  .console-nav__item:nth-child(4) { top: 12.75%; left: 50.25%; }
+
+  .console-nav__item::after { content: none; }
+  .console-nav__item::before {
+    left: 8.2%;
+    width: 4.1%;
+    opacity: 0;
+  }
+
+  .console-nav__item:hover::before,
+  .console-nav__item:focus-visible::before,
+  .console-nav__item.is-active::before { opacity: .95; }
+
+  .console-nav__item:active {
+    transform: scale(.988);
+    background: rgba(0,0,0,.2);
+    filter: brightness(.8);
+  }
+
+  .producer-bank {
+    top: 17.95%;
+    left: 13.35%;
+    width: 73.3%;
+    height: 4.55%;
+    gap: 2.2%;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .producer-toggle {
+    display: block;
+    padding: 0;
+  }
+
+  .producer-toggle input { z-index: 8; }
+
+  .producer-toggle__name {
+    position: absolute;
+    left: 34%;
+    right: 0;
+    top: 50%;
+    z-index: 4;
+    overflow: visible;
+    font-size: clamp(7px,2.15vw,12px);
+    letter-spacing: .08em;
+    line-height: 1;
+    text-align: left;
+    transform: translateY(-50%);
+  }
+
+  .producer-toggle__lamp {
+    position: absolute;
+    left: 26%;
+    top: 50%;
+    z-index: 5;
+    width: 7%;
+    max-width: none;
+    transform: translateY(-50%);
+  }
+
+  .producer-toggle__lever {
+    position: absolute;
+    left: -1%;
+    top: 50%;
+    z-index: 4;
+    width: 28%;
+    height: 92%;
+    max-width: none;
+    aspect-ratio: auto;
+    border: 0;
+    border-radius: 0;
+    background-color: #171713;
+    background-image: url('../assets/ui/collaboration-console-mobile-approved.png');
+    background-repeat: no-repeat;
+    background-position: -13.75vw -18.05svh;
+    background-size: 100vw 100svh;
+    box-shadow: none;
+    clip-path: ellipse(48% 49% at 50% 50%);
+    transform: translateY(-50%) rotate(0deg);
+    transform-origin: 50% 50%;
+    transition: transform 160ms cubic-bezier(.2,.8,.25,1),filter 100ms linear;
+  }
+
+  .producer-toggle__lever::before { content: none; }
+
+  .producer-toggle input:checked ~ .producer-toggle__lever {
+    transform: translateY(-50%) rotate(58deg);
+  }
+
+  .tape-library {
+    top: 24.15%;
+    left: 15.25%;
+    width: 69.55%;
+    height: 58.15%;
+    border-radius: 4% / 2%;
+    background:
+      repeating-linear-gradient(0deg,rgba(151,194,150,.025) 0 1px,transparent 1px 3px),
+      rgba(1,7,3,.965);
+  }
+
+  .tape-library__rows {
+    inset: 5.4% 4.1% 3.6%;
+    grid-auto-rows: 10.35%;
+    gap: .78%;
+    overscroll-behavior: contain;
+  }
+
+  .tape-row {
+    grid-template-columns: 10.5% 31% 1fr 14.5%;
+    grid-template-rows: 56% 44%;
+    padding: 0 2% 0 1.2%;
+    border-color: rgba(77,103,72,.34);
+    background: rgba(2,9,4,.72);
+  }
+
+  .tape-row__channel {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    width: 76%;
+    height: 72%;
+    font-size: clamp(8px,3vw,16px);
+  }
+
+  .tape-row__identity {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    align-self: center;
+  }
+
+  .tape-row__title {
+    font-size: clamp(8px,2.75vw,15px);
+    letter-spacing: .1em;
+  }
+
+  .tape-row__meta { display: none; }
+
+  .tape-row__seller {
+    display: block;
+    margin-top: 5%;
+    overflow: hidden;
+    color: #648a62;
+    font-size: clamp(5px,1.65vw,9px);
+    letter-spacing: .09em;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .tape-row__wave {
+    grid-column: 3;
+    grid-row: 1 / 3;
+    height: 42%;
+    margin: 0 7%;
+  }
+
+  .tape-row__price {
+    grid-column: 4;
+    grid-row: 1;
+    display: grid;
+    place-items: end;
+    align-self: end;
+    color: #88b17f;
+    font-size: clamp(6px,2vw,11px);
+    letter-spacing: .07em;
+    white-space: nowrap;
+  }
+
+  .tape-row__time {
+    grid-column: 4;
+    grid-row: 2;
+    align-self: start;
+    font-size: clamp(6px,2vw,11px);
+  }
+
+  .tape-library__status { font-size: clamp(7px,2.2vw,12px); }
+
+  .routing-overlay,
+  .producer-readout,
+  .price-readout,
+  .transport-bank,
+  .waveform-monitor,
+  .tape-counter { display: none; }
+
+  .buy-tape {
+    top: 86.7%;
+    left: 28.5%;
+    width: 43%;
+    height: 6.15%;
+  }
+
+  .buy-tape__cap {
+    color: transparent;
+    background-image: url('../assets/ui/collaboration-console-mobile-approved.png');
+    background-size: 232.8% 1626%;
+    background-position: 49.8% 92.4%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,*::before,*::after {
     animation-duration: .01ms !important;
