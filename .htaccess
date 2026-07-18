@@ -41,19 +41,21 @@
 # ETag для проверки обновлений
 FileETag MTime Size
 
-# URL Rewriting - открываем страницы без .html
+# Канонические адреса разделов без .html
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
-    
-    # Если запрашивается директория или файл - пропускаем
-    RewriteCond %{REQUEST_FILENAME} -f [OR]
-    RewriteCond %{REQUEST_FILENAME} -d
-    RewriteRule ^ - [L]
-    
-    # Если есть .html файл - отдаём его
-    RewriteCond %{REQUEST_FILENAME}.html -f
-    RewriteRule ^(.*)$ $1.html [L]
+
+    # Главная страница.
+    RewriteRule ^index\.html$ / [R=301,L,NE]
+
+    # Старые публичные адреса остаются рабочими, но ведут на новые разделы.
+    RewriteRule ^music(?:\.html)?/?$ /releases/ [R=301,L,NE]
+    RewriteRule ^artists\.html$ /artists/ [R=301,L,NE]
+    RewriteRule ^work(?:\.html)?/?$ /collaboration/ [R=301,L,NE]
+    RewriteRule ^contacts\.html$ /contacts/ [R=301,L,NE]
+    RewriteRule ^admin\.html$ /admin/ [R=301,L,NE]
+    RewriteRule ^invite\.html$ /invite/ [R=301,L,NE]
 </IfModule>
 
 # Разрешаем доступ к файлам

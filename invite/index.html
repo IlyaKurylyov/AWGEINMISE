@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <base href="/">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>INMISE — Активация кабинета</title>
+  <link rel="stylesheet" href="/styles/invite.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/scripts/config.local.js"></script>
+  <script src="/scripts/config.js"></script>
+</head>
+<body class="invite-page">
+  <main class="invite-terminal">
+    <header class="invite-terminal__header">
+      <span class="invite-lamp" aria-hidden="true"></span>
+      <div>
+        <p>INMISE / ARTIST TERMINAL</p>
+        <h1>Активация кабинета</h1>
+      </div>
+      <span class="invite-terminal__code">CH. INV-01</span>
+    </header>
+
+    <section class="invite-screen" aria-live="polite">
+      <div id="invite-loading" class="invite-state">
+        <p class="invite-kicker">ПРОВЕРКА СИГНАЛА</p>
+        <h2>Читаем инвайт…</h2>
+        <div class="invite-progress"><span></span></div>
+      </div>
+
+      <div id="invite-invalid" class="invite-state" hidden>
+        <p class="invite-kicker invite-kicker--error">СИГНАЛ ПОТЕРЯН</p>
+        <h2>Инвайт недействителен</h2>
+        <p>Ссылка уже использована, отозвана или её срок действия закончился.</p>
+      </div>
+
+      <div id="invite-form-state" class="invite-state" hidden>
+        <p class="invite-kicker">КАНАЛ НАЙДЕН</p>
+        <h2 id="invite-artist-name">Артист</h2>
+        <p class="invite-description">Создай новый вход. Карточка артиста, опубликованные биты и история кабинета сохранятся.</p>
+
+        <form id="invite-form" novalidate>
+          <label for="invite-email">Настоящий email</label>
+          <input id="invite-email" type="email" autocomplete="email" readonly>
+
+          <label for="invite-password">Пароль</label>
+          <input id="invite-password" type="password" autocomplete="new-password" minlength="8" required>
+
+          <div id="invite-confirm-row">
+            <label for="invite-password-confirm">Повтори пароль</label>
+            <input id="invite-password-confirm" type="password" autocomplete="new-password" minlength="8" required>
+          </div>
+
+          <p id="invite-message" class="invite-message"></p>
+          <button id="invite-submit" class="invite-primary" type="submit">Создать новый вход</button>
+          <button id="invite-mode" class="invite-secondary" type="button">У меня уже есть аккаунт</button>
+          <button id="invite-current-session" class="invite-secondary" type="button" hidden>Привязать текущий аккаунт</button>
+        </form>
+      </div>
+
+      <div id="invite-confirm-state" class="invite-state" hidden>
+        <p class="invite-kicker">EMAIL ОТПРАВЛЕН</p>
+        <h2>Подтверди адрес</h2>
+        <p>Открой письмо от Supabase и вернись по ссылке. После подтверждения кабинет привяжется автоматически.</p>
+      </div>
+
+      <div id="invite-success" class="invite-state" hidden>
+        <p class="invite-kicker">КАНАЛ ПОДКЛЮЧЁН</p>
+        <h2>Кабинет перенесён</h2>
+        <p>Карточка и биты уже принадлежат новому аккаунту. Перенаправляем в Artist Terminal…</p>
+      </div>
+    </section>
+
+    <footer class="invite-terminal__footer">
+      <span>ONE-TIME ACCESS LINK</span>
+      <span>NO SIGNAL IS EVER LOST</span>
+    </footer>
+  </main>
+
+  <script src="/scripts/invite.js"></script>
+</body>
+</html>

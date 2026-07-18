@@ -1,0 +1,137 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Share+Tech+Mono&display=swap');
+
+:root {
+  color-scheme: dark;
+  font-family: 'IBM Plex Mono', monospace;
+  --panel: #1b1a18;
+  --panel-hi: #302e29;
+  --line: #4a473f;
+  --screen: #021008;
+  --green: #70f47a;
+  --muted: #9c9a8e;
+  --paper: #d8d4c5;
+  background: #070806;
+}
+
+* { box-sizing: border-box; }
+
+body.invite-page {
+  min-height: 100vh;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: var(--paper);
+  background:
+    radial-gradient(circle at 50% 12%, rgba(89, 104, 75, .17), transparent 42%),
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,255,255,.015) 4px),
+    #050605;
+}
+
+.invite-terminal {
+  width: min(760px, 100%);
+  border: 1px solid #6b675d;
+  padding: 14px;
+  background: linear-gradient(145deg, var(--panel-hi), #11110f 28%, #23211d 82%);
+  box-shadow: inset 0 0 0 3px #090908, inset 0 0 35px #000, 0 24px 70px #000;
+}
+
+.invite-terminal__header,
+.invite-terminal__footer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #151513;
+  padding: 13px 16px;
+  background: linear-gradient(#262521, #121210);
+  box-shadow: inset 0 1px rgba(255,255,255,.06), inset 0 -2px #000;
+}
+
+.invite-terminal__header p,
+.invite-terminal__header h1 { margin: 0; }
+.invite-terminal__header p { color: var(--green); font: 14px 'Share Tech Mono', monospace; letter-spacing: .14em; }
+.invite-terminal__header h1 { margin-top: 4px; font-size: clamp(18px, 4vw, 28px); }
+.invite-terminal__code { margin-left: auto; color: #827f74; font-size: 12px; }
+
+.invite-lamp {
+  flex: 0 0 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 4px #152117, 0 0 18px var(--green);
+}
+
+.invite-screen {
+  position: relative;
+  min-height: 520px;
+  display: grid;
+  align-items: center;
+  margin: 12px 0;
+  padding: clamp(24px, 7vw, 64px);
+  overflow: hidden;
+  border: 8px solid #11120f;
+  border-radius: 30px;
+  color: var(--green);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 2px, rgba(112,244,122,.035) 3px),
+    radial-gradient(circle at center, #082515, var(--screen) 64%);
+  box-shadow: inset 0 0 80px #000, 0 0 0 1px #565349;
+}
+
+.invite-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse, transparent 54%, rgba(0,0,0,.72));
+}
+
+.invite-state { position: relative; z-index: 1; width: 100%; }
+.invite-state[hidden] { display: none; }
+.invite-kicker { margin: 0 0 12px; letter-spacing: .25em; color: #67a76b; font-size: 13px; }
+.invite-kicker--error { color: #ff6d5e; }
+.invite-state h2 { margin: 0 0 18px; font: 700 clamp(30px, 7vw, 58px) 'Share Tech Mono', monospace; letter-spacing: .06em; text-transform: uppercase; text-shadow: 0 0 14px rgba(112,244,122,.35); }
+.invite-description, .invite-state > p { max-width: 600px; line-height: 1.65; color: #90ae91; }
+
+#invite-form { display: grid; gap: 10px; margin-top: 28px; }
+#invite-form label { color: #91a08e; font-size: 13px; letter-spacing: .06em; }
+#invite-form input {
+  width: 100%;
+  border: 1px solid #285532;
+  padding: 13px 14px;
+  color: var(--green);
+  background: rgba(0, 10, 5, .8);
+  font: inherit;
+  box-shadow: inset 0 0 16px #000;
+}
+#invite-form input:focus { outline: 1px solid var(--green); }
+#invite-form input[readonly] { color: #94b298; opacity: .8; }
+
+.invite-primary,
+.invite-secondary {
+  width: 100%;
+  border: 1px solid #315c35;
+  padding: 14px;
+  cursor: pointer;
+  font: 700 14px 'IBM Plex Mono', monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.invite-primary { margin-top: 12px; color: #071007; background: linear-gradient(#8aff91, #48ab51); box-shadow: 0 0 18px rgba(112,244,122,.16); }
+.invite-secondary { color: #719276; background: #061008; }
+.invite-primary:disabled { cursor: wait; filter: grayscale(1); opacity: .55; }
+.invite-message { min-height: 20px; margin: 4px 0 0; color: #ff8d80; font-size: 13px; }
+
+.invite-progress { height: 4px; margin-top: 28px; overflow: hidden; background: #17301b; }
+.invite-progress span { display: block; width: 45%; height: 100%; background: var(--green); animation: invite-scan 1s ease-in-out infinite alternate; }
+@keyframes invite-scan { from { transform: translateX(-100%); } to { transform: translateX(225%); } }
+
+.invite-terminal__footer { justify-content: space-between; color: #767368; font: 11px 'Share Tech Mono', monospace; letter-spacing: .12em; }
+
+@media (max-width: 560px) {
+  body.invite-page { padding: 0; }
+  .invite-terminal { min-height: 100vh; padding: 8px; }
+  .invite-terminal__code { display: none; }
+  .invite-screen { min-height: calc(100vh - 160px); margin: 8px 0; border-radius: 22px; }
+  .invite-terminal__footer { font-size: 9px; }
+}

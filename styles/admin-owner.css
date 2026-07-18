@@ -1,0 +1,99 @@
+.owner-tab[hidden],
+.owner-invites-overlay[hidden],
+.owner-invite-result[hidden] { display: none !important; }
+
+.owner-tab {
+  border-color: #315b35 !important;
+  color: #7fff7f !important;
+  box-shadow: inset 0 0 12px rgba(0,0,0,.7), 0 0 10px rgba(127,255,127,.13) !important;
+}
+
+.owner-invites-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, .78);
+  backdrop-filter: blur(5px);
+}
+
+.owner-invites-dialog {
+  width: min(680px, 100%);
+  border: 1px solid #57534a;
+  padding: 10px;
+  background: linear-gradient(145deg, #302e29, #121210 42%, #24221e);
+  box-shadow: inset 0 0 0 3px #080807, inset 0 0 30px #000, 0 22px 80px #000;
+}
+
+.owner-invites-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid #111;
+  background: linear-gradient(#292824, #151512);
+  box-shadow: inset 0 1px rgba(255,255,255,.05), inset 0 -2px #000;
+}
+.owner-invites-header p,
+.owner-invites-header h3 { margin: 0; }
+.owner-invites-header p { color: #68ba6d; font-size: 11px; letter-spacing: .16em; }
+.owner-invites-header h3 { margin-top: 4px; font-size: 24px; text-transform: uppercase; }
+.owner-close {
+  width: 40px;
+  height: 40px;
+  margin-left: auto;
+  border: 1px solid #45433c;
+  color: #c8c4b7;
+  background: #111;
+  cursor: pointer;
+  font-size: 26px;
+}
+
+.owner-invites-body {
+  display: grid;
+  gap: 9px;
+  margin-top: 8px;
+  padding: 22px;
+  border: 1px solid #10110e;
+  color: #bcb8aa;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 2px, rgba(112,244,122,.02) 3px),
+    #07100a;
+  box-shadow: inset 0 0 35px #000;
+}
+.owner-invites-copy { margin: 0 0 12px; color: #7d8f7d; line-height: 1.55; }
+.owner-invites-body label { color: #8ea18d; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.owner-input {
+  width: 100%;
+  border: 1px solid #315037;
+  padding: 12px 13px;
+  color: #74e37b;
+  background: #020905;
+  font: 14px 'IBM Plex Mono', monospace;
+  box-shadow: inset 0 0 15px #000;
+}
+.owner-input:focus { outline: 1px solid #70f47a; }
+.owner-create,
+.owner-copy {
+  border: 1px solid #345b37;
+  padding: 13px 16px;
+  cursor: pointer;
+  font: 700 13px 'IBM Plex Mono', monospace;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.owner-create { margin-top: 10px; color: #071007; background: linear-gradient(#83ef89, #459f4d); }
+.owner-copy { color: #7add80; background: #071008; }
+.owner-create:disabled { cursor: wait; filter: grayscale(1); opacity: .55; }
+.owner-invite-status { min-height: 20px; margin: 4px 0; color: #df8378; font-size: 12px; }
+.owner-invite-result { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid #1e3f25; }
+.owner-invite-result span { color: #78a47b; font-size: 12px; }
+.owner-invite-result textarea { resize: none; line-height: 1.45; }
+
+@media (max-width: 600px) {
+  .owner-invites-overlay { padding: 8px; }
+  .owner-invites-body { padding: 16px; }
+  .owner-invites-header h3 { font-size: 18px; }
+}

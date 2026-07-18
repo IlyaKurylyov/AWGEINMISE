@@ -1,41 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <base href="/">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#030403">
   <title>INMISE — Collaboration</title>
-  <link rel="stylesheet" href="styles/work.css">
-  <link rel="stylesheet" href="styles/console-home.css">
+  <link rel="stylesheet" href="/styles/work.css">
+  <link rel="stylesheet" href="/styles/console-home.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="scripts/config.local.js" defer></script>
-  <script src="scripts/config.js" defer></script>
-  <script src="scripts/work-dynamic.js" defer></script>
+  <script src="/scripts/config.local.js" defer></script>
+  <script src="/scripts/config.js" defer></script>
+  <script src="/scripts/work-dynamic.js" defer></script>
 </head>
 <body class="collaboration-page">
   <main class="collaboration-console" aria-label="INMISE collaboration tape market">
     <img
       class="collaboration-console__art collaboration-console__art--desktop"
-      src="assets/ui/collaboration-console-approved.png"
+      src="/assets/ui/collaboration-console-approved.png"
       alt=""
       aria-hidden="true"
     >
     <img
       class="collaboration-console__art collaboration-console__art--mobile"
-      src="assets/ui/collaboration-console-mobile-approved.png"
+      src="/assets/ui/collaboration-console-mobile-approved.png"
       alt=""
       aria-hidden="true"
     >
 
-    <a class="console-home" href="index.html" aria-label="Return to master terminal">
+    <a class="console-home" href="/" aria-label="Return to master terminal">
       <i aria-hidden="true"></i><span>MASTER</span>
     </a>
 
     <nav class="console-nav" aria-label="Main navigation">
-      <a class="console-nav__item" href="music" data-label="RELEASES">RELEASES</a>
-      <a class="console-nav__item" href="artists" data-label="ARTISTS">ARTISTS</a>
-      <a class="console-nav__item is-active" href="work" data-label="COLLABORATION" aria-current="page">COLLABORATION</a>
-      <a class="console-nav__item" href="contacts" data-label="CONTACTS">CONTACTS</a>
+      <a class="console-nav__item" href="/releases/" data-label="RELEASES">RELEASES</a>
+      <a class="console-nav__item" href="/artists/" data-label="ARTISTS">ARTISTS</a>
+      <a class="console-nav__item is-active" href="/collaboration/" data-label="COLLABORATION" aria-current="page">COLLABORATION</a>
+      <a class="console-nav__item" href="/contacts/" data-label="CONTACTS">CONTACTS</a>
     </nav>
 
     <fieldset class="producer-bank" aria-label="Select producer">

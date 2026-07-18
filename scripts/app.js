@@ -352,7 +352,7 @@ window.addEventListener('DOMContentLoaded', function() {
     
     // Задержка перед переходом на главную
     setTimeout(function() {
-      window.location.href = 'index.html';
+      window.location.href = '/';
     }, 800);
   });
 }); 

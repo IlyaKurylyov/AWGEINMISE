@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+  <base href="/">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>INMISE — Admin</title>
-  <link rel="stylesheet" href="styles/main.css">
-  <link rel="stylesheet" href="styles/work.css">
-  <link rel="stylesheet" href="styles/responsive.css">
-  <link rel="stylesheet" href="styles/desktop-protection.css">
-  <link rel="stylesheet" href="styles/admin-responsive.css">
+  <link rel="stylesheet" href="/styles/main.css">
+  <link rel="stylesheet" href="/styles/work.css">
+  <link rel="stylesheet" href="/styles/responsive.css">
+  <link rel="stylesheet" href="/styles/desktop-protection.css">
+  <link rel="stylesheet" href="/styles/admin-responsive.css">
+  <link rel="stylesheet" href="/styles/admin-owner.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Share+Tech+Mono&family=VT323&display=swap');
 
@@ -204,8 +206,8 @@
     @media (max-width: 900px) { .admin-grid { grid-template-columns: 1fr; } }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="scripts/config.local.js"></script>
-  <script src="scripts/config.js"></script>
+  <script src="/scripts/config.local.js"></script>
+  <script src="/scripts/config.js"></script>
 </head>
 <body class="page-admin">
   <div class="noise-overlay"></div>
@@ -266,6 +268,7 @@
         <div style="display:flex; align-items:center; gap:12px; margin-left:auto;">
           <div id="admin-status" style="opacity:0.8"></div>
           <div class="auth-panel">
+            <button id="owner-invites-tab" class="auth-btn owner-tab" type="button" hidden>Инвайты</button>
             <button id="auth-login-btn" class="auth-btn">Войти</button>
             <div id="auth-user" class="auth-user" style="display:none;"></div>
             <button id="auth-logout-btn" class="auth-btn" style="display:none;">Выйти</button>
@@ -317,9 +320,42 @@
           </div>
         </section>
       </div>
+
+      <div id="owner-invites-panel" class="owner-invites-overlay" hidden>
+        <section class="owner-invites-dialog" role="dialog" aria-modal="true" aria-labelledby="owner-invites-title">
+          <header class="owner-invites-header">
+            <div>
+              <p>INMISE / LABEL OWNER</p>
+              <h3 id="owner-invites-title">Инвайты артистов</h3>
+            </div>
+            <button id="owner-invites-close" class="owner-close" type="button" aria-label="Закрыть">×</button>
+          </header>
+
+          <div class="owner-invites-body">
+            <p class="owner-invites-copy">Выбери существующего артиста и укажи его настоящий email. Новая ссылка автоматически отменит предыдущую неиспользованную.</p>
+
+            <label for="owner-invite-artist">Артист</label>
+            <select id="owner-invite-artist" class="owner-input">
+              <option value="">Загрузка артистов…</option>
+            </select>
+
+            <label for="owner-invite-email">Настоящий email</label>
+            <input id="owner-invite-email" class="owner-input" type="email" autocomplete="off" placeholder="artist@example.com">
+
+            <button id="owner-invite-create" class="owner-create" type="button">Создать одноразовый инвайт</button>
+            <p id="owner-invite-status" class="owner-invite-status" aria-live="polite"></p>
+
+            <div id="owner-invite-result" class="owner-invite-result" hidden>
+              <span>Ссылка действует 72 часа</span>
+              <textarea id="owner-invite-link" class="owner-input" rows="3" readonly></textarea>
+              <button id="owner-invite-copy" class="owner-copy" type="button">Копировать ссылку</button>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   </main>
 
-  <script src="scripts/admin.js"></script>
+  <script src="/scripts/admin.js"></script>
 </body>
 </html>

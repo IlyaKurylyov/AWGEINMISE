@@ -35,6 +35,16 @@
     bTitle: () => document.getElementById('b-title'),
     bFile: () => document.getElementById('b-file'),
     bAdd: () => document.getElementById('b-add'),
+    ownerInvitesTab: () => document.getElementById('owner-invites-tab'),
+    ownerInvitesPanel: () => document.getElementById('owner-invites-panel'),
+    ownerInvitesClose: () => document.getElementById('owner-invites-close'),
+    ownerInviteArtist: () => document.getElementById('owner-invite-artist'),
+    ownerInviteEmail: () => document.getElementById('owner-invite-email'),
+    ownerInviteCreate: () => document.getElementById('owner-invite-create'),
+    ownerInviteStatus: () => document.getElementById('owner-invite-status'),
+    ownerInviteResult: () => document.getElementById('owner-invite-result'),
+    ownerInviteLink: () => document.getElementById('owner-invite-link'),
+    ownerInviteCopy: () => document.getElementById('owner-invite-copy'),
   };
 
   // Максимальная длина подробного описания и обновление счетчика
@@ -64,6 +74,15 @@
 
   function setStatus(msg) {
     const s = els.status(); if (s) s.textContent = msg || '';
+  }
+
+  function syncOwnerUI(user) {
+    const isOwner = user?.app_metadata?.role === 'owner';
+    const tab = els.ownerInvitesTab();
+    const panel = els.ownerInvitesPanel();
+    if (tab) tab.hidden = !isOwner;
+    if (!isOwner && panel) panel.hidden = true;
+    window.__INMISE_IS_OWNER__ = Boolean(isOwner);
   }
 
   function getCanonicalName() {
@@ -164,8 +183,9 @@
         if (!email) { alert('Сначала укажите e-mail, на который зарегистрирован кабинет.'); emailInput.focus(); return; }
         forgotBtn.disabled = true;
         try {
+          const recoveryUrl = new URL('/admin/', window.location.origin);
           const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.origin + window.location.pathname
+            redirectTo: recoveryUrl.toString()
           });
           if (error) throw error;
           alert('Если такой e-mail зарегистрирован, письмо для восстановления уже отправлено.');
@@ -187,7 +207,7 @@
           resetPassword.value = '';
           resetPasswordConfirm.value = '';
           showLoginForm();
-          setLoggedIn(data.user?.email || '');
+          setLoggedIn(data.user || null);
           alert('Пароль обновлён.');
         } catch (error) {
           alert('Не удалось обновить пароль: ' + (error.message || error));
@@ -211,16 +231,18 @@
       userBox.style.display = 'none';
       userBox.textContent = '';
       setStatus('');
+      syncOwnerUI(null);
       if (unauth) unauth.style.display = 'flex';
       if (adminWrap) adminWrap.style.display = 'none';
       openLogin();
     };
-    const setLoggedIn = (email) => {
+    const setLoggedIn = (user) => {
       loginBtn.style.display = 'none';
       logoutBtn.style.display = '';
       userBox.style.display = '';
-      userBox.textContent = email;
+      userBox.textContent = user?.email || '';
       setStatus('Вход выполнен');
+      syncOwnerUI(user);
       if (unauth) unauth.style.display = 'none';
       if (adminWrap) adminWrap.style.display = '';
       if (overlay) overlay.style.display = 'none';
@@ -230,7 +252,7 @@
       if (event === 'PASSWORD_RECOVERY' && session?.user) {
         showRecoveryForm();
       } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-        setLoggedIn(session.user.email || '');
+        setLoggedIn(session.user);
         // hydrate только при входе/первичной инициализации, не на TOKEN_REFRESHED
         hydrate();
       } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session?.user)) {
@@ -598,6 +620,112 @@
     await Promise.all([hydrateProfile(uid), hydrateBeats(uid)]);
   }
 
+  function bindOwnerInvites() {
+    const tab = els.ownerInvitesTab();
+    const panel = els.ownerInvitesPanel();
+    const close = els.ownerInvitesClose();
+    const artistSelect = els.ownerInviteArtist();
+    const emailInput = els.ownerInviteEmail();
+    const createButton = els.ownerInviteCreate();
+    const status = els.ownerInviteStatus();
+    const result = els.ownerInviteResult();
+    const link = els.ownerInviteLink();
+    const copy = els.ownerInviteCopy();
+    if (!tab || !panel || !artistSelect || !emailInput || !createButton) return;
+
+    let artistsLoaded = false;
+    const setInviteStatus = (text) => { if (status) status.textContent = text || ''; };
+
+    async function loadArtists() {
+      if (artistsLoaded) return;
+      artistSelect.disabled = true;
+      const { data, error } = await supabase
+        .from('artists')
+        .select('id,name')
+        .order('name', { ascending: true });
+      if (error) throw error;
+      artistSelect.innerHTML = '<option value="">Выбери артиста</option>';
+      (data || []).forEach((artist) => {
+        const option = document.createElement('option');
+        option.value = artist.id;
+        option.textContent = artist.name || 'Без имени';
+        artistSelect.appendChild(option);
+      });
+      artistSelect.disabled = false;
+      artistsLoaded = true;
+    }
+
+    async function readFunctionError(error) {
+      try {
+        const body = await error?.context?.json?.();
+        return body?.error || error?.message || 'request_failed';
+      } catch (_) {
+        return error?.message || 'request_failed';
+      }
+    }
+
+    tab.addEventListener('click', async () => {
+      panel.hidden = false;
+      if (result) result.hidden = true;
+      setInviteStatus('');
+      try {
+        await loadArtists();
+      } catch (error) {
+        setInviteStatus('Не удалось загрузить артистов: ' + (error.message || error));
+      }
+    });
+    close?.addEventListener('click', () => { panel.hidden = true; });
+    panel.addEventListener('click', (event) => {
+      if (event.target === panel) panel.hidden = true;
+    });
+
+    createButton.addEventListener('click', async () => {
+      const artistId = artistSelect.value;
+      const email = emailInput.value.trim().toLowerCase();
+      if (!artistId) return setInviteStatus('Выбери артиста.');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setInviteStatus('Укажи корректный email.');
+
+      createButton.disabled = true;
+      setInviteStatus('Создаём защищённую ссылку…');
+      if (result) result.hidden = true;
+      try {
+        const { data, error } = await supabase.functions.invoke('artist-invites', {
+          body: { action: 'create', artist_id: artistId, email }
+        });
+        if (error) throw error;
+        const inviteUrl = new URL('/invite/', window.location.origin);
+        inviteUrl.searchParams.set('token', data.token);
+        if (link) link.value = inviteUrl.toString();
+        if (result) result.hidden = false;
+        setInviteStatus(`Инвайт для ${data.artist?.name || 'артиста'} готов.`);
+      } catch (error) {
+        const code = await readFunctionError(error);
+        const messages = {
+          owner_access_required: 'Эта вкладка доступна только владельцу INMISE.',
+          artist_not_found: 'Артист больше не найден.',
+          invalid_email: 'Некорректный email.',
+        };
+        setInviteStatus(messages[code] || 'Не удалось создать инвайт.');
+      } finally {
+        createButton.disabled = false;
+      }
+    });
+
+    copy?.addEventListener('click', async () => {
+      const value = link?.value || '';
+      if (!value) return;
+      try {
+        await navigator.clipboard.writeText(value);
+      } catch (_) {
+        link.focus();
+        link.select();
+        document.execCommand('copy');
+      }
+      copy.textContent = 'Скопировано';
+      window.setTimeout(() => { copy.textContent = 'Копировать ссылку'; }, 1200);
+    });
+  }
+
   async function uploadArtistImageIfAny(uid) {
     const fileInput = els.pImageFile();
     const file = fileInput?.files && fileInput.files[0];
@@ -692,6 +820,7 @@
     bindAuthUI();
     bindProfileSave();
     bindBeatAdd();
+    bindOwnerInvites();
 
     // Превью аватарки при выборе файла
     const fileInput = els.pImageFile();

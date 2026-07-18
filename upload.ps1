@@ -9,34 +9,48 @@ if (-not $ftpUrl -or -not $user -or -not $pass) {
     exit 1
 }
 
+$buildRoot = Join-Path $PSScriptRoot "dist"
+if (-not (Test-Path -LiteralPath $buildRoot)) {
+    Write-Error "Папка dist не найдена. Сначала выполните npm run build."
+    exit 1
+}
+
 $webclient = New-Object System.Net.WebClient
 $webclient.Credentials = New-Object System.Net.NetworkCredential($user, $pass)
+$remoteRoot = "$($ftpUrl.TrimEnd('/'))/public_html"
 
-# Устанавливаем пассивный режим
-[System.Net.FtpWebRequest]::set_UsePassive($true)
+function New-RemoteDirectory([string]$relativePath) {
+    if (-not $relativePath) { return }
+    $segments = $relativePath.Replace("\", "/").Split('/', [System.StringSplitOptions]::RemoveEmptyEntries)
+    $current = ""
+    foreach ($segment in $segments) {
+        $current = if ($current) { "$current/$segment" } else { $segment }
+        try {
+            $request = [System.Net.WebRequest]::Create("$remoteRoot/$current")
+            $request.Credentials = New-Object System.Net.NetworkCredential($user, $pass)
+            $request.Method = [System.Net.WebRequestMethods+Ftp]::MakeDirectory
+            $response = $request.GetResponse()
+            $response.Close()
+        } catch {
+            # REG.RU возвращает ошибку, если каталог уже существует.
+        }
+    }
+}
 
-# Загружаем все HTML файлы
-Get-ChildItem -Filter "*.html" | ForEach-Object {
-    $uri = New-Object System.Uri("$ftpUrl/public_html/$($_.Name)")
-    Write-Host "Загружаем $($_.Name)..."
+# Загружается только проверенная production-сборка, включая route-каталоги
+# и .htaccess с перенаправлениями со старых адресов.
+Get-ChildItem -LiteralPath $buildRoot -Recurse -Directory |
+    Sort-Object { $_.FullName.Length } |
+    ForEach-Object {
+        $relativeDirectory = [System.IO.Path]::GetRelativePath($buildRoot, $_.FullName)
+        New-RemoteDirectory $relativeDirectory
+    }
+
+Get-ChildItem -LiteralPath $buildRoot -Recurse -File -Force | ForEach-Object {
+    $relativePath = [System.IO.Path]::GetRelativePath($buildRoot, $_.FullName).Replace("\", "/")
+    $uri = New-Object System.Uri("$remoteRoot/$relativePath")
+    Write-Host "Загружаем $relativePath..."
     $webclient.UploadFile($uri, $_.FullName)
 }
 
-# Создаем и загружаем папки и их содержимое
-$directories = @("assets", "scripts", "styles")
-foreach ($dir in $directories) {
-    Write-Host "Создаем директорию $dir..."
-    try {
-        $makeDir = [System.Net.WebRequest]::Create("$ftpUrl/public_html/$dir")
-        $makeDir.Credentials = New-Object System.Net.NetworkCredential($user, $pass)
-        $makeDir.Method = [System.Net.WebRequestMethods+Ftp]::MakeDirectory
-        $makeDir.GetResponse()
-    } catch {}
-
-    Get-ChildItem -Path $dir -Recurse -File | ForEach-Object {
-        $relativePath = $_.FullName.Replace($PSScriptRoot + "\", "").Replace("\", "/")
-        $uri = New-Object System.Uri("$ftpUrl/public_html/$relativePath")
-        Write-Host "Загружаем $relativePath..."
-        $webclient.UploadFile($uri, $_.FullName)
-    }
-} 
+$webclient.Dispose()

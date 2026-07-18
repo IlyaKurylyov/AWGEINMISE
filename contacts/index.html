@@ -1,38 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <base href="/">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#030403">
   <title>INMISE — Contacts</title>
-  <link rel="stylesheet" href="styles/contacts.css">
-  <link rel="stylesheet" href="styles/console-home.css">
-  <script src="scripts/contacts-console.js" defer></script>
+  <link rel="stylesheet" href="/styles/contacts.css">
+  <link rel="stylesheet" href="/styles/console-home.css">
+  <script src="/scripts/contacts-console.js" defer></script>
 </head>
 <body class="contacts-page">
   <main class="contacts-console" aria-label="INMISE contact link console">
     <img
       class="contacts-console__art contacts-console__art--desktop"
-      src="assets/ui/contacts-rotary-approved.png"
+      src="/assets/ui/contacts-rotary-approved.png"
       alt=""
       aria-hidden="true"
     >
     <img
       class="contacts-console__art contacts-console__art--mobile"
-      src="assets/ui/contacts-rotary-mobile-approved.png"
+      src="/assets/ui/contacts-rotary-mobile-approved.png"
       alt=""
       aria-hidden="true"
     >
 
-    <a class="console-home" href="index.html" aria-label="Return to master terminal">
+    <a class="console-home" href="/" aria-label="Return to master terminal">
       <i aria-hidden="true"></i><span>MASTER</span>
     </a>
 
     <nav class="console-nav" aria-label="Main navigation">
-      <a class="console-nav__item" href="music" data-label="RELEASES">RELEASES</a>
-      <a class="console-nav__item" href="artists" data-label="ARTISTS">ARTISTS</a>
-      <a class="console-nav__item" href="work" data-label="COLLABORATION">COLLABORATION</a>
-      <a class="console-nav__item is-active" href="contacts" data-label="CONTACTS" aria-current="page">CONTACTS</a>
+      <a class="console-nav__item" href="/releases/" data-label="RELEASES">RELEASES</a>
+      <a class="console-nav__item" href="/artists/" data-label="ARTISTS">ARTISTS</a>
+      <a class="console-nav__item" href="/collaboration/" data-label="COLLABORATION">COLLABORATION</a>
+      <a class="console-nav__item is-active" href="/contacts/" data-label="CONTACTS" aria-current="page">CONTACTS</a>
     </nav>
 
     <section class="contact-crt" id="contact-crt" aria-live="polite">
@@ -105,19 +106,19 @@
       </defs>
       <g class="dial-rotor__image" id="dial-rotor">
         <g mask="url(#dial-ring-mask)">
-          <image class="dial-source dial-source--desktop" href="assets/ui/contacts-rotary-approved.png" x="-1126" y="-140" width="1671" height="941"></image>
-          <image class="dial-source dial-source--mobile" href="assets/ui/contacts-rotary-mobile-approved.png" x="-111" y="-532" width="648" height="1152"></image>
+          <image class="dial-source dial-source--desktop" href="/assets/ui/contacts-rotary-approved.png" x="-1126" y="-140" width="1671" height="941"></image>
+          <image class="dial-source dial-source--mobile" href="/assets/ui/contacts-rotary-mobile-approved.png" x="-111" y="-532" width="648" height="1152"></image>
         </g>
         <g mask="url(#dial-annulus-mask)" clip-path="url(#dial-stop-fill-clip)">
           <g transform="rotate(-36 215 215)">
-            <image class="dial-source dial-source--desktop" href="assets/ui/contacts-rotary-approved.png" x="-1126" y="-140" width="1671" height="941"></image>
-            <image class="dial-source dial-source--mobile" href="assets/ui/contacts-rotary-mobile-approved.png" x="-111" y="-532" width="648" height="1152"></image>
+            <image class="dial-source dial-source--desktop" href="/assets/ui/contacts-rotary-approved.png" x="-1126" y="-140" width="1671" height="941"></image>
+            <image class="dial-source dial-source--mobile" href="/assets/ui/contacts-rotary-mobile-approved.png" x="-111" y="-532" width="648" height="1152"></image>
           </g>
         </g>
       </g>
       <g mask="url(#dial-stop-mask)">
-        <image class="dial-source dial-source--desktop" href="assets/ui/contacts-rotary-approved.png" x="-1126" y="-140" width="1671" height="941"></image>
-        <image class="dial-source dial-source--mobile" href="assets/ui/contacts-rotary-mobile-approved.png" x="-111" y="-532" width="648" height="1152"></image>
+        <image class="dial-source dial-source--desktop" href="/assets/ui/contacts-rotary-approved.png" x="-1126" y="-140" width="1671" height="941"></image>
+        <image class="dial-source dial-source--mobile" href="/assets/ui/contacts-rotary-mobile-approved.png" x="-111" y="-532" width="648" height="1152"></image>
       </g>
     </svg>
 

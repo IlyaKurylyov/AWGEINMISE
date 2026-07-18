@@ -1,39 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <base href="/">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#050605">
   <title>INMISE — Releases</title>
-  <link rel="stylesheet" href="styles/releases-vhs.css">
-  <link rel="stylesheet" href="styles/console-home.css">
+  <link rel="stylesheet" href="/styles/releases-vhs.css">
+  <link rel="stylesheet" href="/styles/console-home.css">
 </head>
 <body class="releases-page">
   <main class="vhs-console" aria-label="INMISE releases archive">
     <img
       class="approved-console-art approved-console-art--desktop"
-      src="assets/ui/releases-console-approved.png"
+      src="/assets/ui/releases-console-approved.png"
       alt=""
       aria-hidden="true"
     >
     <img
       class="approved-console-art approved-console-art--mobile"
-      src="assets/ui/releases-console-mobile-approved.png"
+      src="/assets/ui/releases-console-mobile-approved.png"
       alt=""
       aria-hidden="true"
     >
 
-    <a class="console-home" href="index.html" aria-label="Return to master terminal">
+    <a class="console-home" href="/" aria-label="Return to master terminal">
       <i aria-hidden="true"></i><span>MASTER</span>
     </a>
 
     <header class="console-header">
-      <a class="console-brand" href="index.html" aria-label="INMISE home">INMISE</a>
+      <a class="console-brand" href="/" aria-label="INMISE home">INMISE</a>
       <nav class="console-nav" aria-label="Main navigation">
-        <a class="console-nav__item is-active" href="music" data-label="RELEASES">RELEASES</a>
-        <a class="console-nav__item" href="artists" data-label="ARTISTS">ARTISTS</a>
-        <a class="console-nav__item" href="work" data-label="COLLABORATION">COLLABORATION</a>
-        <a class="console-nav__item" href="contacts" data-label="CONTACTS">CONTACTS</a>
+        <a class="console-nav__item is-active" href="/releases/" data-label="RELEASES" aria-current="page">RELEASES</a>
+        <a class="console-nav__item" href="/artists/" data-label="ARTISTS">ARTISTS</a>
+        <a class="console-nav__item" href="/collaboration/" data-label="COLLABORATION">COLLABORATION</a>
+        <a class="console-nav__item" href="/contacts/" data-label="CONTACTS">CONTACTS</a>
       </nav>
     </header>
 
@@ -46,7 +47,7 @@
       </div>
       <div class="clip-stage" id="clip-stage" hidden>
         <video id="clip-video" controls playsinline preload="metadata">
-          <source src="assets/videos/background.mp4" type="video/mp4">
+          <source src="/assets/videos/background.mp4" type="video/mp4">
         </video>
         <button class="clip-stage__return" id="clip-return" type="button">RETURN TO ARCHIVE</button>
       </div>
@@ -58,7 +59,7 @@
         <span class="cassette-mouth" aria-hidden="true">
           <span class="cassette-door"><strong id="cassette-door-label">SELECT ARTIST</strong></span>
           <span class="artist-cassette" id="artist-cassette">
-            <img src="assets/ui/releases-cassette-approved.png" alt="">
+            <img src="/assets/ui/releases-cassette-approved.png" alt="">
             <strong id="cassette-artist-name">SELECT ARTIST</strong>
           </span>
         </span>
@@ -118,6 +119,6 @@
     </section>
   </main>
 
-  <script src="scripts/releases-vhs.js"></script>
+  <script src="/scripts/releases-vhs.js"></script>
 </body>
 </html>

@@ -1,47 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <base href="/">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#030403">
   <title>INMISE — Artists</title>
-  <link rel="stylesheet" href="styles/artists-signal.css">
-  <link rel="stylesheet" href="styles/console-home.css">
+  <link rel="stylesheet" href="/styles/artists-signal.css">
+  <link rel="stylesheet" href="/styles/console-home.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="scripts/config.local.js" defer></script>
-  <script src="scripts/config.js" defer></script>
-  <script src="scripts/artists-signal.js" defer></script>
+  <script src="/scripts/config.local.js" defer></script>
+  <script src="/scripts/config.js" defer></script>
+  <script src="/scripts/artists-signal.js" defer></script>
 </head>
 <body class="artists-signal-page">
   <main class="artists-console" aria-label="INMISE artist signal archive">
     <img
       class="artists-console__art artists-console__art--desktop"
-      src="assets/ui/artists-contact-sheet-approved.png"
+      src="/assets/ui/artists-contact-sheet-approved.png"
       alt=""
       aria-hidden="true"
     >
     <img
       class="artists-console__art artists-console__art--mobile"
-      src="assets/ui/artists-contact-sheet-mobile-approved.png"
+      src="/assets/ui/artists-contact-sheet-mobile-approved.png"
       alt=""
       aria-hidden="true"
     >
 
-    <a class="console-home" href="index.html" aria-label="Return to master terminal">
+    <a class="console-home" href="/" aria-label="Return to master terminal">
       <i aria-hidden="true"></i><span>MASTER</span>
     </a>
 
     <nav class="console-nav" aria-label="Main navigation">
-      <a class="console-nav__hotspot console-nav__hotspot--releases" href="music">
+      <a class="console-nav__hotspot console-nav__hotspot--releases" href="/releases/">
         <span class="console-nav__label">RELEASES</span>
       </a>
-      <a class="console-nav__hotspot console-nav__hotspot--artists" href="artists" aria-current="page">
+      <a class="console-nav__hotspot console-nav__hotspot--artists" href="/artists/" aria-current="page">
         <span class="console-nav__label">ARTISTS</span>
       </a>
-      <a class="console-nav__hotspot console-nav__hotspot--work" href="work">
+      <a class="console-nav__hotspot console-nav__hotspot--work" href="/collaboration/">
         <span class="console-nav__label">COLLABORATION</span>
       </a>
-      <a class="console-nav__hotspot console-nav__hotspot--contacts" href="contacts">
+      <a class="console-nav__hotspot console-nav__hotspot--contacts" href="/contacts/">
         <span class="console-nav__label">CONTACTS</span>
       </a>
     </nav>

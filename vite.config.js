@@ -6,10 +6,12 @@ const runtimeScripts = [
   'admin.js',
   'app.js',
   'artists-signal.js',
+  'auth-redirect.js',
   'beats.js',
   'config.js',
   'config.local.js',
   'home-terminal.js',
+  'invite.js',
   'releases-vhs.js',
   'work-dynamic.js',
 ]
@@ -48,11 +50,12 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        artists: resolve(__dirname, 'artists.html'),
-        music: resolve(__dirname, 'music.html'),
-        contacts: resolve(__dirname, 'contacts.html'),
-        work: resolve(__dirname, 'work.html'),
-        admin: resolve(__dirname, 'admin.html'),
+        artists: resolve(__dirname, 'artists/index.html'),
+        releases: resolve(__dirname, 'releases/index.html'),
+        contacts: resolve(__dirname, 'contacts/index.html'),
+        collaboration: resolve(__dirname, 'collaboration/index.html'),
+        admin: resolve(__dirname, 'admin/index.html'),
+        invite: resolve(__dirname, 'invite/index.html'),
       },
       output: {
         assetFileNames: 'assets/[name]-[hash][extname]',
