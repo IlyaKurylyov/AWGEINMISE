@@ -215,7 +215,7 @@
     <div class="unauth-bg"></div>
     <div class="unauth-grid">
       <div class="login-panel">
-        <h3>Вход</h3>
+        <h3 id="auth-panel-title">Вход</h3>
         <div class="row">
           <label>E-mail</label>
           <input id="auth-email" type="email" placeholder="you@example.com" />
@@ -241,6 +241,7 @@
             <input id="reset-password-confirm" type="password" autocomplete="new-password" minlength="8" />
           </div>
           <div class="actions">
+            <button class="auth-link" id="reset-password-cancel" type="button">Вернуться ко входу</button>
             <button class="auth-btn" id="reset-password-submit" type="button">Сохранить пароль</button>
           </div>
         </div>
@@ -356,6 +357,6 @@
     </div>
   </main>
 
-  <script src="/scripts/admin.js"></script>
+  <script src="/scripts/admin.js?v=20260719-2"></script>
 </body>
 </html>

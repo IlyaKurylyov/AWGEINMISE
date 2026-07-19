@@ -5,6 +5,14 @@
     console.warn('[admin] Supabase не настроен. Заполните scripts/config.js');
     return;
   }
+  const recoveryHash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const recoverySearch = new URLSearchParams(window.location.search.replace(/^\?/, ''));
+  const incomingRecovery = recoveryHash.get('type') === 'recovery'
+    || recoverySearch.get('type') === 'recovery'
+    || recoverySearch.get('mode') === 'recovery';
+  if (incomingRecovery) sessionStorage.setItem('inmise-password-recovery', '1');
+  let recoveryMode = incomingRecovery || sessionStorage.getItem('inmise-password-recovery') === '1';
+
   const supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 
   // Track audios that user started to play, to safely resume after tab visibility restore
@@ -141,22 +149,28 @@
       const cancelBtn = document.getElementById('auth-cancel');
       const forgotBtn = document.getElementById('auth-forgot');
       const forgotRow = document.getElementById('auth-forgot-row');
+      const panelTitle = document.getElementById('auth-panel-title');
       const resetForm = document.getElementById('password-reset-form');
       const resetMessage = document.getElementById('password-reset-message');
       const resetPassword = document.getElementById('reset-password');
       const resetPasswordConfirm = document.getElementById('reset-password-confirm');
       const resetSubmit = document.getElementById('reset-password-submit');
+      const resetCancel = document.getElementById('reset-password-cancel');
       if (!emailInput || !passInput || !submitBtn) return;
 
       const loginRows = [emailInput.closest('.row'), passInput.closest('.row')];
       const loginActions = submitBtn.closest('.actions');
       const showLoginForm = () => {
+        if (panelTitle) panelTitle.textContent = 'Вход';
         loginRows.forEach((row) => { if (row) row.style.display = ''; });
         if (loginActions) loginActions.style.display = '';
         if (forgotRow) forgotRow.style.display = '';
         if (resetForm) resetForm.style.display = 'none';
       };
       showRecoveryForm = () => {
+        recoveryMode = true;
+        sessionStorage.setItem('inmise-password-recovery', '1');
+        if (panelTitle) panelTitle.textContent = 'Смена пароля';
         if (unauth) unauth.style.display = 'flex';
         if (adminWrap) adminWrap.style.display = 'none';
         loginRows.forEach((row) => { if (row) row.style.display = 'none'; });
@@ -202,10 +216,18 @@
         if (password !== confirmation) { alert('Пароли не совпадают.'); return; }
         resetSubmit.disabled = true;
         try {
+          const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError) throw sessionError;
+          if (!sessionData.session?.user) {
+            throw new Error('Ссылка восстановления недействительна или уже использована. Запросите новое письмо.');
+          }
           const { data, error } = await supabase.auth.updateUser({ password });
           if (error) throw error;
           resetPassword.value = '';
           resetPasswordConfirm.value = '';
+          recoveryMode = false;
+          sessionStorage.removeItem('inmise-password-recovery');
+          window.history.replaceState({}, document.title, '/admin/');
           showLoginForm();
           setLoggedIn(data.user || null);
           alert('Пароль обновлён.');
@@ -214,6 +236,12 @@
         } finally {
           resetSubmit.disabled = false;
         }
+      });
+      resetCancel?.addEventListener('click', () => {
+        recoveryMode = false;
+        sessionStorage.removeItem('inmise-password-recovery');
+        window.history.replaceState({}, document.title, '/admin/');
+        showLoginForm();
       });
       window.__authHandlersBound = true;
     }
@@ -251,17 +279,27 @@
     // Формы и обработчики должны быть готовы до подписки, иначе recovery
     // может открыться раньше первого показа обычной формы входа.
     attachLoginHandlers();
+    if (recoveryMode) showRecoveryForm();
 
     supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' && session?.user) {
+        recoveryMode = true;
         showRecoveryForm();
       } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-        setLoggedIn(session.user);
-        // hydrate только при входе/первичной инициализации, не на TOKEN_REFRESHED
-        hydrate();
+        if (recoveryMode) {
+          showRecoveryForm();
+        } else {
+          setLoggedIn(session.user);
+          // hydrate только при входе/первичной инициализации, не на TOKEN_REFRESHED
+          hydrate();
+        }
       } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session?.user)) {
-        setLoggedOut();
-        clearForms();
+        if (recoveryMode) {
+          showRecoveryForm();
+        } else {
+          setLoggedOut();
+          clearForms();
+        }
       } else {
         // игнорируем TOKEN_REFRESHED/USER_UPDATED чтобы не дёргать hydrate и не сбрасывать плеер
       }

@@ -11,9 +11,14 @@
         Header set Expires "0"
     </FilesMatch>
 
-    # CSS и JS - короткий кэш (1 день)
-    <FilesMatch "\.(css|js)$">
+    # CSS - короткий кэш (1 день)
+    <FilesMatch "\.css$">
         Header set Cache-Control "max-age=86400, public, must-revalidate"
+    </FilesMatch>
+
+    # Runtime JS имеет постоянные имена файлов, поэтому всегда перепроверяем версию.
+    <FilesMatch "\.js$">
+        Header set Cache-Control "no-cache, must-revalidate"
     </FilesMatch>
 
     # Медиа - длинный кэш (30 дней)
