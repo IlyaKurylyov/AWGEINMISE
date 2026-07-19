@@ -248,6 +248,10 @@
       if (overlay) overlay.style.display = 'none';
     };
 
+    // Формы и обработчики должны быть готовы до подписки, иначе recovery
+    // может открыться раньше первого показа обычной формы входа.
+    attachLoginHandlers();
+
     supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' && session?.user) {
         showRecoveryForm();
@@ -269,6 +273,11 @@
       await supabase.auth.signOut();
     });
   }
+
+  // Скрипт подключён в конце body, поэтому элементы авторизации уже созданы.
+  // Подписываемся сразу после createClient, чтобы не пропустить одноразовое
+  // событие PASSWORD_RECOVERY из URL.
+  bindAuthUI();
 
   function clearForms() {
     els.pName().value = '';
@@ -817,7 +826,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    bindAuthUI();
     bindProfileSave();
     bindBeatAdd();
     bindOwnerInvites();

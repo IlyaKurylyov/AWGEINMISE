@@ -122,7 +122,42 @@ Deno.serve(async (request) => {
         p_claimed_email: callerEmail,
       });
       if (error) throw error;
-      return json({ artist: Array.isArray(data) ? data[0] : data });
+      const artist = Array.isArray(data) ? data[0] : data;
+      const previousOwnerId = String(artist?.previous_owner_user_id || "");
+
+      // The real account inherits the access level of the legacy account.
+      // This makes the Hahahap -> Ilya handoff transfer the owner/admin panel,
+      // while ordinary artist invitations stay ordinary artist accounts.
+      let inheritedRole = caller.app_metadata?.role === "owner" ? "owner" : "artist";
+      if (previousOwnerId && previousOwnerId !== caller.id) {
+        const { data: previousUserData, error: previousUserError } = await admin.auth.admin
+          .getUserById(previousOwnerId);
+        if (previousUserError) throw previousUserError;
+        if (previousUserData.user?.app_metadata?.role === "owner") inheritedRole = "owner";
+      }
+
+      const { error: roleError } = await admin.auth.admin.updateUserById(caller.id, {
+        app_metadata: { ...(caller.app_metadata || {}), role: inheritedRole },
+      });
+      if (roleError) throw roleError;
+
+      let legacyUserRemoved = false;
+      if (previousOwnerId && previousOwnerId !== caller.id) {
+        const { error: deleteError } = await admin.auth.admin.deleteUser(previousOwnerId);
+        if (deleteError) {
+          // Ownership is already transferred. Do not report a failed claim and
+          // tempt the user to repeat a consumed invite; surface cleanup status.
+          console.error("legacy user cleanup failed", deleteError);
+        } else {
+          legacyUserRemoved = true;
+        }
+      }
+
+      return json({
+        artist,
+        role: inheritedRole,
+        legacy_user_removed: legacyUserRemoved,
+      });
     }
 
     return json({ error: "unknown_action" }, 400);

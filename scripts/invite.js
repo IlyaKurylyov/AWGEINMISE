@@ -76,6 +76,10 @@
     setMessage('Перепривязываем кабинет…');
     try {
       await invoke('claim');
+      // Edge Function may have inherited the owner role from the old account.
+      // Refresh the JWT before opening the cabinet so the new app_metadata is
+      // available immediately and the invite panel does not require re-login.
+      await client.auth.refreshSession();
       showState('success');
       window.setTimeout(() => window.location.replace('/admin/'), 1400);
     } catch (error) {

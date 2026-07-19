@@ -1,12 +1,12 @@
 // Runtime Supabase configuration.
-// Define window.SUPABASE_CONFIG in scripts/config.local.js (not committed).
-// Only a publishable/anon key belongs in the browser. Never put a service-role key here.
+// scripts/config.local.js may override these public browser values during local work.
+// Only a publishable/anon key belongs here. Never put a service-role key in browser code.
 (() => {
-  const config = window.SUPABASE_CONFIG;
-  if (!config?.url || !config?.publishableKey) {
-    console.info('[supabase] Local configuration is not set; static fallbacks remain available.');
-    return;
-  }
+  const publicConfig = {
+    url: 'https://cibzssnqbctwydobpahm.supabase.co',
+    publishableKey: 'sb_publishable_VfyMowcTUVJ-ImGlSwLlIQ_J9K3gJCM'
+  };
+  const config = window.SUPABASE_CONFIG || publicConfig;
 
   window.SUPABASE_URL = config.url;
   window.SUPABASE_ANON_KEY = config.publishableKey;
