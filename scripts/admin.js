@@ -7,6 +7,8 @@
   }
   const recoveryHash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
   const recoverySearch = new URLSearchParams(window.location.search.replace(/^\?/, ''));
+  const recoveryTokenHash = recoverySearch.get('token_hash');
+  const recoveryTokenType = recoverySearch.get('type');
   const incomingRecovery = recoveryHash.get('type') === 'recovery'
     || recoverySearch.get('type') === 'recovery'
     || recoverySearch.get('mode') === 'recovery';
@@ -167,7 +169,7 @@
         if (forgotRow) forgotRow.style.display = '';
         if (resetForm) resetForm.style.display = 'none';
       };
-      showRecoveryForm = () => {
+      showRecoveryForm = (message) => {
         recoveryMode = true;
         sessionStorage.setItem('inmise-password-recovery', '1');
         if (panelTitle) panelTitle.textContent = 'Смена пароля';
@@ -177,7 +179,7 @@
         if (loginActions) loginActions.style.display = 'none';
         if (forgotRow) forgotRow.style.display = 'none';
         if (resetForm) resetForm.style.display = '';
-        if (resetMessage) resetMessage.textContent = 'Придумайте новый пароль для кабинета.';
+        if (resetMessage) resetMessage.textContent = message || 'Придумайте новый пароль для кабинета.';
         setTimeout(() => resetPassword?.focus(), 0);
       };
       const doLogin = async () => {
@@ -280,6 +282,32 @@
     // может открыться раньше первого показа обычной формы входа.
     attachLoginHandlers();
     if (recoveryMode) showRecoveryForm();
+
+    let recoveryTokenExchangeStarted = false;
+    async function exchangeRecoveryToken() {
+      if (!recoveryTokenHash || recoveryTokenType !== 'recovery' || recoveryTokenExchangeStarted) return;
+      recoveryTokenExchangeStarted = true;
+      const resetSubmit = document.getElementById('reset-password-submit');
+      if (resetSubmit) resetSubmit.disabled = true;
+      showRecoveryForm('Проверяем ссылку восстановления…');
+      try {
+        const { data, error } = await supabase.auth.verifyOtp({
+          token_hash: recoveryTokenHash,
+          type: 'recovery'
+        });
+        if (error) throw error;
+        if (!data.session?.user) throw new Error('Не удалось открыть сессию восстановления.');
+        window.history.replaceState({}, document.title, '/admin/?mode=recovery');
+        showRecoveryForm('Ссылка подтверждена. Придумайте новый пароль для кабинета.');
+      } catch (error) {
+        sessionStorage.removeItem('inmise-password-recovery');
+        showRecoveryForm('Ссылка недействительна или уже использована. Запросите новое письмо восстановления.');
+        console.error('[admin] recovery token verification failed', error);
+      } finally {
+        if (resetSubmit) resetSubmit.disabled = false;
+      }
+    }
+    void exchangeRecoveryToken();
 
     supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' && session?.user) {

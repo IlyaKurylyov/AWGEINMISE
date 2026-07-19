@@ -4,6 +4,7 @@ import { copyFileSync, cpSync, existsSync, mkdirSync } from 'fs'
 
 const runtimeScripts = [
   'admin.js',
+  'artist-terminal.js',
   'app.js',
   'artists-signal.js',
   'auth-redirect.js',
@@ -15,6 +16,38 @@ const runtimeScripts = [
   'releases-vhs.js',
   'work-dynamic.js',
 ]
+
+const directoryRoutes = new Set([
+  '/admin',
+  '/artists',
+  '/collaboration',
+  '/contacts',
+  '/invite',
+  '/releases',
+])
+
+function normalizeDirectoryRoutes() {
+  return {
+    name: 'normalize-directory-routes',
+    configureServer(server) {
+      server.middlewares.use((request, response, next) => {
+        const requestUrl = request.url || '/'
+        const queryIndex = requestUrl.indexOf('?')
+        const pathname = queryIndex === -1 ? requestUrl : requestUrl.slice(0, queryIndex)
+
+        if (!directoryRoutes.has(pathname)) {
+          next()
+          return
+        }
+
+        const query = queryIndex === -1 ? '' : requestUrl.slice(queryIndex)
+        response.statusCode = 302
+        response.setHeader('Location', `${pathname}/${query}`)
+        response.end()
+      })
+    },
+  }
+}
 
 function copyRuntimeFiles() {
   return {
@@ -45,7 +78,7 @@ function copyRuntimeFiles() {
 }
 
 export default defineConfig({
-  plugins: [copyRuntimeFiles()],
+  plugins: [normalizeDirectoryRoutes(), copyRuntimeFiles()],
   build: {
     rollupOptions: {
       input: {
