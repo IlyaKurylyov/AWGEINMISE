@@ -1,7 +1,12 @@
+param(
+    [switch]$DryRun
+)
+
 # Read credentials from environment variables to avoid hardcoding secrets
 $ftpUrl = $env:FTP_URL
 $user = $env:FTP_USER
 $pass = $env:FTP_PASS
+$remotePath = $env:FTP_REMOTE_PATH
 
 if (-not $ftpUrl -or -not $user -or -not $pass) {
     Write-Error "FTP credentials are not set. Please set FTP_URL, FTP_USER, FTP_PASS environment variables."
@@ -15,12 +20,39 @@ if (-not (Test-Path -LiteralPath $buildRoot)) {
     exit 1
 }
 
+if ($ftpUrl -notmatch '^ftp://[^\[\]\(\)]+(?::\d+)?/?$') {
+    Write-Error "FTP_URL must be a plain FTP address, for example: ftp://server48.hosting.reg.ru"
+    exit 1
+}
+
+if (-not $remotePath) {
+    $remotePath = "www/inmise.ru"
+}
+
+if ($remotePath -match '^/' -or $remotePath -match '\.\.') {
+    Write-Error "FTP_REMOTE_PATH must be relative to the FTP account root, for example: www/inmise.ru"
+    exit 1
+}
+
 $webclient = New-Object System.Net.WebClient
 $webclient.Credentials = New-Object System.Net.NetworkCredential($user, $pass)
-$remoteRoot = "$($ftpUrl.TrimEnd('/'))/public_html"
+$remoteRoot = "$($ftpUrl.TrimEnd('/'))/$($remotePath.Trim('/'))"
+
+function Get-RelativeUploadPath([string]$rootPath, [string]$fullPath) {
+    $root = [System.IO.Path]::GetFullPath($rootPath).TrimEnd('\', '/')
+    $target = [System.IO.Path]::GetFullPath($fullPath)
+    $prefix = "$root\"
+
+    if (-not $target.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Upload path is outside the build directory: $target"
+    }
+
+    return $target.Substring($prefix.Length)
+}
 
 function New-RemoteDirectory([string]$relativePath) {
     if (-not $relativePath) { return }
+    if ($DryRun) { return }
     $segments = $relativePath.Replace("\", "/").Split('/', [System.StringSplitOptions]::RemoveEmptyEntries)
     $current = ""
     foreach ($segment in $segments) {
@@ -32,25 +64,27 @@ function New-RemoteDirectory([string]$relativePath) {
             $response = $request.GetResponse()
             $response.Close()
         } catch {
-            # REG.RU возвращает ошибку, если каталог уже существует.
+            # REG.RU returns an error when the directory already exists.
         }
     }
 }
 
-# Загружается только проверенная production-сборка, включая route-каталоги
-# и .htaccess с перенаправлениями со старых адресов.
+# Upload only the verified production build, including route directories
+# and the .htaccess redirects from legacy URLs.
 Get-ChildItem -LiteralPath $buildRoot -Recurse -Directory |
     Sort-Object { $_.FullName.Length } |
     ForEach-Object {
-        $relativeDirectory = [System.IO.Path]::GetRelativePath($buildRoot, $_.FullName)
+        $relativeDirectory = Get-RelativeUploadPath $buildRoot $_.FullName
         New-RemoteDirectory $relativeDirectory
     }
 
 Get-ChildItem -LiteralPath $buildRoot -Recurse -File -Force | ForEach-Object {
-    $relativePath = [System.IO.Path]::GetRelativePath($buildRoot, $_.FullName).Replace("\", "/")
+    $relativePath = (Get-RelativeUploadPath $buildRoot $_.FullName).Replace("\", "/")
     $uri = New-Object System.Uri("$remoteRoot/$relativePath")
-    Write-Host "Загружаем $relativePath..."
-    $webclient.UploadFile($uri, $_.FullName)
+    Write-Host "Uploading $relativePath..."
+    if (-not $DryRun) {
+        $webclient.UploadFile($uri, $_.FullName)
+    }
 }
 
 $webclient.Dispose()
