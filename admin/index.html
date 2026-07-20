@@ -64,12 +64,13 @@
         <button class="nav-item is-active" data-view="dashboard" type="button"><i>01</i><span>Дашборд</span></button>
         <button class="nav-item" data-view="beats" type="button"><i>02</i><span>Биты</span><b id="nav-beats-count">0</b></button>
         <button class="nav-item" data-view="projects" type="button"><i>03</i><span>Треки и релизы</span></button>
-        <button class="nav-item" data-view="lyrics" type="button"><i>04</i><span>Тексты</span></button>
-        <button class="nav-item" data-view="links" type="button"><i>05</i><span>Ссылки</span></button>
+        <button class="nav-item" data-view="tasks" type="button"><i>04</i><span>Задачи</span><b id="nav-tasks-count">0</b></button>
+        <button class="nav-item" data-view="lyrics" type="button"><i>05</i><span>Тексты</span></button>
         <button class="nav-item" data-view="calendar" type="button"><i>06</i><span>Календарь</span></button>
         <button class="nav-item" data-view="profile" type="button"><i>07</i><span>Карточка артиста</span></button>
-        <button class="nav-item" data-view="autopost" type="button"><i>08</i><span>Автопостинг</span><em>скоро</em></button>
-        <button class="nav-item owner-only" data-view="invites" id="owner-nav" type="button" hidden><i>09</i><span>Инвайты</span><em>owner</em></button>
+        <button class="nav-item" data-view="links" type="button"><i>08</i><span>Ссылки</span></button>
+        <button class="nav-item" data-view="autopost" type="button"><i>09</i><span>Автопостинг</span><em>скоро</em></button>
+        <button class="nav-item owner-only" data-view="invites" id="owner-nav" type="button" hidden><i>10</i><span>Инвайты</span><em>owner</em></button>
       </nav>
 
       <div class="theme-control" role="group" aria-label="Цветовая тема">
@@ -95,25 +96,49 @@
 
       <div class="workspace-content">
         <section class="view is-active" data-view-panel="dashboard">
-          <div class="hero-panel">
-            <div><span class="eyebrow">С возвращением</span><h2 id="dashboard-greeting">Артист</h2><p>Здесь собраны биты, проекты, тексты и ближайшие релизы.</p></div>
-            <button class="button button-primary" data-go-view="projects" type="button">+ Новый трек</button>
+          <div class="dashboard-command">
+            <div class="dashboard-identity"><span class="eyebrow">INMISE / ARTIST TERMINAL</span><h2 id="dashboard-greeting">Артист</h2></div>
+            <div class="dashboard-search-wrap">
+              <label class="dashboard-search"><span aria-hidden="true">⌕</span><input id="dashboard-search" type="search" autocomplete="off" placeholder="Поиск проектов, битов, текстов, файлов…"></label>
+              <div class="dashboard-search-results" id="dashboard-search-results" hidden></div>
+            </div>
+            <div class="dashboard-start-wrap">
+              <button class="button button-primary dashboard-start" id="dashboard-start" type="button" aria-expanded="false">+ Начать</button>
+              <div class="dashboard-start-menu" id="dashboard-start-menu" hidden>
+                <button data-start-action="project" type="button"><strong>Новый трек</strong><span>Создать проект и вести его до релиза</span></button>
+                <button data-start-action="beat" type="button"><strong>Загрузить бит</strong><span>Личный или выставленный на продажу</span></button>
+                <button data-start-action="task" type="button"><strong>Добавить задачу</strong><span>Зафиксировать следующий шаг</span></button>
+                <button data-start-action="event" type="button"><strong>Запланировать дату</strong><span>Добавить событие в календарь</span></button>
+              </div>
+            </div>
           </div>
-          <div class="stats-grid">
-            <article class="stat-card"><span>Битов всего</span><strong id="stat-beats">0</strong><small id="stat-beats-note">нет данных</small></article>
-            <article class="stat-card"><span>На витрине</span><strong id="stat-published">0</strong><small>видны на сайте</small></article>
-            <article class="stat-card"><span>Проектов</span><strong id="stat-projects">0</strong><small id="stat-projects-note">в работе</small></article>
-            <article class="stat-card"><span>Следующий релиз</span><strong class="stat-date" id="stat-next-release">—</strong><small id="stat-next-release-note">не запланирован</small></article>
-          </div>
-          <div class="dashboard-grid">
-            <article class="panel">
-              <header class="panel-header"><div><span class="eyebrow">Рабочая лента</span><h3>Последние проекты</h3></div><button class="text-button" data-go-view="projects" type="button">Все проекты →</button></header>
-              <div class="compact-list" id="dashboard-projects"></div>
+
+          <div class="dashboard-layout">
+            <article class="panel dashboard-calendar-panel">
+              <header class="panel-header dashboard-panel-head"><div><span class="eyebrow">План релизов</span><h3>Календарь</h3></div><div class="dashboard-month-controls"><button id="dashboard-calendar-prev" type="button" aria-label="Предыдущий месяц">←</button><strong id="dashboard-calendar-month"></strong><button id="dashboard-calendar-next" type="button" aria-label="Следующий месяц">→</button></div></header>
+              <div class="dashboard-calendar" id="dashboard-calendar"></div>
             </article>
-            <article class="panel">
-              <header class="panel-header"><div><span class="eyebrow">План</span><h3>Ближайшие даты</h3></div><button class="text-button" data-go-view="calendar" type="button">Календарь →</button></header>
-              <div class="timeline-list" id="dashboard-events"></div>
+
+            <article class="panel dashboard-upcoming-panel">
+              <header class="panel-header"><div><span class="eyebrow">Расписание</span><h3>Ближайшее</h3></div><button class="text-button" data-go-view="calendar" type="button">Открыть →</button></header>
+              <div class="dashboard-upcoming" id="dashboard-events"></div>
+              <div class="dashboard-metrics">
+                <div><span>В работе</span><strong id="stat-projects">0</strong></div>
+                <div><span>Релизов</span><strong id="stat-releases">0</strong></div>
+                <div><span>Готовность</span><strong id="stat-completion">0%</strong></div>
+              </div>
             </article>
+
+            <article class="panel dashboard-pipeline-panel">
+              <header class="panel-header"><div><span class="eyebrow">Производство</span><h3>Прогресс релизов</h3></div><button class="text-button" id="dashboard-new-project" type="button">+ Проект</button></header>
+              <div class="pipeline-board" id="dashboard-pipeline"></div>
+            </article>
+
+            <article class="panel dashboard-files-panel">
+              <header class="panel-header"><div><span class="eyebrow">Приватное хранилище</span><h3>Файлы проектов</h3></div><button class="text-button" id="dashboard-new-file" type="button">+ Файл</button></header>
+              <div class="dashboard-file-table" id="dashboard-files"></div>
+            </article>
+
           </div>
         </section>
 
@@ -131,7 +156,23 @@
           <div class="project-grid" id="projects-list"></div>
         </section>
 
+        <section class="view track-workspace-view" data-view-panel="track" hidden>
+          <div id="track-workspace"></div>
+        </section>
+
+        <section class="view" data-view-panel="tasks" hidden>
+          <div class="section-toolbar"><p class="section-intro">Перетаскивайте задачи между этапами: от задумки до загруженного результата.</p><button class="button button-primary" id="new-task" type="button">+ Новая задача</button></div>
+          <div class="panel"><div class="task-pipeline-board task-pipeline-board-full" id="tasks-board"></div></div>
+        </section>
+
         <section class="view" data-view-panel="lyrics" hidden>
+          <div class="lyrics-view-toolbar">
+            <label class="lyrics-filter-control" for="lyrics-filter-select">
+              <span>Фильтр текстов</span>
+              <select id="lyrics-filter-select" aria-label="Фильтр текстов"></select>
+            </label>
+            <span class="lyrics-filter-result" id="lyrics-filter-count" aria-live="polite"></span>
+          </div>
           <div class="split-editor">
             <aside class="document-list-panel"><div class="section-toolbar compact"><h3>Мои тексты</h3><button class="icon-button" id="new-lyrics" type="button" aria-label="Новый текст">+</button></div><div class="document-list" id="lyrics-list"></div></aside>
             <article class="editor-panel" id="lyrics-editor"><div class="empty-state"><span>TXT</span><h3>Выберите текст</h3><p>Или создайте новый документ.</p></div></article>
@@ -169,7 +210,7 @@
         <section class="view owner-only" data-view-panel="invites" hidden>
           <div class="owner-banner"><span class="eyebrow">INMISE / LABEL OWNER</span><h2>Инвайты артистов</h2><p>Выберите существующую карточку артиста и укажите настоящий e-mail. Ссылка одноразовая и действует 72 часа.</p></div>
           <div class="panel invite-panel">
-            <div class="form-grid two"><label class="field"><span>Существующий артист</span><select id="invite-artist"><option value="">Выберите артиста</option></select></label><label class="field"><span>Настоящий e-mail</span><input id="invite-email" type="email" placeholder="artist@example.com"></label></div>
+            <div class="form-grid two"><label class="field"><span>Существующий артист</span><select id="invite-artist" disabled><option value="">Загружаем артистов…</option></select></label><label class="field"><span>Настоящий e-mail</span><input id="invite-email" type="email" placeholder="artist@example.com"></label></div>
             <button class="button button-primary" id="create-invite" type="button">Создать инвайт</button>
             <p class="form-message" id="invite-status"></p>
             <div class="invite-result" id="invite-result" hidden><label class="field"><span>Одноразовая ссылка</span><textarea id="invite-link" rows="3" readonly></textarea></label><button class="button" id="copy-invite" type="button">Копировать ссылку</button></div>
@@ -183,6 +224,6 @@
   <aside class="drawer" id="drawer" hidden aria-live="polite"><header><div><span class="eyebrow" id="drawer-code">PROJECT</span><h2 id="drawer-title">Карточка</h2></div><button class="icon-button" id="drawer-close" type="button" aria-label="Закрыть">×</button></header><div class="drawer-body" id="drawer-body"></div></aside>
   <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
 
-  <script src="/scripts/artist-terminal.js?v=20260719-2"></script>
+  <script src="/scripts/artist-terminal.js?v=20260720-4"></script>
 </body>
 </html>
