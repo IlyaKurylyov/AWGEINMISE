@@ -7,6 +7,7 @@
   const states = {
     loading: document.getElementById('invite-loading'),
     invalid: document.getElementById('invite-invalid'),
+    unavailable: document.getElementById('invite-unavailable'),
     form: document.getElementById('invite-form-state'),
     confirm: document.getElementById('invite-confirm-state'),
     success: document.getElementById('invite-success'),
@@ -19,13 +20,14 @@
   }
 
   if (!window.supabase || !hasConfig) {
-    showState('invalid');
+    showState('unavailable');
     return;
   }
 
   const client = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
   const params = new URLSearchParams(window.location.search);
   const token = (params.get('token') || '').trim();
+  const pendingInviteKey = 'inmise-pending-invite-token';
   const artistName = document.getElementById('invite-artist-name');
   const emailInput = document.getElementById('invite-email');
   const passwordInput = document.getElementById('invite-password');
@@ -36,12 +38,60 @@
   const modeButton = document.getElementById('invite-mode');
   const currentSessionButton = document.getElementById('invite-current-session');
   const message = document.getElementById('invite-message');
+  const unavailableMessage = document.getElementById('invite-unavailable-message');
+  const retryButton = document.getElementById('invite-retry');
   let invite = null;
   let mode = 'signup';
   let claiming = false;
 
+  function rememberInviteToken() {
+    if (token.length === 64) localStorage.setItem(pendingInviteKey, token);
+  }
+
+  function forgetInviteToken() {
+    localStorage.removeItem(pendingInviteKey);
+  }
+
+  function withTimeout(promise, milliseconds = 12000) {
+    let timeoutId;
+    const timeout = new Promise((_, reject) => {
+      timeoutId = window.setTimeout(() => reject(new Error('invite_check_timeout')), milliseconds);
+    });
+    return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timeoutId));
+  }
+
+  function showUnavailable(error) {
+    console.error('[invite] validation unavailable', error);
+    if (unavailableMessage) {
+      unavailableMessage.textContent = error?.message === 'invite_check_timeout'
+        ? 'Сервер отвечает слишком долго. Повтори проверку — ссылка останется действительной.'
+        : 'Не удалось связаться с сервером. Проверь интернет и повтори проверку — ссылка не была использована.';
+    }
+    showState('unavailable');
+  }
+
   function setMessage(text) {
     if (message) message.textContent = text || '';
+  }
+
+  function goAdmin() {
+    window.location.replace('/admin/');
+  }
+
+  async function redirectIfLinkedAccount() {
+    const { data } = await client.auth.getSession();
+    const user = data.session?.user;
+    if (!user) return false;
+    const { data: rows, error } = await client
+      .from('artists')
+      .select('id')
+      .eq('owner_user_id', user.id)
+      .limit(1);
+    if (error || !rows?.length) return false;
+    forgetInviteToken();
+    showState('success');
+    window.setTimeout(goAdmin, 500);
+    return true;
   }
 
   function friendlyError(error) {
@@ -80,9 +130,11 @@
       // Refresh the JWT before opening the cabinet so the new app_metadata is
       // available immediately and the invite panel does not require re-login.
       await client.auth.refreshSession();
+      forgetInviteToken();
       showState('success');
-      window.setTimeout(() => window.location.replace('/admin/'), 1400);
+      window.setTimeout(goAdmin, 700);
     } catch (error) {
+      if (await redirectIfLinkedAccount()) return;
       setMessage(friendlyError(error));
       if (submit) submit.disabled = false;
       claiming = false;
@@ -111,15 +163,23 @@
   }
 
   async function loadInvite() {
+    showState('loading');
     if (token.length !== 64) {
       showState('invalid');
       return;
     }
     try {
-      const { data, error } = await client.rpc('validate_artist_invite', { p_token: token });
-      if (error) throw error;
+      const { data, error } = await withTimeout(client.rpc('validate_artist_invite', { p_token: token }));
+      if (error) {
+        error.inviteValidationRequest = true;
+        throw error;
+      }
       const row = Array.isArray(data) ? data[0] : data;
-      if (!row) throw new Error('invalid_invite');
+      if (!row) {
+        if (await redirectIfLinkedAccount()) return;
+        showState('invalid');
+        return;
+      }
       invite = {
         artist: { id: row.artist_id, name: row.artist_name },
         email: row.intended_email,
@@ -129,8 +189,8 @@
       if (emailInput) emailInput.value = invite.email || '';
       showState('form');
       await refreshSessionAction();
-    } catch (_) {
-      showState('invalid');
+    } catch (error) {
+      showUnavailable(error);
     }
   }
 
@@ -150,6 +210,7 @@
       if (current.data.session && currentEmail !== email) await client.auth.signOut();
 
       if (mode === 'signup') {
+        rememberInviteToken();
         const redirect = new URL(window.location.href);
         redirect.searchParams.set('claim', '1');
         const { data, error } = await client.auth.signUp({
@@ -176,6 +237,7 @@
 
   modeButton?.addEventListener('click', () => setMode(mode === 'signup' ? 'login' : 'signup'));
   currentSessionButton?.addEventListener('click', claimInvite);
+  retryButton?.addEventListener('click', loadInvite);
   client.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && session?.user && invite) refreshSessionAction();
   });

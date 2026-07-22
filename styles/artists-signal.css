@@ -246,10 +246,10 @@ button { color: inherit; }
   inset: 0 0 14%;
   width: 100%;
   height: 86%;
-  object-fit: cover;
+  object-fit: contain;
   object-position: var(--strip-position, center 34%);
   filter: grayscale(.68) sepia(.1) saturate(.68) contrast(1.08) brightness(.72);
-  transform: scale(1.015);
+  transform: none;
   transition: filter 180ms ease, transform 220ms ease;
 }
 
@@ -279,7 +279,7 @@ button { color: inherit; }
 .contact-frame:hover .contact-frame__image,
 .contact-frame:focus-visible .contact-frame__image {
   filter: grayscale(.48) sepia(.1) saturate(.78) contrast(1.12) brightness(.92);
-  transform: scale(1.04);
+  transform: none;
 }
 
 .contact-frame.is-active {
@@ -342,7 +342,7 @@ button { color: inherit; }
   object-position: var(--hero-position, center 30%);
   filter: grayscale(.58) sepia(.08) saturate(.72) contrast(1.12) brightness(.7);
   mix-blend-mode: normal;
-  transform: translateX(2.3%);
+  transform: none;
 }
 
 .artist-monitor::before,
@@ -812,7 +812,7 @@ button { color: inherit; }
   .artist-monitor__image--front {
     left: 0;
     width: 100%;
-    object-fit: cover;
+    object-fit: contain;
     transform: none;
   }
 

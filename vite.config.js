@@ -14,6 +14,7 @@ const runtimeScripts = [
   'home-terminal.js',
   'invite.js',
   'releases-vhs.js',
+  'supabase.js',
   'work-dynamic.js',
 ]
 

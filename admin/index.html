@@ -20,7 +20,7 @@
       }
     })();
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/scripts/supabase.js"></script>
   <script src="/scripts/config.local.js"></script>
   <script src="/scripts/config.js"></script>
 </head>
@@ -102,6 +102,7 @@
               <label class="dashboard-search"><span aria-hidden="true">⌕</span><input id="dashboard-search" type="search" autocomplete="off" placeholder="Поиск проектов, битов, текстов, файлов…"></label>
               <div class="dashboard-search-results" id="dashboard-search-results" hidden></div>
             </div>
+            <label class="dashboard-focus-select"><span>Фокус-проект</span><select id="dashboard-project-select" aria-label="Фокус-проект"><option value="">Все проекты</option></select></label>
             <div class="dashboard-start-wrap">
               <button class="button button-primary dashboard-start" id="dashboard-start" type="button" aria-expanded="false">+ Начать</button>
               <div class="dashboard-start-menu" id="dashboard-start-menu" hidden>
@@ -119,9 +120,9 @@
               <div class="dashboard-calendar" id="dashboard-calendar"></div>
             </article>
 
-            <article class="panel dashboard-upcoming-panel">
-              <header class="panel-header"><div><span class="eyebrow">Расписание</span><h3>Ближайшее</h3></div><button class="text-button" data-go-view="calendar" type="button">Открыть →</button></header>
-              <div class="dashboard-upcoming" id="dashboard-events"></div>
+            <article class="panel dashboard-tasks-panel">
+              <header class="panel-header"><div><span class="eyebrow">Работа</span><h3>Задачи</h3></div><button class="text-button" id="dashboard-new-task" type="button">+ Задача</button></header>
+              <div class="dashboard-task-list" id="dashboard-tasks"></div>
               <div class="dashboard-metrics">
                 <div><span>В работе</span><strong id="stat-projects">0</strong></div>
                 <div><span>Релизов</span><strong id="stat-releases">0</strong></div>
@@ -130,7 +131,8 @@
             </article>
 
             <article class="panel dashboard-pipeline-panel">
-              <header class="panel-header"><div><span class="eyebrow">Производство</span><h3>Прогресс релизов</h3></div><button class="text-button" id="dashboard-new-project" type="button">+ Проект</button></header>
+              <header class="panel-header"><div><span class="eyebrow" id="dashboard-pipeline-eyebrow"></span><h3 id="dashboard-pipeline-title">Прогресс релиза</h3></div><button class="text-button" id="dashboard-new-project" type="button">+ Проект</button></header>
+              <div class="dashboard-project-focus" id="dashboard-project-focus"></div>
               <div class="pipeline-board" id="dashboard-pipeline"></div>
             </article>
 
@@ -199,7 +201,7 @@
               <div class="form-grid"><label class="field"><span>Telegram</span><input id="profile-tg" type="url" placeholder="https://t.me/..."></label><label class="field"><span>VK</span><input id="profile-vk" type="url" placeholder="https://vk.com/..."></label><label class="field"><span>Instagram</span><input id="profile-inst" type="url" placeholder="https://instagram.com/..."></label></div>
               <button class="button button-primary" type="submit">Сохранить изменения</button>
             </form>
-            <aside class="panel profile-preview"><span class="eyebrow">Предпросмотр</span><div class="profile-photo" id="profile-photo"><span>NO IMAGE</span><img id="profile-image-preview" alt="Фото артиста" hidden></div><label class="file-button">Заменить фото<input id="profile-image" type="file" accept="image/*" hidden></label><h2 id="profile-preview-name">Имя артиста</h2><p id="profile-preview-description">Короткое описание появится здесь.</p></aside>
+            <aside class="panel profile-preview"><span class="eyebrow">Предпросмотр</span><div class="profile-photo" id="profile-photo"><span>NO IMAGE</span><img id="profile-image-preview" alt="Фото артиста" hidden></div><label class="file-button">Заменить фото<input id="profile-image" type="file" accept="image/jpeg,image/png,image/webp" hidden></label><div class="profile-image-guidance"><strong>1200 × 1500 px · 4:5</strong><span>Минимум 800 × 1000 px. JPG, PNG или WebP до 8 МБ. Портрет будет показан целиком, без обрезки.</span><em id="profile-image-status" aria-live="polite"></em></div><h2 id="profile-preview-name">Имя артиста</h2><p id="profile-preview-description">Короткое описание появится здесь.</p></aside>
           </div>
         </section>
 
@@ -224,6 +226,6 @@
   <aside class="drawer" id="drawer" hidden aria-live="polite"><header><div><span class="eyebrow" id="drawer-code">PROJECT</span><h2 id="drawer-title">Карточка</h2></div><button class="icon-button" id="drawer-close" type="button" aria-label="Закрыть">×</button></header><div class="drawer-body" id="drawer-body"></div></aside>
   <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
 
-  <script src="/scripts/artist-terminal.js?v=20260720-4"></script>
+  <script src="/scripts/artist-terminal.js?v=20260722-2"></script>
 </body>
 </html>

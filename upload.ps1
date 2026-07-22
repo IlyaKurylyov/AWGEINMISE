@@ -10,7 +10,7 @@ $remotePath = $env:FTP_REMOTE_PATH
 
 if (-not $ftpUrl -or -not $user -or -not $pass) {
     Write-Error "FTP credentials are not set. Please set FTP_URL, FTP_USER, FTP_PASS environment variables."
-    Write-Error "Example: setx FTP_URL \"ftp://host:21\"; setx FTP_USER \"username\"; setx FTP_PASS \"password\""
+    Write-Error 'Example: setx FTP_URL "ftp://host:21"; setx FTP_USER "username"; setx FTP_PASS "password"'
     exit 1
 }
 

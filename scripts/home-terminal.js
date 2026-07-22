@@ -1,4 +1,13 @@
 (function () {
+  const pendingInviteToken = localStorage.getItem('inmise-pending-invite-token');
+  if (pendingInviteToken && /^[a-f0-9]{64}$/i.test(pendingInviteToken)) {
+    const inviteUrl = new URL('/invite/', window.location.origin);
+    inviteUrl.searchParams.set('token', pendingInviteToken);
+    inviteUrl.searchParams.set('claim', '1');
+    window.location.replace(inviteUrl.toString() + window.location.hash);
+    return;
+  }
+
   const body = document.body;
   const video = document.getElementById('home-signal');
   const railWave = document.getElementById('rail-wave');

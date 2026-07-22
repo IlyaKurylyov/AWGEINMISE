@@ -15,6 +15,14 @@
   const escapeHTML = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
   const formatMoney = (value, currency = 'RUB') => value == null || value === '' ? 'Цена не указана' : new Intl.NumberFormat('ru-RU', { style: 'currency', currency, maximumFractionDigits: 0 }).format(Number(value));
   const formatDate = (value, options = {}) => value ? new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', year: 'numeric', ...options }).format(new Date(value)) : 'Дата не назначена';
+  const padDatePart = (value) => String(value).padStart(2, '0');
+  const localDateKey = (value) => {
+    if (!value) return '';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`;
+  };
+  const dateKeyToISO = (key) => new Date(`${key}T12:00:00`).toISOString();
   const toLocalInput = (value) => {
     if (!value) return '';
     const date = new Date(value);
@@ -22,6 +30,82 @@
     return new Date(date.getTime() - offset).toISOString().slice(0, 16);
   };
   const safeFileName = (name) => String(name || 'file').normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g, '_').slice(-110);
+  const PROFILE_IMAGE = Object.freeze({ minWidth: 800, minHeight: 1000, aspect: 4 / 5, aspectTolerance: 0.015, maxBytes: 8 * 1024 * 1024 });
+  const PROFILE_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+  let profilePreviewObjectUrl = '';
+
+  function readImageSize(file) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      const url = URL.createObjectURL(file);
+      image.onload = () => {
+        const size = { width: image.naturalWidth, height: image.naturalHeight };
+        URL.revokeObjectURL(url);
+        resolve(size);
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Не удалось прочитать изображение.'));
+      };
+      image.src = url;
+    });
+  }
+
+  async function validateProfileImage(file) {
+    if (!PROFILE_IMAGE_TYPES.has(file.type)) throw new Error('Загрузите фото в формате JPG, PNG или WebP.');
+    if (file.size > PROFILE_IMAGE.maxBytes) throw new Error('Фото должно весить не больше 8 МБ.');
+    const size = await readImageSize(file);
+    if (size.width < PROFILE_IMAGE.minWidth || size.height < PROFILE_IMAGE.minHeight) {
+      throw new Error(`Фото слишком маленькое: ${size.width} × ${size.height} px. Минимум — 800 × 1000 px.`);
+    }
+    if (Math.abs((size.width / size.height) - PROFILE_IMAGE.aspect) > PROFILE_IMAGE.aspectTolerance) {
+      throw new Error(`Нужна вертикальная пропорция 4:5. Сейчас — ${size.width} × ${size.height} px.`);
+    }
+    return size;
+  }
+
+  function setProfileImageStatus(message = '', isError = false) {
+    const status = $('#profile-image-status');
+    if (!status) return;
+    status.textContent = message;
+    status.classList.toggle('is-error', isError);
+  }
+
+  function restoreStoredProfileImage() {
+    const image = $('#profile-image-preview');
+    const placeholder = $('#profile-photo > span');
+    if (profilePreviewObjectUrl) {
+      URL.revokeObjectURL(profilePreviewObjectUrl);
+      profilePreviewObjectUrl = '';
+    }
+    if (state.artist?.image_url) {
+      image.src = state.artist.image_url;
+      image.hidden = false;
+      placeholder.hidden = true;
+    } else {
+      image.removeAttribute('src');
+      image.hidden = true;
+      placeholder.hidden = false;
+    }
+  }
+
+  async function previewProfileImage(file) {
+    try {
+      const size = await validateProfileImage(file);
+      if (profilePreviewObjectUrl) URL.revokeObjectURL(profilePreviewObjectUrl);
+      profilePreviewObjectUrl = URL.createObjectURL(file);
+      const image = $('#profile-image-preview');
+      image.src = profilePreviewObjectUrl;
+      image.hidden = false;
+      $('#profile-photo > span').hidden = true;
+      setProfileImageStatus(`Фото подходит: ${size.width} × ${size.height} px.`);
+    } catch (error) {
+      $('#profile-image').value = '';
+      restoreStoredProfileImage();
+      setProfileImageStatus(error.message, true);
+      toast(error.message, 'error');
+    }
+  }
 
   const BEAT_GROUPS = {
     private: ['private', 'archived'],
@@ -53,7 +137,9 @@
     calendarDate: new Date(),
     dashboardDate: new Date(),
     dashboardSearch: '',
+    dashboardProjectId: '',
     activeLyricsId: null,
+    lyricsReturnProjectId: '',
     activeLyricsFilter: 'all',
     activeProjectId: null,
     projectReturnView: 'projects',
@@ -224,20 +310,21 @@
   }
 
   function renderDashboard() {
+    const selectedProject = selectedDashboardProject();
     const activeProjects = state.projects.filter((project) => !['released', 'archived'].includes(project.status));
     const released = state.projects.filter((project) => project.status === 'released').length;
-    const upcoming = state.events
-      .filter((event) => new Date(event.starts_at) >= new Date() && event.status !== 'cancelled')
-      .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
-    const totalTasks = state.tasks.length;
-    const completedTasks = state.tasks.filter((task) => task.is_done).length;
+    const dashboardTasks = selectedProject ? state.tasks.filter((task) => task.project_id === selectedProject.id) : state.tasks;
+    const totalTasks = dashboardTasks.length;
+    const completedTasks = dashboardTasks.filter((task) => task.is_done).length;
 
     $('#stat-projects').textContent = String(activeProjects.length).padStart(2, '0');
     $('#stat-releases').textContent = String(released).padStart(2, '0');
     $('#stat-completion').textContent = totalTasks ? `${Math.round((completedTasks / totalTasks) * 100)}%` : '0%';
 
+    renderDashboardProjectSelect();
     renderDashboardCalendar();
-    renderDashboardUpcoming(upcoming.slice(0, 5));
+    renderDashboardTasks(dashboardTasks, selectedProject);
+    renderDashboardProjectFocus(selectedProject);
     renderDashboardPipeline();
     renderDashboardFiles();
     renderDashboardSearchResults();
@@ -247,7 +334,25 @@
     return state.projects.find((project) => project.id === id) || null;
   }
 
+  function selectedDashboardProject() {
+    if (!state.dashboardProjectId) return null;
+    const project = projectById(state.dashboardProjectId);
+    if (!project) state.dashboardProjectId = '';
+    return project;
+  }
+
+  function renderDashboardProjectSelect() {
+    const select = $('#dashboard-project-select');
+    if (!select) return;
+    const selected = selectedDashboardProject();
+    select.innerHTML = [
+      '<option value="">Все проекты</option>',
+      ...state.projects.map((project) => `<option value="${project.id}" ${selected?.id === project.id ? 'selected' : ''}>${escapeHTML(project.title)}</option>`),
+    ].join('');
+  }
+
   function renderDashboardCalendar() {
+    const selectedProject = selectedDashboardProject();
     const month = new Date(state.dashboardDate.getFullYear(), state.dashboardDate.getMonth(), 1);
     $('#dashboard-calendar-month').textContent = month.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
     const first = new Date(month);
@@ -258,53 +363,72 @@
     for (let index = 0; index < 42; index += 1) {
       const current = new Date(first);
       current.setDate(first.getDate() + index);
-      const key = current.toISOString().slice(0, 10);
-      const events = state.events.filter((event) => new Date(event.starts_at).toISOString().slice(0, 10) === key && event.status !== 'cancelled');
-      const projects = state.projects.filter((project) => ['scheduled', 'released', 'archived'].includes(project.status) && project.release_at && new Date(project.release_at).toISOString().slice(0, 10) === key);
-      const entries = [...events.map((event) => ({ title: event.title, projectId: event.project_id, status: 'event' })), ...projects.map((project) => ({ title: project.title, projectId: project.id, status: project.status }))];
-      const visibleEntries = entries.slice(0, 2);
-      const more = entries.length > 2 ? `<small class="dashboard-calendar-more">+${entries.length - 2}</small>` : '';
-      cells.push(`<div class="dashboard-calendar-day ${current.getMonth() !== month.getMonth() ? 'is-muted' : ''} ${current.toDateString() === today.toDateString() ? 'is-today' : ''}"><span>${current.getDate()}</span>${visibleEntries.map((entry) => `<button class="calendar-entry-${entry.status}" data-open-project="${entry.projectId || ''}" type="button">${escapeHTML(entry.title)}</button>`).join('')}${more}</div>`);
+      const key = localDateKey(current);
+      const projects = state.projects.filter((project) => (!selectedProject || project.id === selectedProject.id) && ['scheduled', 'released', 'archived'].includes(project.status) && project.release_at && localDateKey(project.release_at) === key);
+      const tasks = state.tasks.filter((task) => (!selectedProject || task.project_id === selectedProject.id) && task.due_at && localDateKey(task.due_at) === key);
+      const entries = [
+        ...projects.map((project) => ({ title: project.title, projectId: project.id, status: project.status })),
+        ...tasks.map((task) => ({ title: task.title, taskId: task.id, projectId: task.project_id, status: task.is_done ? 'task-done' : 'task' })),
+      ];
+      cells.push(`<div class="dashboard-calendar-day ${current.getMonth() !== month.getMonth() ? 'is-muted' : ''} ${current.toDateString() === today.toDateString() ? 'is-today' : ''}" data-calendar-drop-date="${key}"><span>${current.getDate()}</span><div class="calendar-entry-stack">${entries.map((entry) => `<button class="calendar-entry-${entry.status}" ${entry.taskId ? `data-open-task="${entry.taskId}" data-task-drag="${entry.taskId}" draggable="true"` : `data-open-project="${entry.projectId || ''}" ${entry.projectId ? `data-project-drag="${entry.projectId}" draggable="true"` : ''}`} type="button">${escapeHTML(entry.title)}</button>`).join('')}</div></div>`);
     }
     const container = $('#dashboard-calendar');
     container.innerHTML = headers + cells.join('');
     bindProjectButtons(container);
+    bindTaskButtons(container);
+    bindCalendarDnD(container);
   }
 
-  function renderDashboardUpcoming(events) {
-    const container = $('#dashboard-events');
-    container.innerHTML = events.length ? events.map((event) => {
-      const project = projectById(event.project_id);
-      return `<button class="dashboard-upcoming-row" ${project ? `data-open-project="${project.id}"` : ''} type="button"><span class="dashboard-upcoming-cover">${project?.cover_storage_path ? '▧' : 'IN'}</span><span><strong>${escapeHTML(event.title)}</strong><small>${project ? escapeHTML(project.title) : EVENT_STATUS[event.status] || event.status}</small></span><time>${formatDate(event.starts_at, { year: undefined })}</time></button>`;
-    }).join('') : '<div class="empty-list">Ближайших событий нет.</div>';
-    bindProjectButtons(container);
+  function renderDashboardTasks(tasks, selectedProject = null) {
+    const container = $('#dashboard-tasks');
+    if (!container) return;
+    const sorted = [...tasks].sort((a, b) => Number(a.is_done) - Number(b.is_done) || new Date(a.due_at || '2999-12-31') - new Date(b.due_at || '2999-12-31'));
+    container.innerHTML = sorted.length ? sorted.slice(0, 8).map((task) => {
+      const project = projectById(task.project_id);
+      return `<article class="dashboard-task-row ${task.is_done ? 'is-done' : ''}" data-task-drag="${task.id}" draggable="true">
+        <label><input type="checkbox" data-dashboard-task-check="${task.id}" ${task.is_done ? 'checked' : ''}><span></span></label>
+        <button data-open-task="${task.id}" type="button"><strong>${escapeHTML(task.title)}</strong><small>${escapeHTML(project?.title || 'Без релиза')} · ${task.due_at ? formatDate(task.due_at, { year: undefined }) : 'без даты'}</small></button>
+      </article>`;
+    }).join('') : `<div class="empty-list">${selectedProject ? 'У этого релиза задач пока нет.' : 'Задач пока нет.'}</div>`;
+    $$('[data-dashboard-task-check]', container).forEach((input) => input.addEventListener('change', () => toggleTask(input.dataset.dashboardTaskCheck, input.checked)));
+    bindTaskButtons(container);
+    bindTaskDragSources(container);
   }
 
   function renderDashboardPipeline() {
     const statuses = ['idea', 'demo', 'mix', 'scheduled', 'released'];
     const query = state.dashboardSearch.toLowerCase();
+    const selectedProject = selectedDashboardProject();
     const container = $('#dashboard-pipeline');
     container.innerHTML = statuses.map((status) => {
-      const projects = state.projects.filter((project) => project.status === status && (!query || project.title.toLowerCase().includes(query)));
-      return `<section class="pipeline-column" data-project-dropzone="${status}"><header><span>${PROJECT_STATUS[status]}</span><b>${projects.length}</b></header><div>${projects.map((project) => `<button class="pipeline-card" data-open-project="${project.id}" data-project-drag="${project.id}" draggable="true" type="button"><strong>${escapeHTML(project.title)}</strong><span>${PROJECT_STATUS_HINT[project.status] || ''}</span><small>${project.beat_id ? 'Бит подключён' : 'Без бита'} · ${formatDate(project.updated_at)}</small></button>`).join('') || '<p>Перетащите проект сюда</p>'}</div><button class="pipeline-add" data-pipeline-status="${status}" type="button">+ Добавить</button></section>`;
+      const projects = state.projects.filter((project) => project.status === status && (!selectedProject || project.id === selectedProject.id) && (!query || project.title.toLowerCase().includes(query)));
+      return `<section class="pipeline-column" data-project-dropzone="${status}"><header><span>${PROJECT_STATUS[status]}</span><b>${projects.length}</b></header><div>${projects.map((project) => `<button class="pipeline-card" data-open-project="${project.id}" data-project-drag="${project.id}" draggable="true" type="button"><strong>${escapeHTML(project.title)}</strong><small>${project.beat_id ? 'Бит подключён' : 'Без бита'} · ${project.release_at ? formatDate(project.release_at) : 'дата не назначена'}</small></button>`).join('') || '<p>Перетащите проект сюда</p>'}</div><button class="pipeline-add" data-pipeline-status="${status}" type="button">+ Добавить</button></section>`;
     }).join('');
     bindProjectButtons(container);
     bindProjectPipelineDnD(container);
     $$('[data-pipeline-status]', container).forEach((button) => button.addEventListener('click', () => openProjectEditor(null, button.dataset.pipelineStatus)));
   }
 
+  function renderDashboardProjectFocus(project) {
+    const container = $('#dashboard-project-focus');
+    if (!container) return;
+    const pipelineEyebrow = $('#dashboard-pipeline-eyebrow');
+    const pipelineTitle = $('#dashboard-pipeline-title');
+    if (pipelineEyebrow) pipelineEyebrow.textContent = '';
+    if (pipelineTitle) pipelineTitle.textContent = project ? `Прогресс: ${project.title}` : 'Прогресс релиза';
+    if (!project) {
+      container.innerHTML = '<div class="dashboard-focus-empty"><strong>Выберите релиз выше — календарь, задачи и прогресс отфильтруются по нему.</strong></div>';
+      return;
+    }
+    const nextTask = state.tasks
+      .filter((task) => task.project_id === project.id && task.due_at && !task.is_done)
+      .sort((a, b) => new Date(a.due_at) - new Date(b.due_at))[0];
+    container.innerHTML = `<div class="dashboard-focus-summary"><div><span class="eyebrow">Работаем над</span><h3>${escapeHTML(project.title)}</h3><p>${PROJECT_STATUS[project.status] || project.status} · ${PROJECT_STATUS_HINT[project.status] || 'Следующий шаг можно добавить задачей.'}</p></div><button class="text-button" data-open-project="${project.id}" type="button">Открыть карточку →</button></div><div class="dashboard-focus-meta"><span>Дата: ${project.release_at ? formatDate(project.release_at) : 'не назначена'}</span><span>Бит: ${project.beat_id ? escapeHTML(state.beats.find((beat) => beat.id === project.beat_id)?.title || 'подключён') : 'не выбран'}</span><span>Ближайшее: ${nextTask ? escapeHTML(nextTask.title) : 'нет задач'}</span></div>`;
+    bindProjectButtons(container);
+  }
+
   function bindProjectPipelineDnD(container) {
-    $$('[data-project-drag]', container).forEach((card) => {
-      card.addEventListener('dragstart', (event) => {
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/project-id', card.dataset.projectDrag);
-        card.classList.add('is-dragging');
-      });
-      card.addEventListener('dragend', () => {
-        card.classList.remove('is-dragging');
-        $$('[data-project-dropzone]', container).forEach((zone) => zone.classList.remove('is-dragover'));
-      });
-    });
+    bindProjectDragSources(container);
     $$('[data-project-dropzone]', container).forEach((zone) => {
       zone.addEventListener('dragover', (event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; zone.classList.add('is-dragover'); });
       zone.addEventListener('dragleave', (event) => { if (!zone.contains(event.relatedTarget)) zone.classList.remove('is-dragover'); });
@@ -313,6 +437,61 @@
         zone.classList.remove('is-dragover');
         const id = event.dataTransfer.getData('text/project-id');
         if (id) moveProjectToStage(id, zone.dataset.projectDropzone);
+      });
+    });
+  }
+
+  function bindProjectDragSources(container) {
+    $$('[data-project-drag]', container).forEach((card) => {
+      card.addEventListener('dragstart', (event) => {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/project-id', card.dataset.projectDrag);
+        card.classList.add('is-dragging');
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('is-dragging');
+        $$('[data-project-dropzone], [data-calendar-drop-date]', document).forEach((zone) => zone.classList.remove('is-dragover'));
+      });
+    });
+  }
+
+  function bindTaskDragSources(container) {
+    $$('[data-task-drag]', container).forEach((card) => {
+      card.addEventListener('dragstart', (event) => {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/task-id', card.dataset.taskDrag);
+        card.classList.add('is-dragging');
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('is-dragging');
+        $$('[data-task-dropzone], [data-calendar-drop-date]', document).forEach((zone) => zone.classList.remove('is-dragover'));
+      });
+    });
+  }
+
+  function bindCalendarDnD(container) {
+    bindProjectDragSources(container);
+    bindTaskDragSources(container);
+    $$('[data-calendar-drop-date]', container).forEach((day) => {
+      day.addEventListener('dragover', (event) => {
+        const dragTypes = Array.from(event.dataTransfer.types || []);
+        if (dragTypes.includes('text/project-id') || dragTypes.includes('text/task-id')) {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          day.classList.add('is-dragover');
+        }
+      });
+      day.addEventListener('dragleave', (event) => {
+        if (!day.contains(event.relatedTarget)) day.classList.remove('is-dragover');
+      });
+      day.addEventListener('drop', (event) => {
+        event.preventDefault();
+        day.classList.remove('is-dragover');
+        const dateKey = day.dataset.calendarDropDate;
+        const projectId = event.dataTransfer.getData('text/project-id');
+        const taskId = event.dataTransfer.getData('text/task-id');
+        if (projectId) moveProjectToCalendar(projectId, dateKey);
+        if (taskId) moveTaskToCalendar(taskId, dateKey);
       });
     });
   }
@@ -326,7 +505,7 @@
     }
     const previous = project.status;
     project.status = status;
-    renderDashboardPipeline();
+    renderDashboard();
     try {
       const { data, error } = await db.from('artist_projects').update({ status }).eq('id', id).eq('artist_id', state.artist.id).select().single();
       if (error) throw error;
@@ -339,6 +518,33 @@
       project.status = previous;
       renderDashboard();
       toast(error.message || 'Не удалось изменить этап проекта.', 'error');
+    }
+  }
+
+  async function moveProjectToCalendar(id, dateKey) {
+    const project = state.projects.find((item) => item.id === id);
+    if (!project || !dateKey) return;
+    const previousReleaseAt = project.release_at;
+    const previousStatus = project.status;
+    const nextStatus = ['scheduled', 'released', 'archived'].includes(project.status) ? project.status : 'scheduled';
+    const releaseAt = dateKeyToISO(dateKey);
+    project.release_at = releaseAt;
+    project.status = nextStatus;
+    renderDashboard();
+    renderCalendar();
+    try {
+      const { data, error } = await db.from('artist_projects').update({ release_at: releaseAt, status: nextStatus }).eq('id', id).eq('artist_id', state.artist.id).select().single();
+      if (error) throw error;
+      Object.assign(project, data);
+      renderDashboard();
+      renderCalendar();
+      toast('Релиз добавлен в календарь.');
+    } catch (error) {
+      project.release_at = previousReleaseAt;
+      project.status = previousStatus;
+      renderDashboard();
+      renderCalendar();
+      toast(error.message || 'Не удалось перенести релиз в календаре.', 'error');
     }
   }
 
@@ -371,17 +577,7 @@
   }
 
   function bindTaskPipelineDnD(container) {
-    $$('[data-task-drag]', container).forEach((card) => {
-      card.addEventListener('dragstart', (event) => {
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/task-id', card.dataset.taskDrag);
-        card.classList.add('is-dragging');
-      });
-      card.addEventListener('dragend', () => {
-        card.classList.remove('is-dragging');
-        $$('[data-task-dropzone]', container).forEach((zone) => zone.classList.remove('is-dragover'));
-      });
-    });
+    bindTaskDragSources(container);
     $$('[data-task-dropzone]', container).forEach((zone) => {
       zone.addEventListener('dragover', (event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; zone.classList.add('is-dragover'); });
       zone.addEventListener('dragleave', (event) => { if (!zone.contains(event.relatedTarget)) zone.classList.remove('is-dragover'); });
@@ -429,7 +625,8 @@
 
   function renderDashboardFiles() {
     const query = state.dashboardSearch.toLowerCase();
-    const files = state.files.filter((file) => !query || file.original_name.toLowerCase().includes(query) || projectById(file.project_id)?.title?.toLowerCase().includes(query));
+    const selectedProject = selectedDashboardProject();
+    const files = state.files.filter((file) => (!selectedProject || file.project_id === selectedProject.id) && (!query || file.original_name.toLowerCase().includes(query) || projectById(file.project_id)?.title?.toLowerCase().includes(query)));
     const container = $('#dashboard-files');
     container.innerHTML = files.length ? `<div class="dashboard-file-head"><span>Имя</span><span>Проект</span><span>Тип</span><span>Размер</span></div>${files.slice(0, 3).map((file) => `<button class="dashboard-file-row" data-download-file="${file.id}" type="button"><span>${escapeHTML(file.original_name)}</span><span>${escapeHTML(projectById(file.project_id)?.title || '—')}</span><span>${escapeHTML(file.file_kind)}</span><span>${formatFileSize(file.size_bytes)}</span></button>`).join('')}` : '<div class="empty-list">Рабочих файлов пока нет.</div>';
     $$('[data-download-file]', container).forEach((button) => button.addEventListener('click', () => downloadProjectFile(button.dataset.downloadFile)));
@@ -464,8 +661,9 @@
     const selectedStatus = task ? taskWorkflow(task) : initialStatus;
     const projectOptions = ['<option value="">Без привязки к релизу</option>', ...state.projects.map((project) => `<option value="${project.id}" ${project.id === selectedProjectId ? 'selected' : ''}>${escapeHTML(project.title)}</option>`)].join('');
     const workflowOptions = Object.entries(TASK_WORKFLOW).map(([value, label]) => `<option value="${value}" ${value === selectedStatus ? 'selected' : ''}>${label}</option>`).join('');
-    openDrawer('TASK / PROJECT', task ? 'Редактирование задачи' : 'Новая задача', `<form id="task-form"><label class="field"><span>Задача</span><input name="title" value="${escapeHTML(task?.title || '')}" required placeholder="Например: подготовить обложку"></label><label class="field"><span>Связанный релиз</span><select name="project_id">${projectOptions}</select></label><div class="form-grid two"><label class="field"><span>Этап</span><select name="workflow_status">${workflowOptions}</select></label><label class="field"><span>Срок</span><input name="due_at" type="datetime-local" value="${toLocalInput(task?.due_at)}"></label></div><div class="drawer-actions"><span>${task ? 'Можно оставить задачу без привязки к релизу.' : ''}</span><button class="button button-primary" type="submit">${task ? 'Сохранить' : 'Добавить задачу'}</button></div></form>`);
+    openDrawer('TASK / PROJECT', task ? 'Редактирование задачи' : 'Новая задача', `<form id="task-form"><label class="field"><span>Задача</span><input name="title" value="${escapeHTML(task?.title || '')}" required placeholder="Например: подготовить обложку"></label><label class="field"><span>Связанный релиз</span><select name="project_id">${projectOptions}</select></label><div class="form-grid two"><label class="field"><span>Этап</span><select name="workflow_status">${workflowOptions}</select></label><label class="field"><span>Срок</span><input name="due_at" type="datetime-local" value="${toLocalInput(task?.due_at)}"></label></div><div class="drawer-actions">${task ? '<button class="button button-danger" id="delete-task" type="button">Удалить</button>' : '<span></span>'}<button class="button button-primary" type="submit">${task ? 'Сохранить' : 'Добавить задачу'}</button></div></form>`);
     $('#task-form').addEventListener('submit', (event) => saveTask(event, task));
+    $('#delete-task')?.addEventListener('click', () => deleteTask(task));
   }
 
   async function saveTask(event, task = null) {
@@ -484,7 +682,7 @@
       const { error } = await query;
       if (error) throw error;
       state.tasks = await safeQuery(db.from('project_tasks').select('*').eq('artist_id', state.artist.id).order('is_done').order('sort_order').order('due_at'));
-      renderDashboard(); renderTasksView();
+      renderDashboard(); renderTasksView(); renderCalendar();
       if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
       closeDrawer(); toast(task ? 'Задача обновлена.' : 'Задача добавлена.');
     } catch (error) { toast(error.message || 'Не удалось сохранить задачу.', 'error'); }
@@ -497,16 +695,62 @@
     const previousWorkflow = task ? taskWorkflow(task) : 'idea';
     const workflowStatus = isDone ? 'uploaded' : (previousWorkflow === 'uploaded' ? 'doing' : previousWorkflow);
     if (task) { task.is_done = isDone; task.workflow_status = workflowStatus; }
+    renderDashboard();
     renderTasksView();
     try {
       const { error } = await db.from('project_tasks').update({ is_done: isDone, workflow_status: workflowStatus }).eq('id', id).eq('artist_id', state.artist.id);
       if (error) throw error;
-      renderDashboard(); renderTasksView();
+      renderDashboard(); renderTasksView(); renderCalendar();
+      if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
     } catch (error) {
       if (task) { task.is_done = previous; task.workflow_status = previousWorkflow; }
-      renderDashboard(); renderTasksView();
+      renderDashboard(); renderTasksView(); renderCalendar();
       if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
       toast(error.message || 'Не удалось обновить задачу.', 'error');
+    }
+  }
+
+  async function moveTaskToCalendar(id, dateKey) {
+    const task = state.tasks.find((item) => item.id === id);
+    if (!task || !dateKey) return;
+    const previousDueAt = task.due_at;
+    const dueAt = dateKeyToISO(dateKey);
+    task.due_at = dueAt;
+    renderDashboard();
+    renderTasksView();
+    renderCalendar();
+    try {
+      const { data, error } = await db.from('project_tasks').update({ due_at: dueAt }).eq('id', id).eq('artist_id', state.artist.id).select().single();
+      if (error) throw error;
+      Object.assign(task, data);
+      renderDashboard();
+      renderTasksView();
+      renderCalendar();
+      if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
+      toast('Задача перенесена в календаре.');
+    } catch (error) {
+      task.due_at = previousDueAt;
+      renderDashboard();
+      renderTasksView();
+      renderCalendar();
+      toast(error.message || 'Не удалось перенести задачу в календаре.', 'error');
+    }
+  }
+
+  async function deleteTask(task) {
+    if (!task || !confirm(`Удалить задачу «${task.title}»?`)) return;
+    try {
+      const { error } = await db.from('project_tasks').delete().eq('id', task.id).eq('artist_id', state.artist.id);
+      if (error) throw error;
+      state.tasks = state.tasks.filter((item) => item.id !== task.id);
+      renderDashboard();
+      renderTasksView();
+      renderCalendar();
+      if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
+      closeDrawer();
+      toast('Задача удалена.');
+    } catch (error) {
+      toast(error.message || 'Не удалось удалить задачу.', 'error');
     }
   }
 
@@ -727,6 +971,13 @@
     }));
   }
 
+  function bindTaskButtons(root) {
+    $$('[data-open-task]', root).forEach((node) => node.addEventListener('click', () => {
+      const task = state.tasks.find((item) => item.id === node.dataset.openTask);
+      if (task) openTaskEditor(taskWorkflow(task), task.project_id || '', task.id);
+    }));
+  }
+
   async function openProjectEditor(id = null, initialStatus = 'idea', returnView = null) {
     const visibleView = $('.view.is-active')?.dataset.viewPanel;
     state.projectReturnView = returnView || (visibleView === 'dashboard' ? 'dashboard' : 'projects');
@@ -747,12 +998,18 @@
     const linkedTasks = project ? state.tasks.filter((task) => task.project_id === project.id) : [];
     const linkedFiles = project ? state.files.filter((file) => file.project_id === project.id) : [];
     const linkedLyrics = project ? state.lyrics.filter((doc) => doc.project_id === project.id) : [];
+    const taskRows = linkedTasks.length ? [...linkedTasks]
+      .sort((a, b) => Number(a.is_done) - Number(b.is_done) || new Date(a.due_at || '2999-12-31') - new Date(b.due_at || '2999-12-31'))
+      .map((task) => `<article class="dashboard-task-row track-task-row ${task.is_done ? 'is-done' : ''}">
+        <label><input type="checkbox" data-track-task-check="${task.id}" ${task.is_done ? 'checked' : ''}><span></span></label>
+        <button data-open-task="${task.id}" type="button"><strong>${escapeHTML(task.title)}</strong><small>${task.due_at ? formatDate(task.due_at, { year: undefined }) : 'без даты'} · ${TASK_WORKFLOW[taskWorkflow(task)]}</small></button>
+      </article>`).join('') : '<p class="track-workspace-empty">Задач пока нет.</p>';
     const progressStatuses = ['idea', 'demo', 'mix', 'scheduled', 'released'];
     const activeIndex = selectedStatus === 'archived'
       ? progressStatuses.length - 1
       : Math.max(0, progressStatuses.indexOf(selectedStatus));
     const fileRows = linkedFiles.length ? linkedFiles.slice(0, 8).map((file) => `<button class="track-workspace-list-row" data-download-file="${file.id}" type="button"><span>${escapeHTML(file.original_name)}</span><small>${escapeHTML(file.file_kind)} · ${formatFileSize(file.size_bytes)}</small></button>`).join('') : '<p class="track-workspace-empty">Файлов пока нет.</p>';
-    const lyricRows = linkedLyrics.length ? linkedLyrics.map((doc) => `<button class="track-workspace-list-row" data-project-lyrics="${doc.id}" type="button"><span>${escapeHTML(doc.title)}</span><small>${doc.document_status === 'ready' ? 'Готов' : 'Черновик'}</small></button>`).join('') : '<p class="track-workspace-empty">Текст ещё не привязан.</p>';
+    const lyricRows = linkedLyrics.length ? linkedLyrics.map((doc) => `<article class="track-lyrics-inline" data-track-lyrics-inline="${doc.id}"><header><button class="track-lyrics-title" data-project-lyrics="${doc.id}" type="button"><strong>${escapeHTML(doc.title)}</strong></button><small>${doc.document_status === 'ready' ? 'Готов' : doc.document_status === 'archived' ? 'Архив' : 'Черновик'}</small></header><textarea data-inline-lyrics-body="${doc.id}" placeholder="Текст трека...">${escapeHTML(doc.body || '')}</textarea><footer><button class="text-button" data-project-lyrics="${doc.id}" type="button">Открыть полностью</button><button class="button button-primary" data-save-inline-lyrics="${doc.id}" type="button">Сохранить текст</button></footer></article>`).join('') : '<p class="track-workspace-empty">Текст ещё не привязан.</p>';
     const container = $('#track-workspace');
     container.innerHTML = `
       <div class="track-workspace-toolbar">
@@ -767,17 +1024,16 @@
             <input class="track-title-input" name="title" value="${escapeHTML(project?.title || '')}" required placeholder="Название трека">
             <p id="project-status-hint">${PROJECT_STATUS_HINT[selectedStatus] || ''}</p>
           </div>
-          <button class="button button-primary track-save-button" type="submit">${project ? 'Сохранить трек' : 'Создать трек'}</button>
+          <div class="track-workspace-actions">
+            <button class="button button-primary track-save-button" type="submit">${project ? 'Сохранить трек' : 'Создать трек'}</button>
+          </div>
           <div class="track-progress" aria-label="Прогресс релиза">${progressStatuses.map((status, index) => `<button class="${index <= activeIndex ? 'is-reached' : ''} ${status === selectedStatus ? 'is-active' : ''}" data-track-status="${status}" type="button"><i>${String(index + 1).padStart(2, '0')}</i><span>${PROJECT_STATUS[status]}</span><small>${PROJECT_STATUS_HINT[status]}</small></button>`).join('')}</div>
         </section>
 
         <div class="track-workspace-grid">
-          <section class="panel track-workspace-main">
-            <header class="panel-header"><div><span class="eyebrow">Основа проекта</span><h3>Трек</h3></div></header>
-            <div class="track-workspace-section-body">
-              <label class="field"><span>Бит</span><select name="beat_id">${beatOptions}</select></label>
-              <label class="field"><span>Заметки по треку</span><textarea name="description" rows="8" placeholder="Идеи, референсы, детали записи…">${escapeHTML(project?.description || '')}</textarea></label>
-            </div>
+          <section class="panel track-workspace-lyrics">
+            <header class="panel-header"><div><span class="eyebrow">Материал</span><h3>Текст</h3></div>${project ? '<button class="text-button" id="track-add-lyrics" type="button">+ Текст</button>' : ''}</header>
+            <div class="track-workspace-list track-workspace-lyrics-list">${project ? lyricRows : '<p class="track-workspace-empty">Сначала сохраните трек.</p>'}</div>
           </section>
 
           <section class="panel track-workspace-release">
@@ -789,20 +1045,31 @@
             </div>
           </section>
 
-          <section class="panel track-workspace-tasks">
-            <header class="panel-header"><div><span class="eyebrow">Производство</span><h3>Задачи трека</h3></div>${project ? '<button class="text-button" id="track-add-task" type="button">+ Задача</button>' : ''}</header>
-            ${project ? '<div class="task-pipeline-board track-task-board" id="track-tasks-board"></div>' : '<p class="track-workspace-empty large">Сохраните трек — стандартные задачи появятся автоматически.</p>'}
+          <section class="panel track-workspace-main">
+            <header class="panel-header"><div><span class="eyebrow">Внутреннее</span><h3>Заметки</h3></div></header>
+            <div class="track-workspace-section-body">
+              <label class="field"><span>Бит</span><select name="beat_id">${beatOptions}</select></label>
+              <label class="field"><span>Заметки по треку</span><textarea name="description" rows="7" placeholder="Идеи, референсы, детали записи…">${escapeHTML(project?.description || '')}</textarea></label>
+            </div>
           </section>
 
-          <section class="panel track-workspace-lyrics">
-            <header class="panel-header"><div><span class="eyebrow">Материал</span><h3>Текст</h3></div>${project ? '<button class="text-button" id="track-add-lyrics" type="button">+ Текст</button>' : ''}</header>
-            <div class="track-workspace-list">${project ? lyricRows : '<p class="track-workspace-empty">Сначала сохраните трек.</p>'}</div>
+          <section class="panel track-workspace-tasks">
+            <header class="panel-header"><div><span class="eyebrow">Производство</span><h3>Задачи трека</h3></div>${project ? '<button class="text-button" id="track-add-task" type="button">+ Задача</button>' : ''}</header>
+            ${project ? `<div class="track-task-list" id="track-tasks-list">${taskRows}</div>` : '<p class="track-workspace-empty large">Сохраните трек — стандартные задачи появятся автоматически.</p>'}
           </section>
 
           <section class="panel track-workspace-files">
             <header class="panel-header"><div><span class="eyebrow">Приватное хранилище</span><h3>Файлы</h3></div>${project ? '<button class="text-button" id="track-add-file" type="button">+ Файл</button>' : ''}</header>
             <div class="track-workspace-list">${project ? fileRows : '<p class="track-workspace-empty">Сначала сохраните трек.</p>'}</div>
           </section>
+
+          ${project ? `<section class="panel track-workspace-danger">
+            <header class="panel-header"><div><span class="eyebrow">Опасная зона</span><h3>Удаление</h3></div></header>
+            <div class="track-workspace-section-body track-danger-body">
+              <p>Удаление уберёт релиз из кабинета, календаря и прогресса. Связанные задачи и даты тоже будут очищены.</p>
+              <button class="button button-danger track-delete-button" id="delete-project" type="button">Удалить релиз</button>
+            </div>
+          </section>` : ''}
         </div>
       </form>`;
     const form = $('#project-form', container);
@@ -832,17 +1099,37 @@
       if (!previousPreview) label.insertBefore(preview, coverInput);
     });
     if (project) {
-      const taskBoard = $('#track-tasks-board', container);
-      taskBoard.dataset.projectId = project.id;
-      renderTaskWorkflowBoard(taskBoard, linkedTasks, project.id);
+      $$('[data-track-task-check]', container).forEach((input) => input.addEventListener('change', () => toggleTask(input.dataset.trackTaskCheck, input.checked)));
+      bindTaskButtons($('#track-tasks-list', container));
       $('#track-add-task').addEventListener('click', () => openTaskEditor('idea', project.id));
       $('#track-add-file').addEventListener('click', () => openFileUploader(project.id));
-      $('#track-add-lyrics').addEventListener('click', () => { goView('lyrics'); openLyrics(null, project.id); });
+      $('#track-add-lyrics').addEventListener('click', () => { state.lyricsReturnProjectId = project.id; goView('lyrics'); openLyrics(null, project.id); });
+      $('#delete-project')?.addEventListener('click', () => deleteProject(project));
     }
     $$('[data-download-file]', form).forEach((button) => button.addEventListener('click', () => downloadProjectFile(button.dataset.downloadFile)));
-    $$('[data-project-lyrics]', form).forEach((button) => button.addEventListener('click', () => { goView('lyrics'); openLyrics(button.dataset.projectLyrics); }));
+    $$('[data-save-inline-lyrics]', form).forEach((button) => button.addEventListener('click', () => saveInlineLyrics(button.dataset.saveInlineLyrics, form)));
+    $$('[data-project-lyrics]', form).forEach((button) => button.addEventListener('click', () => { if (project) state.lyricsReturnProjectId = project.id; goView('lyrics'); openLyrics(button.dataset.projectLyrics); }));
     $('#track-workspace-back').addEventListener('click', () => { state.activeProjectId = null; goView(state.projectReturnView); });
     form.addEventListener('submit', (event) => saveProject(event, project));
+  }
+
+  async function saveInlineLyrics(id, root) {
+    const doc = state.lyrics.find((item) => item.id === id);
+    const textarea = $$('[data-inline-lyrics-body]', root).find((node) => node.dataset.inlineLyricsBody === id);
+    const button = $$('[data-save-inline-lyrics]', root).find((node) => node.dataset.saveInlineLyrics === id);
+    if (!doc || !textarea) return;
+    setBusy(button, true, '...');
+    try {
+      const { data, error } = await db.from('lyrics_documents').update({ body: textarea.value }).eq('id', id).eq('artist_id', state.artist.id).select().single();
+      if (error) throw error;
+      state.lyrics = state.lyrics.map((item) => item.id === id ? data : item);
+      renderLyricsList();
+      toast('Текст сохранён.');
+    } catch (error) {
+      toast(error.message || 'Не удалось сохранить текст.', 'error');
+    } finally {
+      setBusy(button, false);
+    }
   }
 
   async function saveProject(event, project) {
@@ -887,6 +1174,16 @@
       state.projects = await safeQuery(db.from('artist_projects').select('*').eq('artist_id', state.artist.id).order('updated_at', { ascending: false }));
       if (isNewProject) state.tasks = await safeQuery(db.from('project_tasks').select('*').eq('artist_id', state.artist.id).order('is_done').order('sort_order').order('due_at'));
       await renderProjects(); renderDashboard(); renderCalendar();
+      if (isNewProject && state.projectReturnView === 'dashboard') {
+        state.activeProjectId = null;
+        goView('dashboard');
+        const url = new URL(location.href);
+        url.searchParams.set('section', 'dashboard');
+        url.searchParams.delete('project');
+        history.replaceState({}, '', `${url.pathname}${url.search}`);
+        toast('Проект создан со стандартными задачами.');
+        return;
+      }
       state.activeProjectId = saved.id;
       await renderTrackWorkspace(saved.id, saved.status);
       goView('track');
@@ -894,6 +1191,36 @@
       toast(project ? 'Проект обновлён.' : 'Проект создан со стандартными задачами.');
     } catch (error) { toast(error.message || 'Не удалось сохранить проект.', 'error'); }
     finally { setBusy(submit, false); }
+  }
+
+  async function deleteProject(project) {
+    if (!project) return;
+    const answer = prompt(`Чтобы удалить релиз «${project.title}», введите слово: удалить`);
+    if (String(answer || '').trim().toLowerCase() !== 'удалить') {
+      toast('Удаление отменено.');
+      return;
+    }
+    try {
+      const { error } = await db.from('artist_projects').delete().eq('id', project.id).eq('artist_id', state.artist.id);
+      if (error) throw error;
+      state.projects = state.projects.filter((item) => item.id !== project.id);
+      state.tasks = state.tasks.filter((task) => task.project_id !== project.id);
+      state.events = state.events.filter((event) => event.project_id !== project.id);
+      state.files = state.files.filter((file) => file.project_id !== project.id);
+      state.lyrics = state.lyrics.map((doc) => doc.project_id === project.id ? { ...doc, project_id: null } : doc);
+      if (state.dashboardProjectId === project.id) state.dashboardProjectId = '';
+      state.activeProjectId = null;
+      await renderProjects();
+      renderTasksView();
+      renderLyricsList();
+      renderDashboard();
+      renderCalendar();
+      goView(state.projectReturnView === 'dashboard' ? 'dashboard' : 'projects');
+      closeDrawer();
+      toast('Релиз удалён.');
+    } catch (error) {
+      toast(error.message || 'Не удалось удалить релиз.', 'error');
+    }
   }
 
   function renderLyricsList() {
@@ -963,6 +1290,9 @@
     const selectedCategory = doc?.category || 'В работе';
     const categoryOptions = lyricsCategories().map((category) => `<option value="${escapeHTML(category)}" ${selectedCategory === category ? 'selected' : ''}>${escapeHTML(category)}</option>`).join('');
     $('#lyrics-editor').innerHTML = `<form id="lyrics-form"><div class="form-grid two"><label class="field"><span>Название</span><input name="title" value="${escapeHTML(doc?.title || '')}" required></label><label class="field"><span>Статус</span><select name="document_status"><option value="draft" ${doc?.document_status === 'draft' ? 'selected' : ''}>Черновик</option><option value="ready" ${doc?.document_status === 'ready' ? 'selected' : ''}>Готов</option><option value="archived" ${doc?.document_status === 'archived' ? 'selected' : ''}>Архив</option></select></label></div><div class="form-grid two"><label class="field"><span>Трек</span><select name="project_id">${projectOptions}</select></label><label class="field"><span>Категория</span><select name="category">${categoryOptions}<option value="__custom__">+ Своя категория…</option></select></label></div><label class="field lyrics-custom-category" id="lyrics-custom-category" hidden><span>Название своей категории</span><input name="custom_category" maxlength="40" placeholder="Например: Второй альбом"></label><label class="field"><span>Текст</span><textarea class="lyrics-body" name="body" placeholder="Начните писать…">${escapeHTML(doc?.body || '')}</textarea></label><div class="editor-actions">${doc ? '<button class="button button-danger" id="delete-lyrics" type="button">Удалить</button>' : '<span></span>'}<button class="button button-primary" type="submit">Сохранить текст</button></div></form>`;
+    if (state.lyricsReturnProjectId) {
+      $('#lyrics-editor').insertAdjacentHTML('afterbegin', '<div class="lyrics-editor-return"><button class="text-button" id="lyrics-return-track" type="button">← К треку</button></div>');
+    }
     const categorySelect = $('[name="category"]', $('#lyrics-form'));
     const customCategory = $('#lyrics-custom-category');
     categorySelect.addEventListener('change', () => {
@@ -971,6 +1301,11 @@
     });
     $('#lyrics-form').addEventListener('submit', (event) => saveLyrics(event, doc));
     $('#delete-lyrics')?.addEventListener('click', () => deleteLyrics(doc));
+    $('#lyrics-return-track')?.addEventListener('click', () => {
+      const projectId = state.lyricsReturnProjectId;
+      state.lyricsReturnProjectId = '';
+      if (projectId) openProjectEditor(projectId, 'idea', state.projectReturnView || 'projects');
+    });
   }
 
   async function saveLyrics(event, doc) {
@@ -983,9 +1318,15 @@
       const query = doc ? db.from('lyrics_documents').update(payload).eq('id', doc.id).eq('artist_id', state.artist.id) : db.from('lyrics_documents').insert(payload);
       const { error } = await query; if (error) throw error;
       state.lyrics = await safeQuery(db.from('lyrics_documents').select('*').eq('artist_id', state.artist.id).order('updated_at', { ascending: false }));
-      state.activeLyricsId = doc?.id || state.lyrics[0]?.id || null;
-      renderLyricsList(); if (state.activeLyricsId) openLyrics(state.activeLyricsId);
+      const returnProjectId = state.lyricsReturnProjectId;
+      state.activeLyricsId = null;
+      renderLyricsList();
+      $('#lyrics-editor').innerHTML = '<div class="empty-state"><span>TXT</span><h3>Выберите текст</h3><p>Или создайте новый документ.</p></div>';
       toast('Текст сохранён.');
+      if (returnProjectId) {
+        state.lyricsReturnProjectId = '';
+        openProjectEditor(returnProjectId, 'idea', state.projectReturnView || 'projects');
+      }
     } catch (error) { toast(error.message || 'Не удалось сохранить текст.', 'error'); }
   }
 
@@ -1030,18 +1371,24 @@
     const days = [];
     for (let index = 0; index < 42; index += 1) {
       const current = new Date(first); current.setDate(first.getDate() + index);
-      const key = current.toISOString().slice(0, 10);
-      const dayEvents = state.events.filter((event) => new Date(event.starts_at).toISOString().slice(0,10) === key && event.status !== 'cancelled');
-      const dayProjects = state.projects.filter((project) => ['scheduled', 'released', 'archived'].includes(project.status) && project.release_at && new Date(project.release_at).toISOString().slice(0, 10) === key);
+      const key = localDateKey(current);
+      const dayProjects = state.projects.filter((project) => ['scheduled', 'released', 'archived'].includes(project.status) && project.release_at && localDateKey(project.release_at) === key);
+      const dayTasks = state.tasks.filter((task) => task.due_at && localDateKey(task.due_at) === key);
       const today = new Date();
-      days.push(`<div class="calendar-day ${current.getMonth() !== date.getMonth() ? 'is-muted' : ''} ${current.toDateString() === today.toDateString() ? 'is-today' : ''}"><span>${current.getDate()}</span>${dayEvents.slice(0, 1).map((event) => `<button class="calendar-entry-event" data-open-project="${event.project_id || ''}" type="button">${escapeHTML(event.title)}</button>`).join('')}${dayProjects.slice(0, 2).map((project) => `<button class="calendar-entry-${project.status}" data-open-project="${project.id}" type="button">${escapeHTML(project.title)}</button>`).join('')}</div>`);
+      const entries = [
+        ...dayProjects.map((project) => `<button class="calendar-entry-${project.status}" data-open-project="${project.id}" data-project-drag="${project.id}" draggable="true" type="button">${escapeHTML(project.title)}</button>`),
+        ...dayTasks.map((task) => `<button class="calendar-entry-${task.is_done ? 'task-done' : 'task'}" data-open-task="${task.id}" data-task-drag="${task.id}" draggable="true" type="button">${escapeHTML(task.title)}</button>`),
+      ];
+      days.push(`<div class="calendar-day ${current.getMonth() !== date.getMonth() ? 'is-muted' : ''} ${current.toDateString() === today.toDateString() ? 'is-today' : ''}" data-calendar-drop-date="${key}"><span>${current.getDate()}</span><div class="calendar-entry-stack">${entries.join('')}</div></div>`);
     }
     const grid = $('#calendar-grid');
     grid.innerHTML = weekdays + days.join('');
     bindProjectButtons(grid);
+    bindTaskButtons(grid);
+    bindCalendarDnD(grid);
     const calendarFeed = [
-      ...state.events.filter((event) => event.status !== 'cancelled'),
       ...state.projects.filter((project) => ['scheduled', 'released', 'archived'].includes(project.status) && project.release_at).map((project) => ({ title: project.title, status: project.status, starts_at: project.release_at })),
+      ...state.tasks.filter((task) => task.due_at).map((task) => ({ title: task.title, status: task.is_done ? 'done' : 'task', starts_at: task.due_at })),
     ].filter((entry) => new Date(entry.starts_at) >= new Date()).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
     renderEventList($('#calendar-events'), calendarFeed.slice(0, 12));
   }
@@ -1068,8 +1415,8 @@
     $('#profile-inst').value = artist?.inst_url || '';
     $('#profile-preview-name').textContent = artist?.name || 'Имя артиста';
     $('#profile-preview-description').textContent = artist?.description || 'Короткое описание появится здесь.';
-    const image = $('#profile-image-preview');
-    if (artist?.image_url) { image.src = artist.image_url; image.hidden = false; $('#profile-photo > span').hidden = true; }
+    restoreStoredProfileImage();
+    setProfileImageStatus();
     updateProfileCounters();
   }
 
@@ -1086,13 +1433,14 @@
       let imageUrl = state.artist.image_url || null;
       const file = $('#profile-image').files?.[0];
       if (file) {
+        await validateProfileImage(file);
         const path = `${state.user.id}/avatar-${Date.now()}-${safeFileName(file.name)}`;
         const { error } = await db.storage.from('artists').upload(path, file, { contentType: file.type }); if (error) throw error;
         imageUrl = db.storage.from('artists').getPublicUrl(path).data.publicUrl;
       }
       const payload = { name: $('#profile-name').value.trim(), description: $('#profile-description').value.trim(), matrix_text: $('#profile-matrix').value.trim(), tg_url: $('#profile-tg').value.trim() || null, vk_url: $('#profile-vk').value.trim() || null, inst_url: $('#profile-inst').value.trim() || null, image_url: imageUrl };
       const { data, error } = await db.from('artists').update(payload).eq('id', state.artist.id).eq('owner_user_id', state.user.id).select().single(); if (error) throw error;
-      state.artist = data; hydrateProfile(); syncIdentity(); $('#profile-save-state').textContent = 'Сохранено'; toast('Карточка артиста обновлена.');
+      state.artist = data; $('#profile-image').value = ''; hydrateProfile(); syncIdentity(); $('#profile-save-state').textContent = 'Сохранено'; toast('Карточка артиста обновлена.');
     } catch (error) { toast(error.message || 'Не удалось сохранить карточку.', 'error'); }
     finally { setBusy(button, false); setTimeout(() => { $('#profile-save-state').textContent = ''; }, 1800); }
   }
@@ -1146,6 +1494,14 @@
       else goView(VIEW_TITLES[requested] && requested !== 'track' && (requested !== 'invites' || isOwner()) ? requested : 'dashboard');
       state.booted = true;
     } catch (error) {
+      const pendingInviteToken = localStorage.getItem('inmise-pending-invite-token');
+      if (pendingInviteToken && /^[a-f0-9]{64}$/i.test(pendingInviteToken)) {
+        const inviteUrl = new URL('/invite/', window.location.origin);
+        inviteUrl.searchParams.set('token', pendingInviteToken);
+        inviteUrl.searchParams.set('claim', '1');
+        window.location.replace(inviteUrl.toString());
+        return;
+      }
       setSystemStatus('Ошибка привязки');
       toast(error.message || 'Не удалось открыть кабинет.', 'error');
     }
@@ -1240,7 +1596,7 @@
       closeDashboardStart();
       if (action === 'project') openProjectEditor();
       if (action === 'beat') openBeatEditor();
-      if (action === 'task') openTaskEditor();
+      if (action === 'task') openTaskEditor('idea', state.dashboardProjectId || '');
       if (action === 'event') openEventEditor();
     });
     document.addEventListener('click', (event) => {
@@ -1248,7 +1604,9 @@
     });
     $('#dashboard-calendar-prev').addEventListener('click', () => { state.dashboardDate.setMonth(state.dashboardDate.getMonth() - 1); renderDashboardCalendar(); });
     $('#dashboard-calendar-next').addEventListener('click', () => { state.dashboardDate.setMonth(state.dashboardDate.getMonth() + 1); renderDashboardCalendar(); });
-    $('#dashboard-search').addEventListener('input', (event) => { state.dashboardSearch = event.currentTarget.value; renderDashboardPipeline(); renderDashboardFiles(); renderDashboardSearchResults(); });
+    $('#dashboard-project-select').addEventListener('change', (event) => { state.dashboardProjectId = event.currentTarget.value; renderDashboard(); });
+    $('#dashboard-new-task').addEventListener('click', () => openTaskEditor('idea', state.dashboardProjectId || ''));
+    $('#dashboard-search').addEventListener('input', (event) => { state.dashboardSearch = event.currentTarget.value; renderDashboardProjectFocus(selectedDashboardProject()); renderDashboardPipeline(); renderDashboardFiles(); renderDashboardSearchResults(); });
     $('#dashboard-search').addEventListener('keydown', (event) => { if (event.key === 'Escape') { event.currentTarget.value = ''; state.dashboardSearch = ''; renderDashboard(); } });
     $('#new-lyrics').addEventListener('click', () => openLyrics());
     $('#new-link').addEventListener('click', () => openLinkEditor());
@@ -1257,7 +1615,7 @@
     $('#calendar-next').addEventListener('click', () => { state.calendarDate.setMonth(state.calendarDate.getMonth() + 1); renderCalendar(); });
     $('#profile-form').addEventListener('submit', saveProfile);
     ['profile-name','profile-description','profile-matrix'].forEach((id) => $(`#${id}`).addEventListener('input', updateProfileCounters));
-    $('#profile-image').addEventListener('change', () => { const file = $('#profile-image').files?.[0]; if (!file) return; const image = $('#profile-image-preview'); image.src = URL.createObjectURL(file); image.hidden = false; $('#profile-photo > span').hidden = true; });
+    $('#profile-image').addEventListener('change', () => { const file = $('#profile-image').files?.[0]; if (file) previewProfileImage(file); });
     $('#create-invite').addEventListener('click', createInvite);
     $('#copy-invite').addEventListener('click', async () => { const value = $('#invite-link').value; if (!value) return; await navigator.clipboard.writeText(value); toast('Ссылка скопирована.'); });
   }
