@@ -27,7 +27,15 @@
 <body>
   <div class="terminal-noise" aria-hidden="true"></div>
 
-  <section class="auth-screen" id="auth-screen" aria-live="polite">
+  <section class="auth-screen" id="auth-loading-screen" aria-live="polite">
+    <div class="auth-card auth-loading-card">
+      <div class="auth-brand"><span class="status-lamp is-on"></span> INMISE / ARTIST TERMINAL</div>
+      <h1>Проверяем сессию</h1>
+      <p>Подключаем кабинет…</p>
+    </div>
+  </section>
+
+  <section class="auth-screen" id="auth-screen" aria-live="polite" hidden>
     <div class="auth-card">
       <div class="auth-brand"><span class="status-lamp is-on"></span> INMISE / ARTIST TERMINAL</div>
       <h1 id="auth-title">Вход в кабинет</h1>
@@ -69,7 +77,7 @@
         <button class="nav-item" data-view="calendar" type="button"><i>06</i><span>Календарь</span></button>
         <button class="nav-item" data-view="profile" type="button"><i>07</i><span>Карточка артиста</span></button>
         <button class="nav-item" data-view="links" type="button"><i>08</i><span>Ссылки</span></button>
-        <button class="nav-item" data-view="autopost" type="button"><i>09</i><span>Автопостинг</span><em>скоро</em></button>
+        <button class="nav-item" data-view="autopost" type="button"><i>09</i><span>Автопостинг</span></button>
         <button class="nav-item owner-only" data-view="invites" id="owner-nav" type="button" hidden><i>10</i><span>Инвайты</span><em>owner</em></button>
       </nav>
 
@@ -121,7 +129,7 @@
             </article>
 
             <article class="panel dashboard-tasks-panel">
-              <header class="panel-header"><div><span class="eyebrow">Работа</span><h3>Задачи</h3></div><button class="text-button" id="dashboard-new-task" type="button">+ Задача</button></header>
+              <header class="panel-header"><div><span class="eyebrow">Работа</span><h3 class="dashboard-tasks-heading">Задачи<button class="dashboard-wheel-trigger" id="dashboard-wheel-trigger" type="button" title="Случайная задача" aria-label="Случайная задача"><span class="wheel-trigger-tape"><span class="wheel-trigger-reel"></span><span class="wheel-trigger-reel"></span></span><i class="wheel-trigger-rec" aria-hidden="true"></i></button></h3></div><button class="text-button" id="dashboard-new-task" type="button">+ Задача</button></header>
               <div class="dashboard-task-list" id="dashboard-tasks"></div>
               <div class="dashboard-metrics">
                 <div><span>В работе</span><strong id="stat-projects">0</strong></div>
@@ -182,7 +190,21 @@
         </section>
 
         <section class="view" data-view-panel="links" hidden>
-          <div class="section-toolbar"><p class="section-intro">Приватное хранилище рабочих ссылок. На основном сайте они не отображаются.</p><button class="button button-primary" id="new-link" type="button">+ Добавить ссылку</button></div>
+          <div class="links-toolbar">
+            <div class="links-toolbar-copy">
+              <span class="eyebrow">Приватное хранилище</span>
+              <p class="section-intro">Рабочие ссылки видны только вам и не отображаются на основном сайте.</p>
+            </div>
+            <label class="links-filter-control" for="links-category-filter">
+              <span>Категория</span>
+              <select id="links-category-filter" aria-label="Фильтр ссылок по категории"></select>
+            </label>
+            <div class="links-view-toggle" role="group" aria-label="Вид ссылок">
+              <button type="button" data-links-view="cards" aria-pressed="true">Карточки</button>
+              <button type="button" data-links-view="list" aria-pressed="false">Список</button>
+            </div>
+            <button class="button button-primary" id="new-link" type="button">+ Добавить ссылку</button>
+          </div>
           <div class="links-grid" id="links-list"></div>
         </section>
 
@@ -206,7 +228,7 @@
         </section>
 
         <section class="view" data-view-panel="autopost" hidden>
-          <div class="coming-soon"><span class="coming-icon">TX</span><span class="eyebrow">Модуль в разработке</span><h2>Автопостинг</h2><p>Позже здесь можно будет подготовить один пост и отправить его во все подключённые соцсети.</p><div class="channel-row"><span>Telegram</span><span>VK</span><span>YouTube</span><span>Другие</span></div></div>
+          <div id="autopost-panel"></div>
         </section>
 
         <section class="view owner-only" data-view-panel="invites" hidden>
@@ -224,8 +246,21 @@
 
   <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
   <aside class="drawer" id="drawer" hidden aria-live="polite"><header><div><span class="eyebrow" id="drawer-code">PROJECT</span><h2 id="drawer-title">Карточка</h2></div><button class="icon-button" id="drawer-close" type="button" aria-label="Закрыть">×</button></header><div class="drawer-body" id="drawer-body"></div></aside>
+
+  <div class="wheel-backdrop" id="wheel-backdrop" hidden></div>
+  <div class="wheel-modal" id="wheel-modal" hidden aria-live="polite">
+    <button class="icon-button wheel-modal-close" id="wheel-modal-close" type="button" aria-label="Закрыть">×</button>
+    <div class="wheel-osd"><i class="wheel-osd-rec" aria-hidden="true"></i>REC ● SP</div>
+    <div class="wheel-stage">
+      <div class="wheel-pointer" aria-hidden="true"></div>
+      <canvas class="wheel-canvas" id="wheel-canvas" width="600" height="600"></canvas>
+      <div class="wheel-scanlines" aria-hidden="true"></div>
+    </div>
+    <div class="wheel-result" id="wheel-result" hidden><span class="eyebrow">Выбрано</span><strong id="wheel-result-title"></strong></div>
+    <button class="button button-primary wheel-spin-button" id="wheel-spin" type="button">Крутить</button>
+  </div>
   <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
 
-  <script src="/scripts/artist-terminal.js?v=20260722-2"></script>
+  <script src="/scripts/artist-terminal.js?v=20260723-1"></script>
 </body>
 </html>

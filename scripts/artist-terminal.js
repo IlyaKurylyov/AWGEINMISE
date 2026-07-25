@@ -8,7 +8,7 @@
 
   const db = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
   const publicDb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'inmise-public-client' },
   });
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -117,6 +117,8 @@
   const TASK_WORKFLOW = { idea: 'Придумал', doing: 'Делаю', uploaded: 'Загружено' };
   const DEFAULT_PROJECT_TASKS = ['Сделать обложку', 'Записать вокал', 'Свести'];
   const DEFAULT_LYRICS_CATEGORIES = ['На альбом', 'Ипишка', 'В работе'];
+  const LINK_CATEGORIES = { social: 'Соцсети', distribution: 'Дистрибуция', cloud: 'Облако', reference: 'Референсы', other: 'Другое' };
+  const LINKS_VIEW_STORAGE_KEY = 'inmise-artist-links-view';
   const EVENT_STATUS = { planned: 'Запланировано', ready: 'Готово', completed: 'Завершено', cancelled: 'Отменено' };
   const VIEW_TITLES = {
     dashboard: ['01', 'Дашборд'], beats: ['02', 'Биты'], projects: ['03', 'Треки и релизы'], track: ['03', 'Рабочее пространство трека'], tasks: ['04', 'Задачи'], lyrics: ['05', 'Тексты'],
@@ -142,9 +144,14 @@
     lyricsReturnProjectId: '',
     activeLyricsFilter: 'all',
     activeProjectId: null,
+    freshDraftProjectId: null,
     projectReturnView: 'projects',
+    linksCategory: 'all',
+    linksView: localStorage.getItem(LINKS_VIEW_STORAGE_KEY) === 'list' ? 'list' : 'cards',
     booted: false,
+    booting: false,
   };
+  let activeWorkspaceFlush = null;
 
   const THEME_STORAGE_KEY = 'inmise-artist-theme';
 
@@ -213,8 +220,18 @@
     document.body.style.overflow = '';
   }
 
-  function goView(view) {
+  async function goView(view) {
     if (!VIEW_TITLES[view]) return;
+    const currentView = $('.view.is-active')?.dataset.viewPanel;
+    if (currentView === 'track' && view !== 'track' && activeWorkspaceFlush) {
+      const flush = activeWorkspaceFlush;
+      activeWorkspaceFlush = null;
+      try {
+        await flush();
+      } catch (error) {
+        toast(error.message || 'Не удалось автоматически сохранить изменения.', 'error');
+      }
+    }
     $$('.view').forEach((panel) => {
       const active = panel.dataset.viewPanel === view;
       panel.hidden = !active;
@@ -228,10 +245,23 @@
     if (view === 'calendar') renderCalendar();
     if (view === 'tasks') renderTasksView();
     if (view === 'invites') loadInviteArtists();
+    if (view === 'autopost') renderAutopost();
   }
 
-  async function safeQuery(promise, fallback = []) {
-    const { data, error } = await promise;
+  function withTimeout(promise, timeoutMs, message) {
+    let timer = 0;
+    const timeout = new Promise((_, reject) => {
+      timer = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    });
+    return Promise.race([Promise.resolve(promise), timeout]).finally(() => window.clearTimeout(timer));
+  }
+
+  async function safeQuery(promise, fallback = [], timeoutMs = 12000) {
+    const { data, error } = await withTimeout(
+      promise,
+      timeoutMs,
+      'Сервер слишком долго отвечает. Обновите страницу или попробуйте ещё раз.',
+    );
     if (error) throw error;
     return data ?? fallback;
   }
@@ -307,6 +337,86 @@
     hydrateProfile();
     $('#nav-beats-count').textContent = state.beats.length;
     $('#nav-tasks-count').textContent = state.tasks.filter((task) => (task.workflow_status || (task.is_done ? 'uploaded' : 'idea')) !== 'uploaded').length;
+  }
+
+  const WHEEL_COLORS = ['#c91c78', '#1fa8a9', '#d9c53f', '#5c3593', '#2f9e6b', '#e0672b', '#2758a8', '#a8296b'];
+  let wheelSpinning = false;
+
+  function drawWheel(tasks) {
+    const canvas = $('#wheel-canvas');
+    const ctx = canvas.getContext('2d');
+    const size = canvas.width;
+    const center = size / 2;
+    const radius = size / 2 - 4;
+    const sliceAngle = (2 * Math.PI) / tasks.length;
+    ctx.clearRect(0, 0, size, size);
+    tasks.forEach((task, index) => {
+      const start = index * sliceAngle;
+      const end = start + sliceAngle;
+      ctx.beginPath();
+      ctx.moveTo(center, center);
+      ctx.arc(center, center, radius, start, end);
+      ctx.closePath();
+      ctx.fillStyle = WHEEL_COLORS[index % WHEEL_COLORS.length];
+      ctx.fill();
+      ctx.save();
+      ctx.translate(center, center);
+      ctx.rotate(start + sliceAngle / 2);
+      ctx.textAlign = 'right';
+      ctx.font = '600 15px "IBM Plex Mono", monospace';
+      const label = task.title.length > 22 ? `${task.title.slice(0, 21)}…` : task.title;
+      ctx.fillStyle = 'rgba(224,111,192,.75)';
+      ctx.fillText(label, radius - 15, 5);
+      ctx.fillStyle = 'rgba(31,168,169,.75)';
+      ctx.fillText(label, radius - 13, 5);
+      ctx.fillStyle = '#f2f4ef';
+      ctx.fillText(label, radius - 14, 5);
+      ctx.restore();
+    });
+  }
+
+  function openWheel() {
+    const pendingTasks = state.tasks.filter((task) => !task.is_done);
+    if (!pendingTasks.length) return toast('Нет незавершённых задач для колеса.', 'error');
+    state.wheelTasks = pendingTasks;
+    const canvas = $('#wheel-canvas');
+    canvas.style.transition = 'none';
+    canvas.style.transform = 'rotate(0deg)';
+    drawWheel(pendingTasks);
+    $('#wheel-result').hidden = true;
+    $('#wheel-backdrop').hidden = false;
+    $('#wheel-modal').hidden = false;
+  }
+
+  function closeWheel() {
+    $('#wheel-backdrop').hidden = true;
+    $('#wheel-modal').hidden = true;
+  }
+
+  function spinWheel() {
+    if (wheelSpinning) return;
+    const tasks = state.wheelTasks || [];
+    if (!tasks.length) return;
+    wheelSpinning = true;
+    $('#wheel-result').hidden = true;
+    const canvas = $('#wheel-canvas');
+    const winnerIndex = Math.floor(Math.random() * tasks.length);
+    const sliceDeg = 360 / tasks.length;
+    const winnerCenterDeg = winnerIndex * sliceDeg + sliceDeg / 2;
+    const randomJitter = (Math.random() - 0.5) * sliceDeg * 0.6;
+    const extraSpins = 6 * 360;
+    const landingDeg = ((270 - winnerCenterDeg) % 360 + 360) % 360;
+    const targetRotation = extraSpins + landingDeg + randomJitter;
+    canvas.style.transition = 'transform 4.5s cubic-bezier(0.12, 0.67, 0.1, 1)';
+    canvas.style.transform = `rotate(${targetRotation}deg)`;
+    const onEnd = () => {
+      canvas.removeEventListener('transitionend', onEnd);
+      wheelSpinning = false;
+      const winner = tasks[winnerIndex];
+      $('#wheel-result-title').textContent = winner.title;
+      $('#wheel-result').hidden = false;
+    };
+    canvas.addEventListener('transitionend', onEnd);
   }
 
   function renderDashboard() {
@@ -833,17 +943,29 @@
     if (!beat) return;
     let audio = button.__audio;
     if (!audio) {
-      const url = await getBeatAudio(beat);
+      button.classList.add('is-loading');
+      button.disabled = true;
+      let url;
+      try {
+        url = await getBeatAudio(beat);
+      } finally {
+        button.classList.remove('is-loading');
+        button.disabled = false;
+      }
       if (!url) return toast('У бита нет доступного аудиофайла.', 'error');
       audio = new Audio(url);
       button.__audio = audio;
       audio.addEventListener('ended', () => { button.textContent = '▶'; });
+      audio.addEventListener('waiting', () => button.classList.add('is-loading'));
+      audio.addEventListener('playing', () => button.classList.remove('is-loading'));
     }
     if (audio.paused) {
       $$('.track-actions button').forEach((other) => {
         if (other !== button && other.__audio && !other.__audio.paused) { other.__audio.pause(); other.textContent = '▶'; }
       });
+      button.classList.add('is-loading');
       await audio.play();
+      button.classList.remove('is-loading');
       button.textContent = 'Ⅱ';
     } else {
       audio.pause();
@@ -947,6 +1069,7 @@
   async function refreshBeats() {
     state.beats = await safeQuery(db.from('beats').select('id,title,seller,seller_link,price,audio_url,storage_path,publication_status,public_preview_path,private_master_path,cover_url,currency,published_at,created_at,updated_at').eq('owner_user_id', state.user.id).order('created_at', { ascending: false }));
     renderBeats(); renderDashboard(); $('#nav-beats-count').textContent = state.beats.length;
+    if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
   }
 
   async function projectCover(project) {
@@ -958,7 +1081,10 @@
     if (!state.projects.length) { container.innerHTML = '<div class="empty-list">Проектов пока нет. Создайте карточку первого трека.</div>'; return; }
     const cards = await Promise.all(state.projects.map(async (project) => {
       const cover = await projectCover(project);
-      return `<article class="project-card" data-open-project="${project.id}"><div class="project-cover">${cover ? `<img src="${escapeHTML(cover)}" alt="">` : '<span>NO COVER</span>'}</div><div class="project-body"><span class="eyebrow">${formatDate(project.release_at)}</span><h3>${escapeHTML(project.title)}</h3><p class="project-stage-copy">${PROJECT_STATUS_HINT[project.status] || ''}</p><div class="project-meta"><span>${project.beat_id ? 'Бит выбран' : 'Без бита'}</span><span class="status-chip ${project.status}">${PROJECT_STATUS[project.status] || project.status}</span></div></div></article>`;
+      const coverMarkup = cover
+        ? `<img class="project-cover-bg" src="${escapeHTML(cover)}" alt="" aria-hidden="true"><img class="project-cover-fg" src="${escapeHTML(cover)}" alt="">`
+        : '<span>NO COVER</span>';
+      return `<article class="project-card" data-open-project="${project.id}"><div class="project-cover">${coverMarkup}</div><div class="project-body"><span class="eyebrow">${formatDate(project.release_at)}</span><h3>${escapeHTML(project.title)}</h3><p class="project-stage-copy">${PROJECT_STATUS_HINT[project.status] || ''}</p><div class="project-meta"><span>${project.beat_id ? 'Бит выбран' : 'Без бита'}</span><span class="status-chip ${project.status}">${PROJECT_STATUS[project.status] || project.status}</span></div></div></article>`;
     }));
     container.innerHTML = cards.join('');
     bindProjectButtons(container);
@@ -978,23 +1104,84 @@
     }));
   }
 
+  async function createDraftProject(initialStatus) {
+    const payload = { artist_id: state.artist.id, title: 'Без названия', status: initialStatus, beat_id: null, description: '', release_at: null, timezone: 'Europe/Moscow' };
+    const { data: saved, error } = await db.from('artist_projects').insert(payload).select().single();
+    if (error) throw error;
+    const defaults = DEFAULT_PROJECT_TASKS.map((title, index) => ({ artist_id: state.artist.id, project_id: saved.id, title, workflow_status: 'idea', is_done: false, sort_order: index }));
+    const { error: taskError } = await db.from('project_tasks').insert(defaults);
+    if (taskError) console.error('Failed to seed default tasks for draft project', taskError);
+    state.projects = [saved, ...state.projects];
+    state.tasks = await safeQuery(db.from('project_tasks').select('*').eq('artist_id', state.artist.id).order('is_done').order('sort_order').order('due_at'));
+    state.freshDraftProjectId = saved.id;
+    return saved.id;
+  }
+
+  function isPristineDraft(project) {
+    if (!project || state.freshDraftProjectId !== project.id) return false;
+    const linkedTasks = state.tasks.filter((task) => task.project_id === project.id);
+    const tasksArePristine = linkedTasks.length === DEFAULT_PROJECT_TASKS.length
+      && linkedTasks.every((task) => DEFAULT_PROJECT_TASKS.includes(task.title) && !task.is_done);
+    const hasLyrics = state.lyrics.some((doc) => doc.project_id === project.id);
+    const hasFiles = state.files.some((file) => file.project_id === project.id);
+    return tasksArePristine && !hasLyrics && !hasFiles
+      && project.title === 'Без названия'
+      && !project.description
+      && !project.beat_id
+      && !project.release_at
+      && !project.cover_storage_path;
+  }
+
+  async function deleteDraftSilently(project) {
+    if (!project) return;
+    try {
+      const { error } = await db.from('artist_projects').delete().eq('id', project.id).eq('artist_id', state.artist.id);
+      if (error) throw error;
+      state.projects = state.projects.filter((item) => item.id !== project.id);
+      state.tasks = state.tasks.filter((task) => task.project_id !== project.id);
+      state.files = state.files.filter((file) => file.project_id !== project.id);
+      state.lyrics = state.lyrics.map((doc) => doc.project_id === project.id ? { ...doc, project_id: null } : doc);
+      if (state.freshDraftProjectId === project.id) state.freshDraftProjectId = null;
+      renderDashboard();
+      renderCalendar();
+      renderLyricsList();
+    } catch (error) {
+      console.error('Failed to clean up an empty draft project', error);
+    }
+  }
+
   async function openProjectEditor(id = null, initialStatus = 'idea', returnView = null) {
     const visibleView = $('.view.is-active')?.dataset.viewPanel;
     state.projectReturnView = returnView || (visibleView === 'dashboard' ? 'dashboard' : 'projects');
-    state.activeProjectId = id || null;
+    if (!id) {
+      try {
+        id = await createDraftProject(initialStatus);
+      } catch (error) {
+        toast(error.message || 'Не удалось создать черновик трека.', 'error');
+        return;
+      }
+    }
+    state.activeProjectId = id;
     await renderTrackWorkspace(id, initialStatus);
-    goView('track');
+    await goView('track');
     const url = new URL(location.href);
     url.searchParams.set('section', 'track');
-    if (id) url.searchParams.set('project', id); else url.searchParams.delete('project');
+    url.searchParams.set('project', id);
     history.replaceState({}, '', `${url.pathname}${url.search}`);
   }
 
   async function renderTrackWorkspace(id = null, initialStatus = 'idea') {
+    activeWorkspaceFlush = null;
     const project = state.projects.find((item) => item.id === id) || null;
     const selectedStatus = project?.status === 'master' ? 'mix' : (project?.status || initialStatus);
+    const stageOrder = Object.keys(PROJECT_STATUS);
+    const selectedStageIndex = Math.max(0, stageOrder.indexOf(selectedStatus));
+    const stageRail = Object.entries(PROJECT_STATUS).map(([status, label], index) => `
+      <button class="${index <= selectedStageIndex ? 'is-reached' : ''} ${status === selectedStatus ? 'is-active' : ''}" data-track-stage="${status}" type="button">
+        <i>0${index + 1}</i><span>${label}</span><small>${PROJECT_STATUS_HINT[status]}</small>
+      </button>`).join('');
     const cover = project ? await projectCover(project) : '';
-    const beatOptions = ['<option value="">Бит не выбран</option>', ...state.beats.map((beat) => `<option value="${beat.id}" ${project?.beat_id === beat.id ? 'selected' : ''}>${escapeHTML(beat.title)}</option>`)].join('');
+    const beatOptions = ['<option value="">Бит не выбран</option>', ...state.beats.map((beat) => `<option value="${beat.id}" ${project?.beat_id === beat.id ? 'selected' : ''}>${escapeHTML(beat.title)}</option>`), '<option value="__new__">+ Добавить бит…</option>'].join('');
     const linkedTasks = project ? state.tasks.filter((task) => task.project_id === project.id) : [];
     const linkedFiles = project ? state.files.filter((file) => file.project_id === project.id) : [];
     const linkedLyrics = project ? state.lyrics.filter((doc) => doc.project_id === project.id) : [];
@@ -1004,12 +1191,8 @@
         <label><input type="checkbox" data-track-task-check="${task.id}" ${task.is_done ? 'checked' : ''}><span></span></label>
         <button data-open-task="${task.id}" type="button"><strong>${escapeHTML(task.title)}</strong><small>${task.due_at ? formatDate(task.due_at, { year: undefined }) : 'без даты'} · ${TASK_WORKFLOW[taskWorkflow(task)]}</small></button>
       </article>`).join('') : '<p class="track-workspace-empty">Задач пока нет.</p>';
-    const progressStatuses = ['idea', 'demo', 'mix', 'scheduled', 'released'];
-    const activeIndex = selectedStatus === 'archived'
-      ? progressStatuses.length - 1
-      : Math.max(0, progressStatuses.indexOf(selectedStatus));
-    const fileRows = linkedFiles.length ? linkedFiles.slice(0, 8).map((file) => `<button class="track-workspace-list-row" data-download-file="${file.id}" type="button"><span>${escapeHTML(file.original_name)}</span><small>${escapeHTML(file.file_kind)} · ${formatFileSize(file.size_bytes)}</small></button>`).join('') : '<p class="track-workspace-empty">Файлов пока нет.</p>';
-    const lyricRows = linkedLyrics.length ? linkedLyrics.map((doc) => `<article class="track-lyrics-inline" data-track-lyrics-inline="${doc.id}"><header><button class="track-lyrics-title" data-project-lyrics="${doc.id}" type="button"><strong>${escapeHTML(doc.title)}</strong></button><small>${doc.document_status === 'ready' ? 'Готов' : doc.document_status === 'archived' ? 'Архив' : 'Черновик'}</small></header><textarea data-inline-lyrics-body="${doc.id}" placeholder="Текст трека...">${escapeHTML(doc.body || '')}</textarea><footer><button class="text-button" data-project-lyrics="${doc.id}" type="button">Открыть полностью</button><button class="button button-primary" data-save-inline-lyrics="${doc.id}" type="button">Сохранить текст</button></footer></article>`).join('') : '<p class="track-workspace-empty">Текст ещё не привязан.</p>';
+    const fileRows = linkedFiles.length ? linkedFiles.map((file) => `<button class="track-workspace-list-row" data-download-file="${file.id}" type="button"><span>${escapeHTML(file.original_name)}</span><small>${escapeHTML(file.file_kind)} · ${formatFileSize(file.size_bytes)}</small></button>`).join('') : '<p class="track-workspace-empty">Файлов пока нет.</p>';
+    const lyricRows = linkedLyrics.length ? linkedLyrics.map((doc) => `<article class="track-lyrics-inline" data-track-lyrics-inline="${doc.id}"><textarea data-inline-lyrics-body="${doc.id}" placeholder="Слова, строки, идеи…">${escapeHTML(doc.body || '')}</textarea><footer><button class="text-button" data-project-lyrics="${doc.id}" type="button">Открыть полностью</button><button class="button button-primary" data-save-inline-lyrics="${doc.id}" type="button">Сохранить</button></footer></article>`).join('') : '<p class="track-workspace-empty">Текст ещё не привязан.</p>';
     const container = $('#track-workspace');
     container.innerHTML = `
       <div class="track-workspace-toolbar">
@@ -1019,20 +1202,22 @@
       <form class="track-workspace-form" id="project-form">
         <section class="panel track-workspace-hero">
           <label class="cover-upload track-workspace-cover" id="project-cover-label">${cover ? `<img src="${escapeHTML(cover)}" alt="Обложка">` : '<span>+ Обложка</span>'}<input name="cover" type="file" accept="image/*" hidden></label>
-          <div class="track-workspace-title">
-            <span class="eyebrow">Единое рабочее пространство</span>
+          <div class="track-workspace-title" ${project ? `draggable="true" data-track-project-drag="${project.id}" title="Перетащите трек на нужную стадию"` : ''}>
+            <span class="eyebrow">Текст · релиз · задачи · промо</span>
             <input class="track-title-input" name="title" value="${escapeHTML(project?.title || '')}" required placeholder="Название трека">
-            <p id="project-status-hint">${PROJECT_STATUS_HINT[selectedStatus] || ''}</p>
           </div>
           <div class="track-workspace-actions">
-            <button class="button button-primary track-save-button" type="submit">${project ? 'Сохранить трек' : 'Создать трек'}</button>
+            <button class="button button-primary track-save-button" type="submit">${project && !isPristineDraft(project) ? 'Сохранить трек' : 'Создать трек'}</button>
           </div>
-          <div class="track-progress" aria-label="Прогресс релиза">${progressStatuses.map((status, index) => `<button class="${index <= activeIndex ? 'is-reached' : ''} ${status === selectedStatus ? 'is-active' : ''}" data-track-status="${status}" type="button"><i>${String(index + 1).padStart(2, '0')}</i><span>${PROJECT_STATUS[status]}</span><small>${PROJECT_STATUS_HINT[status]}</small></button>`).join('')}</div>
+          <div class="track-status-row">
+            <p id="project-status-hint">${PROJECT_STATUS_HINT[selectedStatus] || ''}</p>
+            <div class="track-progress track-progress-compact" aria-label="Стадия релиза">${stageRail}</div>
+          </div>
         </section>
 
         <div class="track-workspace-grid">
           <section class="panel track-workspace-lyrics">
-            <header class="panel-header"><div><span class="eyebrow">Материал</span><h3>Текст</h3></div>${project ? '<button class="text-button" id="track-add-lyrics" type="button">+ Текст</button>' : ''}</header>
+            <header class="panel-header"><div><span class="eyebrow">Материал</span><h3>Текст</h3></div>${project ? '<button class="text-button" id="track-add-lyrics" type="button">+ Добавить</button>' : ''}</header>
             <div class="track-workspace-list track-workspace-lyrics-list">${project ? lyricRows : '<p class="track-workspace-empty">Сначала сохраните трек.</p>'}</div>
           </section>
 
@@ -1041,25 +1226,23 @@
             <div class="track-workspace-section-body">
               <label class="field"><span>Статус</span><select name="status">${Object.entries(PROJECT_STATUS).map(([value,label]) => `<option value="${value}" ${selectedStatus === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
               <label class="field"><span>Дата релиза</span><input name="release_at" type="datetime-local" value="${toLocalInput(project?.release_at)}"><small>Запланированные и выпущенные релизы появляются в календаре.</small></label>
-              <div class="track-release-summary"><span>Текущая стадия</span><strong id="track-current-status">${PROJECT_STATUS[selectedStatus]}</strong><small>${formatDate(project?.release_at)}</small></div>
             </div>
           </section>
 
           <section class="panel track-workspace-main">
-            <header class="panel-header"><div><span class="eyebrow">Внутреннее</span><h3>Заметки</h3></div></header>
+            <header class="panel-header"><div><span class="eyebrow">Внутреннее</span><h3>Бит и заметки</h3></div><select class="track-beat-select" name="beat_id" aria-label="Бит">${beatOptions}</select></header>
             <div class="track-workspace-section-body">
-              <label class="field"><span>Бит</span><select name="beat_id">${beatOptions}</select></label>
-              <label class="field"><span>Заметки по треку</span><textarea name="description" rows="7" placeholder="Идеи, референсы, детали записи…">${escapeHTML(project?.description || '')}</textarea></label>
+              <div class="field notes-field"><div class="notes-toolbar"><button type="button" class="notes-toolbar-btn" data-note-format="bold" title="Жирный текст"><b>B</b></button><button type="button" class="notes-toolbar-btn" data-note-format="insertUnorderedList" title="Список точками">&bull;</button><button type="button" class="notes-toolbar-btn" data-note-format="insertOrderedList" title="Нумерованный список">1.</button></div><div class="notes-editor" data-notes-editor contenteditable="true" role="textbox" aria-multiline="true" aria-label="Заметки по треку" data-placeholder="Заметки по треку…">${notesToHTML(project?.description || '')}</div></div>
             </div>
           </section>
 
           <section class="panel track-workspace-tasks">
-            <header class="panel-header"><div><span class="eyebrow">Производство</span><h3>Задачи трека</h3></div>${project ? '<button class="text-button" id="track-add-task" type="button">+ Задача</button>' : ''}</header>
+            <header class="panel-header"><div><span class="eyebrow">Производство и промо</span><h3>Задачи трека</h3></div>${project ? '<button class="text-button" id="track-add-task" type="button">+ Задача</button>' : ''}</header>
             ${project ? `<div class="track-task-list" id="track-tasks-list">${taskRows}</div>` : '<p class="track-workspace-empty large">Сохраните трек — стандартные задачи появятся автоматически.</p>'}
           </section>
 
           <section class="panel track-workspace-files">
-            <header class="panel-header"><div><span class="eyebrow">Приватное хранилище</span><h3>Файлы</h3></div>${project ? '<button class="text-button" id="track-add-file" type="button">+ Файл</button>' : ''}</header>
+            <header class="panel-header"><div><span class="eyebrow">Необязательно</span><h3>Материалы проекта</h3><p>Обложки, документы и финальные версии. Аудио загружать не требуется.</p></div>${project ? '<button class="text-button" id="track-add-file" type="button">+ Файл</button>' : ''}</header>
             <div class="track-workspace-list">${project ? fileRows : '<p class="track-workspace-empty">Сначала сохраните трек.</p>'}</div>
           </section>
 
@@ -1074,18 +1257,54 @@
       </form>`;
     const form = $('#project-form', container);
     const statusSelect = $('[name="status"]', form);
+    let projectDirty = false;
+    let acceptedStage = selectedStatus;
     const syncTrackStatus = (status) => {
       statusSelect.value = status;
       $('#project-status-hint').textContent = PROJECT_STATUS_HINT[status] || '';
-      $('#track-current-status').textContent = PROJECT_STATUS[status] || status;
-      const index = progressStatuses.indexOf(status);
-      $$('[data-track-status]', container).forEach((button, buttonIndex) => {
-        button.classList.toggle('is-active', button.dataset.trackStatus === status);
-        button.classList.toggle('is-reached', index >= 0 && buttonIndex <= index);
+    };
+    const stageButtons = $$('[data-track-stage]', form);
+    const refreshStageRail = (status) => {
+      const activeIndex = stageOrder.indexOf(status);
+      stageButtons.forEach((button, index) => {
+        button.classList.toggle('is-active', button.dataset.trackStage === status);
+        button.classList.toggle('is-reached', index <= activeIndex);
       });
     };
-    statusSelect.addEventListener('change', () => syncTrackStatus(statusSelect.value));
-    $$('[data-track-status]', container).forEach((button) => button.addEventListener('click', () => syncTrackStatus(button.dataset.trackStatus)));
+    const chooseStage = (status) => {
+      const releaseInput = $('[name="release_at"]', form);
+      if (['scheduled', 'released', 'archived'].includes(status) && !releaseInput.value) {
+        toast('Для этого статуса сначала укажите дату релиза.', 'error');
+        releaseInput.focus();
+        return false;
+      }
+      syncTrackStatus(status);
+      refreshStageRail(status);
+      acceptedStage = status;
+      if (project) projectDirty = true;
+      return true;
+    };
+    statusSelect.addEventListener('change', (event) => {
+      if (!chooseStage(statusSelect.value)) {
+        syncTrackStatus(acceptedStage);
+        refreshStageRail(acceptedStage);
+        event.stopPropagation();
+      }
+    });
+    stageButtons.forEach((button) => {
+      button.addEventListener('click', () => chooseStage(button.dataset.trackStage));
+      button.addEventListener('dragover', (event) => {
+        if (!project) return;
+        event.preventDefault();
+        button.classList.add('is-drag-over');
+      });
+      button.addEventListener('dragleave', () => button.classList.remove('is-drag-over'));
+      button.addEventListener('drop', (event) => {
+        event.preventDefault();
+        button.classList.remove('is-drag-over');
+        chooseStage(button.dataset.trackStage);
+      });
+    });
     const coverInput = $('[name="cover"]', form);
     coverInput.addEventListener('change', () => {
       const file = coverInput.files?.[0]; if (!file) return;
@@ -1099,18 +1318,139 @@
       if (!previousPreview) label.insertBefore(preview, coverInput);
     });
     if (project) {
+      const dragTitle = $('[data-track-project-drag]', form);
+      dragTitle?.addEventListener('dragstart', (event) => {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/project-id', project.id);
+      });
       $$('[data-track-task-check]', container).forEach((input) => input.addEventListener('change', () => toggleTask(input.dataset.trackTaskCheck, input.checked)));
       bindTaskButtons($('#track-tasks-list', container));
       $('#track-add-task').addEventListener('click', () => openTaskEditor('idea', project.id));
       $('#track-add-file').addEventListener('click', () => openFileUploader(project.id));
-      $('#track-add-lyrics').addEventListener('click', () => { state.lyricsReturnProjectId = project.id; goView('lyrics'); openLyrics(null, project.id); });
+      $('#track-add-lyrics').addEventListener('click', () => openLyricsDrawer(null, project.id));
       $('#delete-project')?.addEventListener('click', () => deleteProject(project));
+
+      const dirtyLyrics = new Set();
+      let saveInFlight = Promise.resolve();
+      let autosaveTimer = null;
+      const persistWorkspace = async () => {
+        const shouldSaveProject = projectDirty;
+        const lyricIds = [...dirtyLyrics];
+        if (!shouldSaveProject && !lyricIds.length) {
+          await saveInFlight.catch(() => {});
+          return;
+        }
+        if (shouldSaveProject) projectDirty = false;
+        lyricIds.forEach((id) => dirtyLyrics.delete(id));
+        saveInFlight = saveInFlight.catch(() => {}).then(async () => {
+          if (shouldSaveProject) {
+            const { payload } = projectPayloadFromForm(form);
+            if (!payload.title) throw new Error('Укажите название трека.');
+            if (['scheduled', 'released', 'archived'].includes(payload.status) && !payload.release_at) {
+              throw new Error('Для этого статуса укажите дату релиза.');
+            }
+            const { data, error } = await db.from('artist_projects').update(payload).eq('id', project.id).eq('artist_id', state.artist.id).select().single();
+            if (error) throw error;
+            state.projects = state.projects.map((item) => item.id === project.id ? data : item);
+          }
+          for (const lyricId of lyricIds) {
+            const textarea = $$('[data-inline-lyrics-body]', form).find((node) => node.dataset.inlineLyricsBody === lyricId);
+            if (!textarea) continue;
+            const { data, error } = await db.from('lyrics_documents').update({ body: textarea.value }).eq('id', lyricId).eq('artist_id', state.artist.id).select().single();
+            if (error) throw error;
+            state.lyrics = state.lyrics.map((item) => item.id === lyricId ? data : item);
+          }
+        });
+        try {
+          await saveInFlight;
+        } catch (error) {
+          if (shouldSaveProject) projectDirty = true;
+          lyricIds.forEach((id) => dirtyLyrics.add(id));
+          throw error;
+        }
+      };
+      const scheduleWorkspaceSave = () => {
+        clearTimeout(autosaveTimer);
+        autosaveTimer = setTimeout(() => {
+          persistWorkspace().catch((error) => toast(error.message || 'Не удалось автоматически сохранить изменения.', 'error'));
+        }, 800);
+      };
+      form.addEventListener('input', (event) => {
+        if (event.target.matches('[data-inline-lyrics-body]')) dirtyLyrics.add(event.target.dataset.inlineLyricsBody);
+        else if (event.target.matches('[data-notes-editor]')) projectDirty = true;
+        else if (event.target.name && event.target.name !== 'cover') projectDirty = true;
+        scheduleWorkspaceSave();
+      });
+      form.addEventListener('change', (event) => {
+        if (event.target.name && event.target.name !== 'cover') projectDirty = true;
+        scheduleWorkspaceSave();
+      });
+      const notesEditor = $('[data-notes-editor]', form);
+      if (notesEditor) {
+        $$('[data-note-format]', form).forEach((button) => button.addEventListener('mousedown', (event) => {
+          event.preventDefault(); // keep the caret/selection inside the editor
+          notesEditor.focus();
+          document.execCommand(button.dataset.noteFormat, false, null);
+          projectDirty = true;
+          scheduleWorkspaceSave();
+        }));
+        notesEditor.addEventListener('paste', (event) => {
+          event.preventDefault();
+          const text = (event.clipboardData || window.clipboardData).getData('text/plain');
+          document.execCommand('insertText', false, text);
+        });
+      }
+      activeWorkspaceFlush = async () => {
+        clearTimeout(autosaveTimer);
+        await persistWorkspace();
+        const latestProject = state.projects.find((item) => item.id === project.id);
+        if (!latestProject) return;
+        const isFreshDraft = state.freshDraftProjectId === latestProject.id;
+        if (!isFreshDraft) return;
+        // An untouched draft leaves no trace; a touched-but-never-explicitly-saved
+        // draft asks whether to keep it before the user navigates away.
+        if (isPristineDraft(latestProject)) {
+          await deleteDraftSilently(latestProject);
+          return;
+        }
+        const named = latestProject.title && latestProject.title !== 'Без названия' ? ` «${latestProject.title}»` : '';
+        const keep = window.confirm(`Сохранить новый трек${named}?\n\nОК — сохранить, Отмена — удалить черновик.`);
+        if (keep) {
+          state.freshDraftProjectId = null;
+        } else {
+          await deleteDraftSilently(latestProject);
+        }
+      };
     }
     $$('[data-download-file]', form).forEach((button) => button.addEventListener('click', () => downloadProjectFile(button.dataset.downloadFile)));
     $$('[data-save-inline-lyrics]', form).forEach((button) => button.addEventListener('click', () => saveInlineLyrics(button.dataset.saveInlineLyrics, form)));
-    $$('[data-project-lyrics]', form).forEach((button) => button.addEventListener('click', () => { if (project) state.lyricsReturnProjectId = project.id; goView('lyrics'); openLyrics(button.dataset.projectLyrics); }));
+    $$('[data-project-lyrics]', form).forEach((button) => button.addEventListener('click', () => openLyricsDrawer(button.dataset.projectLyrics, project ? project.id : '')));
     $('#track-workspace-back').addEventListener('click', () => { state.activeProjectId = null; goView(state.projectReturnView); });
     form.addEventListener('submit', (event) => saveProject(event, project));
+    const beatSelect = $('[name="beat_id"]', form);
+    let acceptedBeatId = beatSelect.value;
+    beatSelect.addEventListener('change', (event) => {
+      if (beatSelect.value === '__new__') {
+        event.stopPropagation();
+        beatSelect.value = acceptedBeatId;
+        openBeatEditor(null);
+        return;
+      }
+      acceptedBeatId = beatSelect.value;
+    });
+  }
+
+  // Notes are stored as light HTML (bold + native lists). Old plain-text notes
+  // are escaped and line-broken so they keep rendering correctly.
+  function notesToHTML(raw) {
+    if (!raw) return '';
+    return /<[a-z][\s\S]*>/i.test(raw) ? raw : escapeHTML(raw).replace(/\n/g, '<br>');
+  }
+
+  function readNotesHTML(element) {
+    if (!element) return '';
+    const text = (element.textContent || '').replace(/ /g, ' ').trim();
+    return text ? element.innerHTML : '';
   }
 
   async function saveInlineLyrics(id, root) {
@@ -1132,63 +1472,53 @@
     }
   }
 
+  function projectPayloadFromForm(form) {
+    const data = new FormData(form);
+    return {
+      data,
+      payload: {
+        artist_id: state.artist.id,
+        title: String(data.get('title') || '').trim(),
+        status: data.get('status') || 'idea',
+        beat_id: data.get('beat_id') || null,
+        description: readNotesHTML($('[data-notes-editor]', form)),
+        release_at: data.get('release_at') ? new Date(data.get('release_at')).toISOString() : null,
+        timezone: 'Europe/Moscow',
+      },
+    };
+  }
+
   async function saveProject(event, project) {
     event.preventDefault();
     const form = event.currentTarget;
     const submit = $('button[type="submit"]', form);
-    const data = new FormData(form);
-    const payload = {
-      artist_id: state.artist.id,
-      title: String(data.get('title') || '').trim(),
-      status: data.get('status') || 'idea',
-      beat_id: data.get('beat_id') || null,
-      description: String(data.get('description') || '').trim(),
-      release_at: data.get('release_at') ? new Date(data.get('release_at')).toISOString() : null,
-      timezone: 'Europe/Moscow',
-    };
+    const { data, payload } = projectPayloadFromForm(form);
     if (['scheduled', 'released', 'archived'].includes(payload.status) && !payload.release_at) {
       return toast('Для этого статуса укажите дату релиза.', 'error');
     }
     setBusy(submit, true, 'Сохраняем…');
     try {
-      let saved = project;
-      const isNewProject = !project;
-      if (project) {
-        const { data: row, error } = await db.from('artist_projects').update(payload).eq('id', project.id).eq('artist_id', state.artist.id).select().single();
-        if (error) throw error; saved = row;
-      } else {
-        const { data: row, error } = await db.from('artist_projects').insert(payload).select().single();
-        if (error) throw error; saved = row;
-        const defaults = DEFAULT_PROJECT_TASKS.map((title, index) => ({ artist_id: state.artist.id, project_id: saved.id, title, workflow_status: 'idea', is_done: false, sort_order: index }));
-        const { error: taskError } = await db.from('project_tasks').insert(defaults);
-        if (taskError) throw taskError;
-      }
+      const { data: row, error } = await db.from('artist_projects').update(payload).eq('id', project.id).eq('artist_id', state.artist.id).select().single();
+      if (error) throw error;
+      let saved = row;
       const cover = data.get('cover');
       if (cover instanceof File && cover.size) {
         const path = `${state.user.id}/projects/${saved.id}/cover-${Date.now()}-${safeFileName(cover.name)}`;
         const { error: uploadError } = await db.storage.from('artist-private').upload(path, cover, { contentType: cover.type });
         if (uploadError) throw uploadError;
-        const { data: row, error } = await db.from('artist_projects').update({ cover_storage_path: path }).eq('id', saved.id).eq('artist_id', state.artist.id).select().single();
-        if (error) throw error; saved = row;
+        const { data: coverRow, error: coverError } = await db.from('artist_projects').update({ cover_storage_path: path }).eq('id', saved.id).eq('artist_id', state.artist.id).select().single();
+        if (coverError) throw coverError;
+        saved = coverRow;
       }
       state.projects = await safeQuery(db.from('artist_projects').select('*').eq('artist_id', state.artist.id).order('updated_at', { ascending: false }));
-      if (isNewProject) state.tasks = await safeQuery(db.from('project_tasks').select('*').eq('artist_id', state.artist.id).order('is_done').order('sort_order').order('due_at'));
+      if (state.freshDraftProjectId === saved.id) state.freshDraftProjectId = null;
       await renderProjects(); renderDashboard(); renderCalendar();
-      if (isNewProject && state.projectReturnView === 'dashboard') {
-        state.activeProjectId = null;
-        goView('dashboard');
-        const url = new URL(location.href);
-        url.searchParams.set('section', 'dashboard');
-        url.searchParams.delete('project');
-        history.replaceState({}, '', `${url.pathname}${url.search}`);
-        toast('Проект создан со стандартными задачами.');
-        return;
-      }
+      activeWorkspaceFlush = null;
       state.activeProjectId = saved.id;
       await renderTrackWorkspace(saved.id, saved.status);
       goView('track');
       const url = new URL(location.href); url.searchParams.set('section', 'track'); url.searchParams.set('project', saved.id); history.replaceState({}, '', `${url.pathname}${url.search}`);
-      toast(project ? 'Проект обновлён.' : 'Проект создан со стандартными задачами.');
+      toast('Проект обновлён.');
     } catch (error) { toast(error.message || 'Не удалось сохранить проект.', 'error'); }
     finally { setBusy(submit, false); }
   }
@@ -1281,6 +1611,276 @@
     return `${count} ${word}`;
   }
 
+  function openLyricsDrawer(id = null, initialProjectId = '') {
+    const doc = state.lyrics.find((item) => item.id === id) || null;
+    const selectedProjectId = doc?.project_id || initialProjectId;
+    const projectOptions = ['<option value="">Не привязан к треку</option>', ...state.projects.map((project) => `<option value="${project.id}" ${selectedProjectId === project.id ? 'selected' : ''}>${escapeHTML(project.title)}</option>`)].join('');
+    const selectedCategory = doc?.category || 'В работе';
+    const categoryOptions = lyricsCategories().map((category) => `<option value="${escapeHTML(category)}" ${selectedCategory === category ? 'selected' : ''}>${escapeHTML(category)}</option>`).join('');
+    openDrawer('TEXT / LYRICS', doc ? 'Редактирование текста' : 'Новый текст', `<form id="lyrics-drawer-form"><div class="form-grid two"><label class="field"><span>Название</span><input name="title" value="${escapeHTML(doc?.title || '')}" required></label><label class="field"><span>Статус</span><select name="document_status"><option value="draft" ${doc?.document_status === 'draft' ? 'selected' : ''}>Черновик</option><option value="ready" ${doc?.document_status === 'ready' ? 'selected' : ''}>Готов</option><option value="archived" ${doc?.document_status === 'archived' ? 'selected' : ''}>Архив</option></select></label></div><div class="form-grid two"><label class="field"><span>Трек</span><select name="project_id">${projectOptions}</select></label><label class="field"><span>Категория</span><select name="category">${categoryOptions}<option value="__custom__">+ Своя категория…</option></select></label></div><label class="field lyrics-custom-category" id="lyrics-drawer-custom-category" hidden><span>Название своей категории</span><input name="custom_category" maxlength="40" placeholder="Например: Второй альбом"></label><label class="field"><span>Текст</span><textarea class="lyrics-body lyrics-body-autogrow" name="body" placeholder="Начните писать…">${escapeHTML(doc?.body || '')}</textarea></label><div class="drawer-actions">${doc ? '<button class="button button-danger" id="delete-lyrics-drawer" type="button">Удалить</button>' : '<span></span>'}<button class="button button-primary" type="submit">Сохранить текст</button></div></form>`);
+    const categorySelect = $('[name="category"]', $('#lyrics-drawer-form'));
+    const customCategory = $('#lyrics-drawer-custom-category');
+    categorySelect.addEventListener('change', () => {
+      customCategory.hidden = categorySelect.value !== '__custom__';
+      if (!customCategory.hidden) $('[name="custom_category"]', customCategory).focus();
+    });
+    $('#lyrics-drawer-form').addEventListener('submit', (event) => saveLyricsDrawer(event, doc));
+    $('#delete-lyrics-drawer')?.addEventListener('click', () => deleteLyricsDrawer(doc));
+    const autogrowBody = $('.lyrics-body-autogrow', $('#lyrics-drawer-form'));
+    const resizeAutogrow = () => { autogrowBody.style.height = 'auto'; autogrowBody.style.height = `${autogrowBody.scrollHeight}px`; };
+    autogrowBody.addEventListener('input', resizeAutogrow);
+    resizeAutogrow();
+  }
+
+  async function saveLyricsDrawer(event, doc) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = $('button[type="submit"]', form);
+    const data = new FormData(form);
+    const category = data.get('category') === '__custom__' ? String(data.get('custom_category') || '').trim() : String(data.get('category') || 'В работе').trim();
+    if (!category) return toast('Назовите свою категорию.', 'error');
+    const payload = { artist_id: state.artist.id, project_id: data.get('project_id') || null, title: String(data.get('title') || '').trim(), body: String(data.get('body') || ''), document_status: data.get('document_status') || 'draft', category };
+    setBusy(button, true, 'Сохраняем…');
+    try {
+      const query = doc ? db.from('lyrics_documents').update(payload).eq('id', doc.id).eq('artist_id', state.artist.id) : db.from('lyrics_documents').insert(payload);
+      const { error } = await query; if (error) throw error;
+      state.lyrics = await safeQuery(db.from('lyrics_documents').select('*').eq('artist_id', state.artist.id).order('updated_at', { ascending: false }));
+      closeDrawer();
+      toast('Текст сохранён.');
+      if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
+    } catch (error) { toast(error.message || 'Не удалось сохранить текст.', 'error'); }
+    finally { setBusy(button, false); }
+  }
+
+  async function deleteLyricsDrawer(doc) {
+    if (!doc || !confirm(`Удалить текст «${doc.title}»?`)) return;
+    const { error } = await db.from('lyrics_documents').delete().eq('id', doc.id).eq('artist_id', state.artist.id);
+    if (error) return toast(error.message, 'error');
+    state.lyrics = state.lyrics.filter((item) => item.id !== doc.id);
+    closeDrawer();
+    toast('Текст удалён.');
+    if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
+  }
+
+  const SOCIAL_PLATFORM_LABEL = { youtube: 'YouTube', instagram: 'Instagram' };
+
+  function socialRedirectUri() {
+    return `${location.origin}/admin/`;
+  }
+
+  function startSocialConnect(platform) {
+    const redirectUri = socialRedirectUri();
+    if (platform === 'youtube') {
+      if (!window.GOOGLE_CLIENT_ID) return toast('GOOGLE_CLIENT_ID не настроен в scripts/config.js.', 'error');
+      const params = new URLSearchParams({
+        client_id: window.GOOGLE_CLIENT_ID,
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        access_type: 'offline',
+        prompt: 'consent',
+        scope: 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly',
+        state: 'youtube',
+      });
+      location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+      return;
+    }
+    if (!window.META_APP_ID) return toast('META_APP_ID не настроен в scripts/config.js.', 'error');
+    const params = new URLSearchParams({
+      client_id: window.META_APP_ID,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement',
+      state: 'instagram',
+    });
+    location.href = `https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`;
+  }
+
+  async function completeSocialConnect(platform, code) {
+    const label = SOCIAL_PLATFORM_LABEL[platform] || platform;
+    const { data, error } = await db.functions.invoke('social-connect', {
+      body: { action: 'exchange', platform, code, redirect_uri: socialRedirectUri() },
+    });
+    if (error || data?.error) {
+      toast(`Не удалось подключить ${label}: ${data?.detail || data?.error || error?.message || 'ошибка'}`, 'error');
+      return;
+    }
+    toast(`${label} подключён: ${data.account_name || ''}`);
+  }
+
+  async function disconnectSocial(platform) {
+    const label = SOCIAL_PLATFORM_LABEL[platform] || platform;
+    if (!confirm(`Отключить ${label}?`)) return;
+    const { data, error } = await db.functions.invoke('social-connect', { body: { action: 'disconnect', platform } });
+    if (error || data?.error) return toast(`Не удалось отключить ${label}.`, 'error');
+    toast(`${label} отключён.`);
+    renderAutopost();
+  }
+
+  async function renderAutopost() {
+    const container = $('#autopost-panel');
+    container.innerHTML = '<p class="track-workspace-empty">Загружаем…</p>';
+    try {
+    // The connection-status call must never break the whole page: if the edge
+    // function is unavailable, we still render the cards as "not connected".
+    const [statusResult, posts, targets] = await Promise.all([
+      db.functions.invoke('social-connect', { body: { action: 'status' } }).catch((error) => ({ error })),
+      safeQuery(db.from('social_posts').select('*').eq('artist_id', state.artist.id).order('created_at', { ascending: false })),
+      safeQuery(db.from('social_post_targets').select('*').eq('artist_id', state.artist.id)),
+    ]);
+    if (statusResult?.error || statusResult?.data?.error) {
+      console.warn('social-connect status unavailable', statusResult.error || statusResult.data?.error);
+    }
+    const connections = statusResult?.data?.connections || { youtube: { connected: false }, instagram: { connected: false } };
+
+    const platformMark = { youtube: 'YT', instagram: 'IG' };
+    const connectionCards = ['youtube', 'instagram'].map((platform) => {
+      const label = SOCIAL_PLATFORM_LABEL[platform];
+      const info = connections[platform] || { connected: false };
+      return `<div class="autopost-conn autopost-conn-${platform} ${info.connected ? 'is-connected' : ''}">
+        <span class="autopost-conn-mark">${platformMark[platform]}</span>
+        <div class="autopost-conn-body"><span class="eyebrow">${label}</span><strong><span class="autopost-conn-dot"></span>${info.connected ? escapeHTML(info.account_name || 'Подключено') : 'Не подключено'}</strong></div>
+        <button class="button ${info.connected ? 'button-danger' : 'button-primary'} autopost-conn-btn" type="button" data-social-${info.connected ? 'disconnect' : 'connect'}="${platform}">${info.connected ? 'Отключить' : 'Подключить'}</button>
+      </div>`;
+    }).join('');
+
+    const platformPills = ['youtube', 'instagram'].map((platform) => {
+      const info = connections[platform] || { connected: false };
+      return `<label class="autopost-pill ${info.connected ? '' : 'is-disabled'}"${info.connected ? '' : ' title="Подключите площадку выше"'}><input type="checkbox" name="platforms" value="${platform}" ${info.connected ? '' : 'disabled'}><span>${SOCIAL_PLATFORM_LABEL[platform]}</span></label>`;
+    }).join('');
+
+    const historyRows = (posts || []).map((post) => {
+      const postTargets = (targets || []).filter((target) => target.post_id === post.id);
+      const targetBadges = postTargets.map((target) => {
+        const label = SOCIAL_PLATFORM_LABEL[target.platform] || target.platform;
+        if (target.status === 'success') return `<a class="autopost-target-badge is-success" href="${escapeHTML(target.external_post_url || '#')}" target="_blank" rel="noopener">${label}: опубликовано</a>`;
+        if (target.status === 'failed') return `<span class="autopost-target-badge is-failed" title="${escapeHTML(target.error_message || '')}">${label}: ошибка</span>`;
+        return `<span class="autopost-target-badge">${label}: ${escapeHTML(target.status)}</span>`;
+      }).join('');
+      const canRetry = post.storage_path && postTargets.some((target) => target.status === 'failed');
+      return `<article class="autopost-history-row">
+        <div><strong>${escapeHTML(post.title || 'Без названия')}</strong><small>${formatDate(post.created_at)}</small></div>
+        <div class="autopost-target-badges">${targetBadges || '<span class="autopost-target-badge">нет площадок</span>'}</div>
+        ${canRetry ? `<button class="text-button" data-retry-post="${post.id}" type="button">Повторить</button>` : ''}
+      </article>`;
+    }).join('') || '<p class="track-workspace-empty">Публикаций пока нет.</p>';
+
+    container.innerHTML = `
+      <div class="autopost-connections">${connectionCards}</div>
+      <section class="panel autopost-composer">
+        <header class="panel-header"><div><span class="eyebrow">Новая публикация</span><h3>Загрузить видео</h3></div></header>
+        <form id="autopost-form" class="autopost-form">
+          <label class="autopost-dropzone" id="autopost-dropzone">
+            <video class="autopost-dropzone-video" id="autopost-dropzone-video" muted playsinline hidden></video>
+            <span class="autopost-dropzone-empty" id="autopost-dropzone-empty"><span class="autopost-dropzone-icon">↥</span><strong>Перетащите видео сюда</strong><small>или нажмите, чтобы выбрать файл</small></span>
+            <input type="file" name="video" accept="video/*" hidden required>
+          </label>
+          <label class="field"><span>Название</span><input type="text" name="title" maxlength="120" placeholder="Название публикации" required></label>
+          <label class="field"><span>Подпись / описание</span><textarea name="caption" rows="3" placeholder="Текст под видео…"></textarea></label>
+          <div class="autopost-publish-row"><div class="autopost-platform-checks">${platformPills}</div><button class="button button-primary autopost-publish-btn" type="submit">Опубликовать</button></div>
+        </form>
+      </section>
+      <section class="panel autopost-history">
+        <header class="panel-header"><div><span class="eyebrow">История</span><h3>Публикации</h3></div></header>
+        <div class="autopost-history-list">${historyRows}</div>
+      </section>`;
+
+    const form = $('#autopost-form', container);
+    const dropzone = $('#autopost-dropzone', container);
+    const fileInput = $('input[name="video"]', form);
+    const dzVideo = $('#autopost-dropzone-video', container);
+    const dzEmpty = $('#autopost-dropzone-empty', container);
+    let previewUrl = '';
+    const showFirstFrame = (video) => video.addEventListener('loadeddata', () => { try { video.currentTime = 0.1; } catch (e) { /* seek unsupported */ } }, { once: true });
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files?.[0];
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (file) {
+        previewUrl = URL.createObjectURL(file);
+        dzVideo.src = previewUrl; dzVideo.hidden = false; dzEmpty.hidden = true; dropzone.classList.add('has-file');
+        showFirstFrame(dzVideo);
+      } else {
+        previewUrl = ''; dzVideo.hidden = true; dzVideo.removeAttribute('src'); dzEmpty.hidden = false; dropzone.classList.remove('has-file');
+      }
+    });
+    ['dragover', 'dragenter'].forEach((ev) => dropzone.addEventListener(ev, (event) => { event.preventDefault(); dropzone.classList.add('is-dragover'); }));
+    ['dragleave', 'drop'].forEach((ev) => dropzone.addEventListener(ev, (event) => { event.preventDefault(); dropzone.classList.remove('is-dragover'); }));
+    dropzone.addEventListener('drop', (event) => {
+      const file = event.dataTransfer?.files?.[0];
+      if (file && file.type.startsWith('video/')) { fileInput.files = event.dataTransfer.files; fileInput.dispatchEvent(new Event('change')); }
+    });
+
+    $$('[data-social-connect]', container).forEach((button) => button.addEventListener('click', () => startSocialConnect(button.dataset.socialConnect)));
+    $$('[data-social-disconnect]', container).forEach((button) => button.addEventListener('click', () => disconnectSocial(button.dataset.socialDisconnect)));
+    $$('[data-retry-post]', container).forEach((button) => button.addEventListener('click', () => retrySocialPost(button.dataset.retryPost)));
+    form.addEventListener('submit', uploadSocialPost);
+    } catch (error) {
+      console.error('renderAutopost failed', error);
+      container.innerHTML = '<p class="track-workspace-empty">Не удалось загрузить автопостинг. <button class="text-button" id="autopost-retry" type="button">Повторить</button></p>';
+      $('#autopost-retry')?.addEventListener('click', renderAutopost);
+    }
+  }
+
+  async function uploadSocialPost(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = $('button[type="submit"]', form);
+    const data = new FormData(form);
+    const file = data.get('video');
+    const platforms = data.getAll('platforms');
+    if (!(file instanceof File) || !file.size) return toast('Выберите видеофайл.', 'error');
+    if (!platforms.length) return toast('Выберите хотя бы одну площадку.', 'error');
+
+    setBusy(button, true, 'Загружаем…');
+    const path = `${state.user.id}/${Date.now()}-${safeFileName(file.name)}`;
+    try {
+      const { error: uploadError } = await db.storage.from('social-uploads').upload(path, file, { contentType: file.type, upsert: false });
+      if (uploadError) throw uploadError;
+
+      const { data: post, error: insertError } = await db.from('social_posts').insert({
+        artist_id: state.artist.id,
+        title: String(data.get('title') || '').trim(),
+        caption: String(data.get('caption') || ''),
+        bucket_id: 'social-uploads',
+        storage_path: path,
+        original_name: file.name,
+        mime_type: file.type,
+        size_bytes: file.size,
+      }).select().single();
+      if (insertError) {
+        await db.storage.from('social-uploads').remove([path]);
+        throw insertError;
+      }
+
+      toast('Видео загружено, публикуем…');
+      form.reset();
+      await publishSocialPost(post.id, platforms);
+    } catch (error) {
+      toast(error.message || 'Не удалось загрузить видео.', 'error');
+    } finally {
+      setBusy(button, false);
+    }
+  }
+
+  async function retrySocialPost(postId) {
+    const posts = await safeQuery(db.from('social_posts').select('*').eq('id', postId).limit(1));
+    if (!posts[0]) return;
+    const targets = await safeQuery(db.from('social_post_targets').select('*').eq('post_id', postId));
+    const failedPlatforms = targets.filter((target) => target.status === 'failed').map((target) => target.platform);
+    if (!failedPlatforms.length) return;
+    await publishSocialPost(postId, failedPlatforms);
+  }
+
+  async function publishSocialPost(postId, platforms) {
+    const { data, error } = await db.functions.invoke('social-publish', { body: { post_id: postId, platforms } });
+    if (error || data?.error) {
+      toast(`Ошибка публикации: ${data?.detail || data?.error || error?.message || ''}`, 'error');
+    } else {
+      toast('Публикация завершена.');
+    }
+    renderAutopost();
+  }
+
   function openLyrics(id = null, initialProjectId = '') {
     const doc = state.lyrics.find((item) => item.id === id) || null;
     state.activeLyricsId = doc?.id || null;
@@ -1340,9 +1940,57 @@
 
   function renderLinks() {
     const container = $('#links-list');
-    container.innerHTML = state.links.length ? state.links.map((link) => `<article class="link-card"><span class="eyebrow">${escapeHTML(link.category)}</span><strong>${escapeHTML(link.label)}</strong><a href="${escapeHTML(link.url)}" target="_blank" rel="noopener">${escapeHTML(link.url)}</a><p>${escapeHTML(link.notes || '')}</p><footer><button class="icon-button" data-edit-link="${link.id}" type="button">✎</button><button class="icon-button" data-delete-link="${link.id}" type="button">×</button></footer></article>`).join('') : '<div class="empty-list">Сохранённых ссылок пока нет.</div>';
+    const categorySelect = $('#links-category-filter');
+    const categoryCounts = state.links.reduce((counts, link) => {
+      const category = LINK_CATEGORIES[link.category] ? link.category : 'other';
+      counts[category] = (counts[category] || 0) + 1;
+      return counts;
+    }, {});
+    categorySelect.innerHTML = [`<option value="all">Все категории · ${state.links.length}</option>`, ...Object.entries(LINK_CATEGORIES).map(([value, label]) => `<option value="${value}">${label} · ${categoryCounts[value] || 0}</option>`)].join('');
+    categorySelect.value = state.linksCategory;
+
+    const links = state.links.filter((link) => state.linksCategory === 'all' || (LINK_CATEGORIES[link.category] ? link.category : 'other') === state.linksCategory);
+    container.classList.toggle('is-list', state.linksView === 'list');
+    $$('[data-links-view]').forEach((button) => {
+      const active = button.dataset.linksView === state.linksView;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    container.innerHTML = links.length ? links.map((link) => {
+      const category = LINK_CATEGORIES[link.category] || LINK_CATEGORIES.other;
+      return `<article class="link-card"><span class="eyebrow link-card-category">${escapeHTML(category)}</span><div class="link-card-main"><strong>${escapeHTML(link.label)}</strong><a href="${escapeHTML(link.url)}" target="_blank" rel="noopener">${escapeHTML(link.url)}</a>${link.notes ? `<p>${escapeHTML(link.notes)}</p>` : ''}</div><footer><button class="link-action" data-copy-link="${link.id}" type="button">Копировать</button><button class="link-action" data-edit-link="${link.id}" type="button">Изменить</button><button class="link-action is-danger" data-delete-link="${link.id}" type="button">Удалить</button></footer></article>`;
+    }).join('') : `<div class="empty-list">${state.links.length ? 'В этой категории ссылок пока нет.' : 'Сохранённых ссылок пока нет.'}</div>`;
+    $$('[data-copy-link]', container).forEach((button) => button.addEventListener('click', () => copyLink(button.dataset.copyLink)));
     $$('[data-edit-link]', container).forEach((button) => button.addEventListener('click', () => openLinkEditor(button.dataset.editLink)));
     $$('[data-delete-link]', container).forEach((button) => button.addEventListener('click', () => deleteLink(button.dataset.deleteLink)));
+  }
+
+  async function copyLink(id) {
+    const link = state.links.find((item) => item.id === id);
+    if (!link) return;
+    const fallbackCopy = () => {
+      const input = document.createElement('textarea');
+      input.value = link.url;
+      input.setAttribute('readonly', '');
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.append(input);
+      input.select();
+      const copied = document.execCommand('copy');
+      input.remove();
+      if (!copied) throw new Error('Copy command failed');
+    };
+    try {
+      if (navigator.clipboard?.writeText) {
+        try { await navigator.clipboard.writeText(link.url); }
+        catch (error) { fallbackCopy(); }
+      } else {
+        fallbackCopy();
+      }
+      toast('Ссылка скопирована.');
+    } catch (error) {
+      toast('Не удалось скопировать ссылку.', 'error');
+    }
   }
 
   function openLinkEditor(id = null) {
@@ -1479,20 +2127,31 @@
   }
 
   async function bootApp(user) {
+    if (state.booting) return;
+    state.booting = true;
     state.user = user;
     syncOwnerUI();
     if (isOwner()) loadInviteArtists();
     $('#sidebar-email').textContent = user.email || '';
     $('#auth-screen').hidden = true;
+    $('#auth-loading-screen').hidden = true;
     $('#terminal-shell').hidden = false;
+    state.booted = true;
+    setSystemStatus('Загружаем кабинет…');
     try {
       await loadAllData();
       const query = new URLSearchParams(location.search);
+      const oauthCode = query.get('code');
+      const oauthState = query.get('state');
+      if (oauthCode && (oauthState === 'youtube' || oauthState === 'instagram')) {
+        await completeSocialConnect(oauthState, oauthCode);
+        history.replaceState({}, '', '/admin/?section=autopost');
+        return goView('autopost');
+      }
       const requested = query.get('section');
       const requestedProject = query.get('project');
       if (requested === 'track' && requestedProject && state.projects.some((project) => project.id === requestedProject)) await openProjectEditor(requestedProject, 'idea', 'projects');
       else goView(VIEW_TITLES[requested] && requested !== 'track' && (requested !== 'invites' || isOwner()) ? requested : 'dashboard');
-      state.booted = true;
     } catch (error) {
       const pendingInviteToken = localStorage.getItem('inmise-pending-invite-token');
       if (pendingInviteToken && /^[a-f0-9]{64}$/i.test(pendingInviteToken)) {
@@ -1503,11 +2162,16 @@
         return;
       }
       setSystemStatus('Ошибка привязки');
+      $('#auth-loading-screen').hidden = true;
+      $('#terminal-shell').hidden = false;
       toast(error.message || 'Не удалось открыть кабинет.', 'error');
+    } finally {
+      state.booting = false;
     }
   }
 
   function showLogin(message = '') {
+    $('#auth-loading-screen').hidden = true;
     $('#auth-screen').hidden = false; $('#terminal-shell').hidden = true;
     $('#login-form').hidden = false; $('#recovery-form').hidden = true;
     $('#auth-title').textContent = 'Вход в кабинет'; $('#auth-copy').textContent = 'Доступ только для артистов INMISE.';
@@ -1515,6 +2179,7 @@
   }
 
   function showRecovery(message = 'Придумайте новый пароль для кабинета.') {
+    $('#auth-loading-screen').hidden = true;
     $('#auth-screen').hidden = false; $('#terminal-shell').hidden = true;
     $('#login-form').hidden = true; $('#recovery-form').hidden = false;
     $('#auth-title').textContent = 'Смена пароля'; $('#auth-copy').textContent = message; setAuthMessage('');
@@ -1532,24 +2197,42 @@
       showRecovery('Ссылка подтверждена. Придумайте новый пароль.');
       return;
     }
-    const { data } = await db.auth.getSession();
+    const { data, error: sessionError } = await withTimeout(
+      db.auth.getSession(),
+      8000,
+      'Проверка сессии заняла слишком много времени.',
+    );
+    if (sessionError) throw sessionError;
     if (data.session?.user && !recovery) await bootApp(data.session.user);
     else if (!recovery) showLogin();
 
     db.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') { state.booted = false; showLogin(); }
+      if (event === 'SIGNED_OUT') { state.booted = false; state.booting = false; showLogin(); }
       if (event === 'PASSWORD_RECOVERY') showRecovery();
-      if (event === 'SIGNED_IN' && session?.user && sessionStorage.getItem('inmise-password-recovery') !== '1' && !state.booted) bootApp(session.user);
+      if (event === 'SIGNED_IN' && session?.user && sessionStorage.getItem('inmise-password-recovery') !== '1' && !state.booted && !state.booting) bootApp(session.user);
     });
   }
 
   function bindEvents() {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && activeWorkspaceFlush) {
+        activeWorkspaceFlush().catch(() => {});
+      }
+    });
+    window.addEventListener('pagehide', () => {
+      if (activeWorkspaceFlush) activeWorkspaceFlush().catch(() => {});
+    });
     $$('[data-theme-choice]').forEach((button) => button.addEventListener('click', () => setTheme(button.dataset.themeChoice)));
     $$('.nav-item').forEach((button) => button.addEventListener('click', () => goView(button.dataset.view)));
     $$('[data-go-view]').forEach((button) => button.addEventListener('click', () => goView(button.dataset.goView)));
     $('#mobile-menu').addEventListener('click', () => $('#sidebar').classList.toggle('is-open'));
     $('#drawer-close').addEventListener('click', closeDrawer); $('#drawer-backdrop').addEventListener('click', closeDrawer);
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeDrawer(); });
+    $('#dashboard-wheel-trigger').addEventListener('click', openWheel);
+    $('#wheel-modal-close').addEventListener('click', closeWheel);
+    $('#wheel-backdrop').addEventListener('click', closeWheel);
+    $('#wheel-spin').addEventListener('click', spinWheel);
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeWheel(); });
     $('#logout-button').addEventListener('click', () => db.auth.signOut());
     $('#auth-submit').addEventListener('click', async () => {
       const button = $('#auth-submit'); const email = $('#auth-email').value.trim(); const password = $('#auth-password').value;
@@ -1610,6 +2293,12 @@
     $('#dashboard-search').addEventListener('keydown', (event) => { if (event.key === 'Escape') { event.currentTarget.value = ''; state.dashboardSearch = ''; renderDashboard(); } });
     $('#new-lyrics').addEventListener('click', () => openLyrics());
     $('#new-link').addEventListener('click', () => openLinkEditor());
+    $('#links-category-filter').addEventListener('change', (event) => { state.linksCategory = event.currentTarget.value; renderLinks(); });
+    $$('.links-view-toggle [data-links-view]').forEach((button) => button.addEventListener('click', () => {
+      state.linksView = button.dataset.linksView === 'list' ? 'list' : 'cards';
+      localStorage.setItem(LINKS_VIEW_STORAGE_KEY, state.linksView);
+      renderLinks();
+    }));
     $('#new-event').addEventListener('click', openEventEditor);
     $('#calendar-prev').addEventListener('click', () => { state.calendarDate.setMonth(state.calendarDate.getMonth() - 1); renderCalendar(); });
     $('#calendar-next').addEventListener('click', () => { state.calendarDate.setMonth(state.calendarDate.getMonth() + 1); renderCalendar(); });

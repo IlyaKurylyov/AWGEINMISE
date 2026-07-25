@@ -420,3 +420,11 @@ enabled = true
 [functions.artist-invites]
 enabled = true
 verify_jwt = true
+
+[functions.social-connect]
+enabled = true
+verify_jwt = true
+
+[functions.social-publish]
+enabled = true
+verify_jwt = true

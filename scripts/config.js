@@ -10,4 +10,9 @@
 
   window.SUPABASE_URL = config.url;
   window.SUPABASE_ANON_KEY = config.publishableKey;
+
+  // OAuth Client IDs are not secret (unlike the Client Secret, which lives only
+  // in Edge Function env vars) and are safe to ship in browser code.
+  window.GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || '';
+  window.META_APP_ID = window.META_APP_ID || '';
 })();

@@ -5,3 +5,7 @@ window.SUPABASE_CONFIG = {
   url: 'https://YOUR_PROJECT_REF.supabase.co',
   publishableKey: 'YOUR_PUBLISHABLE_OR_ANON_KEY'
 };
+
+// Optional: OAuth Client IDs for autoposting (YouTube/Instagram connect buttons).
+// window.GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_OAUTH_CLIENT_ID';
+// window.META_APP_ID = 'YOUR_META_APP_ID';
