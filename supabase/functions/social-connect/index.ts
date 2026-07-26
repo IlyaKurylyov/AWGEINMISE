@@ -11,8 +11,39 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
   headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
 });
 
-const PLATFORMS = ["youtube", "instagram"] as const;
+const PLATFORMS = ["youtube", "instagram", "telegram", "vk"] as const;
 type Platform = typeof PLATFORMS[number];
+
+async function connectTelegram(token: string, target: string) {
+  const resp = await fetch(`https://api.telegram.org/bot${token}/getChat?chat_id=${encodeURIComponent(target)}`);
+  const data = await resp.json();
+  if (!data.ok) throw new Error(`telegram_connect_failed: ${data.description || resp.status}`);
+  return {
+    external_account_id: String(data.result.id),
+    external_account_name: String(data.result.title || data.result.username || target),
+    access_token: token,
+    refresh_token: null as string | null,
+    token_expires_at: null as string | null,
+    scope: "bot",
+  };
+}
+
+async function connectVk(token: string, target: string) {
+  const groupId = target.replace(/^-|club/gi, "");
+  const resp = await fetch(`https://api.vk.com/method/groups.getById?group_id=${encodeURIComponent(groupId)}&access_token=${encodeURIComponent(token)}&v=5.199`);
+  const data = await resp.json();
+  if (data.error) throw new Error(`vk_connect_failed: ${data.error.error_msg}`);
+  const group = Array.isArray(data.response) ? data.response[0] : data.response?.groups?.[0];
+  if (!group) throw new Error("vk_group_not_found");
+  return {
+    external_account_id: String(group.id),
+    external_account_name: String(group.name || `club${group.id}`),
+    access_token: token,
+    refresh_token: null as string | null,
+    token_expires_at: null as string | null,
+    scope: "wall,docs",
+  };
+}
 
 const GRAPH_API = "https://graph.facebook.com/v19.0";
 
@@ -183,6 +214,26 @@ Deno.serve(async (request) => {
       const connection = platform === "youtube"
         ? await exchangeGoogleCode(code, redirectUri)
         : await exchangeMetaCode(code, redirectUri);
+
+      const { error: upsertError } = await admin.from("social_connections").upsert({
+        artist_id: artist.id,
+        platform,
+        ...connection,
+      }, { onConflict: "artist_id,platform" });
+      if (upsertError) throw upsertError;
+
+      return json({ connected: true, account_name: connection.external_account_name });
+    }
+
+    if (action === "connect_token") {
+      const token = String(payload.token || "").trim();
+      const target = String(payload.target || "").trim();
+      if (!token || !target) return json({ error: "missing_token_or_target" }, 400);
+      if (platform !== "telegram" && platform !== "vk") return json({ error: "invalid_platform" }, 400);
+
+      const connection = platform === "telegram"
+        ? await connectTelegram(token, target)
+        : await connectVk(token, target);
 
       const { error: upsertError } = await admin.from("social_connections").upsert({
         artist_id: artist.id,

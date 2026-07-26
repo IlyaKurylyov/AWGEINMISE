@@ -253,6 +253,7 @@
     $$('.nav-item').forEach((button) => button.classList.toggle('is-active', button.dataset.view === view));
     $('#view-code').textContent = `ТЕРМИНАЛ / ${VIEW_TITLES[view][0]}`;
     $('#view-title').textContent = VIEW_TITLES[view][1];
+    $('#view-actions').innerHTML = '';
     $('#sidebar').classList.remove('is-open');
     window.history.replaceState({}, '', `/admin/?section=${view}`);
     if (view === 'calendar') renderCalendar();
@@ -1675,7 +1676,10 @@
     if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
   }
 
-  const SOCIAL_PLATFORM_LABEL = { youtube: 'YouTube', instagram: 'Instagram' };
+  const SOCIAL_PLATFORM_LABEL = { youtube: 'YouTube', instagram: 'Instagram', telegram: 'Telegram', vk: 'VK' };
+  const SOCIAL_VIDEO_PLATFORMS = ['youtube', 'instagram', 'vk'];
+  const SOCIAL_TEXT_PLATFORMS = ['vk', 'telegram'];
+  const SOCIAL_TOKEN_PLATFORMS = ['telegram', 'vk']; // connected by pasting a token, not OAuth
   const SOCIAL_MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024; // R2 staging — 2GB sanity cap
   const formatSize = (bytes) => bytes >= 1024 * 1024 * 1024 ? `${(bytes / 1024 / 1024 / 1024).toFixed(1)} ГБ` : `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
 
@@ -1745,10 +1749,10 @@
     if (statusResult?.error || statusResult?.data?.error) {
       console.warn('social-connect status unavailable', statusResult.error || statusResult.data?.error);
     }
-    const connections = statusResult?.data?.connections || { youtube: { connected: false }, instagram: { connected: false } };
+    const connections = statusResult?.data?.connections || {};
 
-    const platformMark = { youtube: 'YT', instagram: 'IG' };
-    const connectionCards = ['youtube', 'instagram'].map((platform) => {
+    const platformMark = { youtube: 'YT', instagram: 'IG', telegram: 'TG', vk: 'VK' };
+    const connCard = (platform) => {
       const label = SOCIAL_PLATFORM_LABEL[platform];
       const info = connections[platform] || { connected: false };
       return `<div class="autopost-conn autopost-conn-${platform} ${info.connected ? 'is-connected' : ''}">
@@ -1756,12 +1760,16 @@
         <div class="autopost-conn-body"><span class="eyebrow">${label}</span><strong><span class="autopost-conn-dot"></span>${info.connected ? escapeHTML(info.account_name || 'Подключено') : 'Не подключено'}</strong></div>
         <button class="button ${info.connected ? 'button-danger' : 'button-primary'} autopost-conn-btn" type="button" data-social-${info.connected ? 'disconnect' : 'connect'}="${platform}">${info.connected ? 'Отключить' : 'Подключить'}</button>
       </div>`;
-    }).join('');
+    };
+    const videoConnectionCards = SOCIAL_VIDEO_PLATFORMS.map(connCard).join('');
+    const textConnectionCards = SOCIAL_TEXT_PLATFORMS.map(connCard).join('');
 
-    const platformPills = ['youtube', 'instagram'].map((platform) => {
+    const pill = (platform) => {
       const info = connections[platform] || { connected: false };
       return `<label class="autopost-pill ${info.connected ? '' : 'is-disabled'}"${info.connected ? '' : ' title="Подключите площадку выше"'}><input type="checkbox" name="platforms" value="${platform}" ${info.connected ? '' : 'disabled'}><span>${SOCIAL_PLATFORM_LABEL[platform]}</span></label>`;
-    }).join('');
+    };
+    const videoPills = SOCIAL_VIDEO_PLATFORMS.map(pill).join('');
+    const textPills = SOCIAL_TEXT_PLATFORMS.map(pill).join('');
 
     const historyRows = (posts || []).map((post) => {
       const postTargets = (targets || []).filter((target) => target.post_id === post.id);
@@ -1780,10 +1788,13 @@
     }).join('') || '<p class="track-workspace-empty">Публикаций пока нет.</p>';
 
     container.innerHTML = `
-      <div class="autopost-connections">${connectionCards}</div>
+      <div class="autopost-connections" data-mode="video">${videoConnectionCards}</div>
+      <div class="autopost-connections" data-mode="text" hidden>${textConnectionCards}</div>
       <section class="panel autopost-composer">
-        <header class="panel-header"><div><span class="eyebrow">Новая публикация</span><h3>Загрузить видео</h3></div></header>
-        <form id="autopost-form" class="autopost-form">
+        <header class="panel-header">
+          <div><span class="eyebrow">Новая публикация</span><h3 id="autopost-composer-title">Загрузить видео</h3></div>
+        </header>
+        <form id="autopost-form" class="autopost-form" data-mode="video">
           <label class="autopost-dropzone" id="autopost-dropzone">
             <video class="autopost-dropzone-video" id="autopost-dropzone-video" muted playsinline hidden></video>
             <span class="autopost-dropzone-empty" id="autopost-dropzone-empty"><span class="autopost-dropzone-icon">↥</span><strong>Перетащите видео сюда</strong><small>или нажмите, чтобы выбрать файл</small></span>
@@ -1793,13 +1804,39 @@
           </label>
           <label class="field"><span>Название</span><input type="text" name="title" maxlength="120" placeholder="Название публикации" required></label>
           <label class="field"><span>Подпись / описание</span><textarea name="caption" rows="3" placeholder="Текст под видео…"></textarea></label>
-          <div class="autopost-publish-row"><div class="autopost-platform-checks">${platformPills}</div><button class="button button-primary autopost-publish-btn" type="submit">Опубликовать</button></div>
+          <div class="autopost-publish-row"><div class="autopost-platform-checks">${videoPills}</div><button class="button button-primary autopost-publish-btn" type="submit">Опубликовать</button></div>
+        </form>
+        <form id="autopost-text-form" class="autopost-form" data-mode="text" hidden>
+          <label class="field"><span>Текст поста</span><textarea name="body" rows="6" placeholder="Текст поста для VK и Telegram…" required></textarea></label>
+          <div class="autopost-attach">
+            <div class="autopost-attach-head"><span>Картинки</span><label class="text-button autopost-attach-add">+ Добавить<input type="file" accept="image/*" multiple hidden data-attach="image"></label></div>
+            <div class="autopost-attach-list" id="autopost-image-list"></div>
+          </div>
+          <div class="autopost-attach">
+            <div class="autopost-attach-head"><span>Аудио</span><label class="text-button autopost-attach-add">+ Добавить<input type="file" accept="audio/*" multiple hidden data-attach="audio"></label></div>
+            <div class="autopost-attach-list" id="autopost-audio-list"></div>
+            <small class="autopost-attach-note">В VK аудио отправится как файл-документ (ограничение API VK).</small>
+          </div>
+          <div class="autopost-publish-row"><div class="autopost-platform-checks">${textPills}</div><button class="button button-primary autopost-publish-btn" type="submit">Опубликовать</button></div>
         </form>
       </section>
       <section class="panel autopost-history">
         <header class="panel-header"><div><span class="eyebrow">История</span><h3>Публикации</h3></div></header>
         <div class="autopost-history-list">${historyRows}</div>
       </section>`;
+
+    // Mode toggle lives in the workspace header, next to the "Автопостинг" title.
+    const viewActions = $('#view-actions');
+    viewActions.innerHTML = '<div class="autopost-mode-toggle" role="group" aria-label="Тип публикации"><button type="button" class="is-active" data-autopost-mode="video">Видео</button><button type="button" data-autopost-mode="text">Текст</button></div>';
+    const modeEls = $$('[data-mode]', container);
+    const composerTitle = $('#autopost-composer-title', container);
+    $$('[data-autopost-mode]', viewActions).forEach((btn) => btn.addEventListener('click', () => {
+      const mode = btn.dataset.autopostMode;
+      $$('[data-autopost-mode]', viewActions).forEach((b) => b.classList.toggle('is-active', b === btn));
+      modeEls.forEach((el) => { el.hidden = el.dataset.mode !== mode; });
+      composerTitle.textContent = mode === 'text' ? 'Написать пост' : 'Загрузить видео';
+    }));
+    bindTextComposer(container);
 
     const form = $('#autopost-form', container);
     const dropzone = $('#autopost-dropzone', container);
@@ -1851,7 +1888,11 @@
       if (file && file.type.startsWith('video/')) { fileInput.files = event.dataTransfer.files; fileInput.dispatchEvent(new Event('change')); }
     });
 
-    $$('[data-social-connect]', container).forEach((button) => button.addEventListener('click', () => startSocialConnect(button.dataset.socialConnect)));
+    $$('[data-social-connect]', container).forEach((button) => button.addEventListener('click', () => {
+      const platform = button.dataset.socialConnect;
+      if (SOCIAL_TOKEN_PLATFORMS.includes(platform)) openTokenConnectDrawer(platform);
+      else startSocialConnect(platform);
+    }));
     $$('[data-social-disconnect]', container).forEach((button) => button.addEventListener('click', () => disconnectSocial(button.dataset.socialDisconnect)));
     $$('[data-retry-post]', container).forEach((button) => button.addEventListener('click', () => retrySocialPost(button.dataset.retryPost)));
     form.addEventListener('submit', uploadSocialPost);
@@ -1932,6 +1973,97 @@
     } finally {
       hideBusy();
     }
+    renderAutopost();
+  }
+
+  function bindTextComposer(container) {
+    const form = $('#autopost-text-form', container);
+    if (!form) return;
+    const attachments = { image: [], audio: [] };
+    const lists = { image: $('#autopost-image-list', container), audio: $('#autopost-audio-list', container) };
+    const renderList = (kind) => {
+      lists[kind].innerHTML = attachments[kind].map((file, index) => `<div class="autopost-attach-item"><span>${escapeHTML(file.name)}</span><small>${formatSize(file.size)}</small><button type="button" class="autopost-attach-remove" data-attach-remove="${kind}:${index}" aria-label="Убрать">×</button></div>`).join('');
+    };
+    $$('input[data-attach]', form).forEach((input) => input.addEventListener('change', () => {
+      const kind = input.dataset.attach;
+      for (const file of input.files) attachments[kind].push(file);
+      input.value = '';
+      renderList(kind);
+    }));
+    form.addEventListener('click', (event) => {
+      const remove = event.target.closest('[data-attach-remove]');
+      if (!remove) return;
+      const [kind, index] = remove.dataset.attachRemove.split(':');
+      attachments[kind].splice(Number(index), 1);
+      renderList(kind);
+    });
+    form.addEventListener('submit', (event) => publishTextPost(event, attachments));
+  }
+
+  async function publishTextPost(event, attachments) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = $('button[type="submit"]', form);
+    const body = $('textarea[name="body"]', form).value.trim();
+    const platforms = $$('input[name="platforms"]:checked', form).map((el) => el.value);
+    const files = [...attachments.image.map((file) => ({ file, type: 'image' })), ...attachments.audio.map((file) => ({ file, type: 'audio' }))];
+    if (!body && !files.length) return toast('Введите текст или прикрепите файл.', 'error');
+    if (!platforms.length) return toast('Выберите хотя бы одну площадку.', 'error');
+
+    setBusy(button, true, 'Публикуем…');
+    showBusy(files.length ? 'Загружаем вложения…' : 'Публикуем…', 'Не закрывайте вкладку');
+    try {
+      const uploaded = [];
+      for (const { file, type } of files) {
+        const { data: urlData, error: urlError } = await db.functions.invoke('social-storage', { body: { action: 'upload_url', content_type: file.type || 'application/octet-stream' } });
+        if (urlError || urlData?.error) throw new Error(urlData?.detail || urlData?.error || 'Не удалось подготовить загрузку.');
+        const put = await fetch(urlData.upload_url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream' } });
+        if (!put.ok) throw new Error(`Не удалось загрузить вложение (${put.status}).`);
+        uploaded.push({ type, key: urlData.key, mime: file.type, name: file.name });
+      }
+      const { data: post, error: insertError } = await db.from('social_posts').insert({
+        artist_id: state.artist.id,
+        post_type: 'text',
+        title: body.slice(0, 80) || 'Текстовый пост',
+        body,
+        bucket_id: 'r2',
+        attachments: uploaded,
+      }).select().single();
+      if (insertError) throw insertError;
+      form.reset();
+      await publishSocialPost(post.id, platforms);
+    } catch (error) {
+      toast(error.message || 'Не удалось опубликовать.', 'error');
+    } finally {
+      setBusy(button, false);
+      hideBusy();
+    }
+  }
+
+  function openTokenConnectDrawer(platform) {
+    const label = SOCIAL_PLATFORM_LABEL[platform];
+    const fields = platform === 'telegram'
+      ? `<label class="field"><span>Токен бота</span><input name="token" placeholder="123456:ABC-DEF..." required></label>
+         <label class="field"><span>Канал</span><input name="target" placeholder="@mychannel или -100123..." required><small>Создайте бота через @BotFather и добавьте его администратором канала.</small></label>`
+      : `<label class="field"><span>Токен сообщества VK</span><input name="token" placeholder="vk1.a...." required></label>
+         <label class="field"><span>ID группы</span><input name="target" placeholder="123456789" required><small>Число без «club». Токен: настройки сообщества → Работа с API → создать ключ с правами «Управление», «Стена», «Документы».</small></label>`;
+    openDrawer(`${platform.toUpperCase()} / CONNECT`, `Подключить ${label}`, `<form id="token-connect-form">${fields}<div class="drawer-actions"><span></span><button class="button button-primary" type="submit">Подключить</button></div></form>`);
+    $('#token-connect-form').addEventListener('submit', (event) => submitTokenConnect(event, platform));
+  }
+
+  async function submitTokenConnect(event, platform) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = $('button[type="submit"]', form);
+    const token = $('[name="token"]', form).value.trim();
+    const target = $('[name="target"]', form).value.trim();
+    if (!token || !target) return;
+    setBusy(button, true, 'Подключаем…');
+    const { data, error } = await db.functions.invoke('social-connect', { body: { action: 'connect_token', platform, token, target } });
+    setBusy(button, false);
+    if (error || data?.error) return toast(`Не удалось подключить ${SOCIAL_PLATFORM_LABEL[platform]}: ${data?.detail || data?.error || error?.message || ''}`, 'error');
+    closeDrawer();
+    toast(`${SOCIAL_PLATFORM_LABEL[platform]} подключён: ${data.account_name || ''}`);
     renderAutopost();
   }
 

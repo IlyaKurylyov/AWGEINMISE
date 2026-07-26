@@ -178,6 +178,119 @@ async function publishToInstagram(connection: Connection, videoUrl: string, capt
   };
 }
 
+type Attachment = { type: string; key: string; name?: string };
+
+async function publishToTelegram(connection: Connection, body: string, attachments: Attachment[]) {
+  const token = connection.access_token;
+  const chatId = connection.external_account_id;
+  const api = async (method: string, params: Record<string, unknown>) => {
+    const resp = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(`telegram_${method}_failed: ${data.description || resp.status}`);
+    return data.result;
+  };
+  const imgUrls = await Promise.all(attachments.filter((a) => a.type === "image").map((a) => r2PresignGet(a.key, 3600)));
+  const audUrls = await Promise.all(attachments.filter((a) => a.type === "audio").map((a) => r2PresignGet(a.key, 3600)));
+
+  // deno-lint-ignore no-explicit-any
+  let head: any = null;
+  let lastId: number | null = null;
+  if (imgUrls.length > 1) {
+    const media = imgUrls.map((url, i) => ({ type: "photo", media: url, ...(i === 0 && body ? { caption: body } : {}) }));
+    const res = await api("sendMediaGroup", { chat_id: chatId, media });
+    head = res[0]; lastId = res[0]?.message_id;
+  } else if (imgUrls.length === 1) {
+    const res = await api("sendPhoto", { chat_id: chatId, photo: imgUrls[0], caption: body || undefined });
+    head = res; lastId = res?.message_id;
+  } else if (body) {
+    const res = await api("sendMessage", { chat_id: chatId, text: body });
+    head = res; lastId = res?.message_id;
+  }
+  for (const url of audUrls) {
+    const res = await api("sendAudio", { chat_id: chatId, audio: url });
+    if (lastId === null) { head = res; lastId = res?.message_id; }
+  }
+  const username = head?.chat?.username;
+  return {
+    external_post_id: String(lastId ?? ""),
+    external_post_url: username && lastId ? `https://t.me/${username}/${lastId}` : "",
+  };
+}
+
+async function publishToVk(connection: Connection, body: string, attachments: Attachment[]) {
+  const token = connection.access_token;
+  const groupId = connection.external_account_id;
+  const V = "5.199";
+  const vk = async (method: string, params: Record<string, string>) => {
+    const url = `https://api.vk.com/method/${method}?${new URLSearchParams({ ...params, access_token: token, v: V })}`;
+    const data = await (await fetch(url)).json();
+    if (data.error) throw new Error(`vk_${method}_failed: ${data.error.error_msg}`);
+    return data.response;
+  };
+  const attachStrings: string[] = [];
+  for (const item of attachments) {
+    const blob = await (await fetch(await r2PresignGet(item.key, 3600))).blob();
+    if (item.type === "image") {
+      const server = await vk("photos.getWallUploadServer", { group_id: groupId });
+      const fd = new FormData();
+      fd.append("photo", blob, item.name || "photo.jpg");
+      const up = await (await fetch(server.upload_url, { method: "POST", body: fd })).json();
+      const saved = await vk("photos.saveWallPhoto", { group_id: groupId, photo: up.photo, server: String(up.server), hash: up.hash });
+      attachStrings.push(`photo${saved[0].owner_id}_${saved[0].id}`);
+    } else {
+      const server = await vk("docs.getWallUploadServer", { group_id: groupId });
+      const fd = new FormData();
+      fd.append("file", blob, item.name || "audio.mp3");
+      const up = await (await fetch(server.upload_url, { method: "POST", body: fd })).json();
+      const saved = await vk("docs.save", { file: up.file });
+      const doc = saved.doc || saved.audio_message || saved.graffiti;
+      if (doc) attachStrings.push(`doc${doc.owner_id}_${doc.id}`);
+    }
+  }
+  const response = await vk("wall.post", {
+    owner_id: `-${groupId}`,
+    from_group: "1",
+    message: body,
+    attachments: attachStrings.join(","),
+  });
+  return {
+    external_post_id: String(response.post_id),
+    external_post_url: `https://vk.com/wall-${groupId}_${response.post_id}`,
+  };
+}
+
+// Note: buffers the video in memory (edge limit ~256MB), so very large clips may
+// fail here — fine for typical uploads; can be streamed later if needed.
+async function publishVideoToVk(connection: Connection, videoUrl: string, title: string, caption: string) {
+  const token = connection.access_token;
+  const groupId = connection.external_account_id;
+  const V = "5.199";
+  const vk = async (method: string, params: Record<string, string>) => {
+    const data = await (await fetch(`https://api.vk.com/method/${method}?${new URLSearchParams({ ...params, access_token: token, v: V })}`)).json();
+    if (data.error) throw new Error(`vk_${method}_failed: ${data.error.error_msg}`);
+    return data.response;
+  };
+  const saved = await vk("video.save", { group_id: groupId, name: title || "video", description: caption || "" });
+  const blob = await (await fetch(videoUrl)).blob();
+  const fd = new FormData();
+  fd.append("video_file", blob, "video.mp4");
+  await (await fetch(saved.upload_url, { method: "POST", body: fd })).json();
+  const response = await vk("wall.post", {
+    owner_id: `-${groupId}`,
+    from_group: "1",
+    message: caption || title || "",
+    attachments: `video${saved.owner_id}_${saved.video_id}`,
+  });
+  return {
+    external_post_id: String(response.post_id),
+    external_post_url: `https://vk.com/wall-${groupId}_${response.post_id}`,
+  };
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -224,7 +337,7 @@ Deno.serve(async (request) => {
       .from("social_posts").select("*").eq("id", postId).eq("artist_id", artist.id).maybeSingle();
     if (postError) throw postError;
     if (!post) return json({ error: "post_not_found" }, 404);
-    if (!post.storage_path) return json({ error: "post_already_published" }, 409);
+    if (post.status === "done") return json({ error: "post_already_published" }, 409);
 
     await admin.from("social_posts").update({ status: "processing" }).eq("id", post.id);
     for (const platform of requestedPlatforms) {
@@ -234,11 +347,13 @@ Deno.serve(async (request) => {
       }, { onConflict: "post_id,platform" });
     }
 
-    // Instagram fetches publicUrl itself; YouTube streams a fresh copy from it.
+    const isText = post.post_type === "text";
     const isR2 = post.bucket_id === "r2";
-    const publicUrl = isR2
-      ? await r2PresignGet(post.storage_path, 3600)
-      : admin.storage.from(post.bucket_id).getPublicUrl(post.storage_path).data.publicUrl;
+    const attachments: Array<{ type: string; key: string; name?: string }> = Array.isArray(post.attachments) ? post.attachments : [];
+    // Video only: Instagram fetches publicUrl itself; YouTube streams from it.
+    const publicUrl = !isText
+      ? (isR2 ? await r2PresignGet(post.storage_path, 3600) : admin.storage.from(post.bucket_id).getPublicUrl(post.storage_path).data.publicUrl)
+      : "";
 
     for (const platform of requestedPlatforms) {
       try {
@@ -247,13 +362,21 @@ Deno.serve(async (request) => {
         if (connectionError) throw connectionError;
         if (!rawConnection) throw new Error(`${platform}_not_connected`);
 
-        const connection = await refreshIfNeeded(admin, rawConnection as Connection, platform);
+        const connection = (platform === "youtube" || platform === "instagram")
+          ? await refreshIfNeeded(admin, rawConnection as Connection, platform as "youtube" | "instagram")
+          : (rawConnection as Connection);
         let result;
-        if (platform === "youtube") {
+        if (isText) {
+          result = platform === "telegram"
+            ? await publishToTelegram(connection, post.body || "", attachments)
+            : await publishToVk(connection, post.body || "", attachments);
+        } else if (platform === "youtube") {
           const videoResp = await fetch(publicUrl);
           if (!videoResp.ok || !videoResp.body) throw new Error(`video_fetch_failed: ${videoResp.status}`);
           const size = post.size_bytes || Number(videoResp.headers.get("content-length")) || 0;
           result = await uploadToYouTube(connection, videoResp.body, size, post.mime_type || "video/mp4", post.title, post.caption);
+        } else if (platform === "vk") {
+          result = await publishVideoToVk(connection, publicUrl, post.title, post.caption);
         } else {
           result = await publishToInstagram(connection, publicUrl, post.caption);
         }
@@ -280,9 +403,14 @@ Deno.serve(async (request) => {
 
     const allSucceeded = (targets || []).length > 0 && targets!.every((target) => target.status === "success");
     if (allSucceeded) {
-      if (isR2) await r2Delete(post.storage_path);
-      else await admin.storage.from(post.bucket_id).remove([post.storage_path]);
-      await admin.from("social_posts").update({ status: "done", storage_path: null }).eq("id", post.id);
+      if (isText) {
+        for (const item of attachments) { try { await r2Delete(item.key); } catch (_) { /* best effort */ } }
+      } else if (isR2) {
+        await r2Delete(post.storage_path);
+      } else {
+        await admin.storage.from(post.bucket_id).remove([post.storage_path]);
+      }
+      await admin.from("social_posts").update({ status: "done", storage_path: null, attachments: [] }).eq("id", post.id);
     } else {
       await admin.from("social_posts").update({ status: "failed" }).eq("id", post.id);
     }
