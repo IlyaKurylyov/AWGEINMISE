@@ -1,4 +1,30 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { AwsClient } from "npm:aws4fetch@1";
+
+// R2 (S3-compatible) helpers. Videos larger than Supabase's 50MB cap are staged
+// in Cloudflare R2 instead of Supabase Storage; such posts have bucket_id = "r2".
+function r2Config() {
+  const accountId = Deno.env.get("R2_ACCOUNT_ID");
+  const accessKeyId = Deno.env.get("R2_ACCESS_KEY_ID");
+  const secretAccessKey = Deno.env.get("R2_SECRET_ACCESS_KEY");
+  const bucket = Deno.env.get("R2_BUCKET");
+  if (!accountId || !accessKeyId || !secretAccessKey || !bucket) throw new Error("r2_not_configured");
+  return { accessKeyId, secretAccessKey, objectUrl: (key: string) => `https://${accountId}.r2.cloudflarestorage.com/${bucket}/${encodeURIComponent(key).replace(/%2F/g, "/")}` };
+}
+function r2Client() {
+  const { accessKeyId, secretAccessKey } = r2Config();
+  return new AwsClient({ accessKeyId, secretAccessKey, region: "auto", service: "s3" });
+}
+async function r2PresignGet(key: string, expiresSec: number) {
+  const url = new URL(r2Config().objectUrl(key));
+  url.searchParams.set("X-Amz-Expires", String(expiresSec));
+  const signed = await r2Client().sign(url.toString(), { method: "GET", aws: { signQuery: true } });
+  return signed.url;
+}
+async function r2Delete(key: string) {
+  const signed = await r2Client().sign(r2Config().objectUrl(key), { method: "DELETE" });
+  await fetch(signed);
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,7 +94,9 @@ async function refreshIfNeeded(admin: ReturnType<typeof createClient>, connectio
   return { ...connection, access_token: data.access_token, token_expires_at: tokenExpiresAt };
 }
 
-async function uploadToYouTube(connection: Connection, video: Blob, title: string, caption: string) {
+// Streams the video body straight through to YouTube's resumable endpoint so a
+// large file never has to be buffered in the (memory-limited) edge function.
+async function uploadToYouTube(connection: Connection, body: ReadableStream<Uint8Array>, size: number, contentType: string, title: string, caption: string) {
   const initResponse = await fetch(
     "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
     {
@@ -76,8 +104,8 @@ async function uploadToYouTube(connection: Connection, video: Blob, title: strin
       headers: {
         Authorization: `Bearer ${connection.access_token}`,
         "Content-Type": "application/json; charset=UTF-8",
-        "X-Upload-Content-Type": video.type || "video/mp4",
-        "X-Upload-Content-Length": String(video.size),
+        "X-Upload-Content-Type": contentType || "video/mp4",
+        "X-Upload-Content-Length": String(size),
       },
       body: JSON.stringify({
         snippet: { title: title || "Untitled", description: caption || "", categoryId: "10" },
@@ -91,9 +119,11 @@ async function uploadToYouTube(connection: Connection, video: Blob, title: strin
 
   const uploadResponse = await fetch(uploadUrl, {
     method: "PUT",
-    headers: { "Content-Type": video.type || "video/mp4" },
-    body: video,
-  });
+    headers: { "Content-Type": contentType || "video/mp4", "Content-Length": String(size) },
+    body,
+    // Deno requires this for a streaming request body.
+    duplex: "half",
+  } as RequestInit);
   const uploadData = await uploadResponse.json();
   if (!uploadResponse.ok) throw new Error(`youtube_upload_failed: ${uploadData.error?.message}`);
 
@@ -204,10 +234,11 @@ Deno.serve(async (request) => {
       }, { onConflict: "post_id,platform" });
     }
 
-    const { data: videoBlob, error: downloadError } = await admin.storage
-      .from(post.bucket_id).download(post.storage_path);
-    if (downloadError) throw downloadError;
-    const publicUrl = admin.storage.from(post.bucket_id).getPublicUrl(post.storage_path).data.publicUrl;
+    // Instagram fetches publicUrl itself; YouTube streams a fresh copy from it.
+    const isR2 = post.bucket_id === "r2";
+    const publicUrl = isR2
+      ? await r2PresignGet(post.storage_path, 3600)
+      : admin.storage.from(post.bucket_id).getPublicUrl(post.storage_path).data.publicUrl;
 
     for (const platform of requestedPlatforms) {
       try {
@@ -217,9 +248,15 @@ Deno.serve(async (request) => {
         if (!rawConnection) throw new Error(`${platform}_not_connected`);
 
         const connection = await refreshIfNeeded(admin, rawConnection as Connection, platform);
-        const result = platform === "youtube"
-          ? await uploadToYouTube(connection, videoBlob, post.title, post.caption)
-          : await publishToInstagram(connection, publicUrl, post.caption);
+        let result;
+        if (platform === "youtube") {
+          const videoResp = await fetch(publicUrl);
+          if (!videoResp.ok || !videoResp.body) throw new Error(`video_fetch_failed: ${videoResp.status}`);
+          const size = post.size_bytes || Number(videoResp.headers.get("content-length")) || 0;
+          result = await uploadToYouTube(connection, videoResp.body, size, post.mime_type || "video/mp4", post.title, post.caption);
+        } else {
+          result = await publishToInstagram(connection, publicUrl, post.caption);
+        }
 
         await admin.from("social_post_targets").update({
           status: "success",
@@ -243,7 +280,8 @@ Deno.serve(async (request) => {
 
     const allSucceeded = (targets || []).length > 0 && targets!.every((target) => target.status === "success");
     if (allSucceeded) {
-      await admin.storage.from(post.bucket_id).remove([post.storage_path]);
+      if (isR2) await r2Delete(post.storage_path);
+      else await admin.storage.from(post.bucket_id).remove([post.storage_path]);
       await admin.from("social_posts").update({ status: "done", storage_path: null }).eq("id", post.id);
     } else {
       await admin.from("social_posts").update({ status: "failed" }).eq("id", post.id);

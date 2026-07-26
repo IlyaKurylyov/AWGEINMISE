@@ -425,6 +425,10 @@ verify_jwt = true
 enabled = true
 verify_jwt = true
 
+[functions.social-storage]
+enabled = true
+verify_jwt = true
+
 [functions.social-publish]
 enabled = true
 verify_jwt = true

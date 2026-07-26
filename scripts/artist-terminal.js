@@ -1676,7 +1676,8 @@
   }
 
   const SOCIAL_PLATFORM_LABEL = { youtube: 'YouTube', instagram: 'Instagram' };
-  const SOCIAL_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+  const SOCIAL_MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024; // R2 staging — 2GB sanity cap
+  const formatSize = (bytes) => bytes >= 1024 * 1024 * 1024 ? `${(bytes / 1024 / 1024 / 1024).toFixed(1)} ГБ` : `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
 
   function socialRedirectUri() {
     return `${location.origin}/admin/`;
@@ -1785,7 +1786,7 @@
         <form id="autopost-form" class="autopost-form">
           <label class="autopost-dropzone" id="autopost-dropzone">
             <video class="autopost-dropzone-video" id="autopost-dropzone-video" muted playsinline hidden></video>
-            <span class="autopost-dropzone-empty" id="autopost-dropzone-empty"><span class="autopost-dropzone-icon">↥</span><strong>Перетащите видео сюда</strong><small>или нажмите, чтобы выбрать файл · до 50 МБ</small></span>
+            <span class="autopost-dropzone-empty" id="autopost-dropzone-empty"><span class="autopost-dropzone-icon">↥</span><strong>Перетащите видео сюда</strong><small>или нажмите, чтобы выбрать файл</small></span>
             <span class="autopost-orient-tag" id="autopost-orient-tag" hidden></span>
             <span class="autopost-file-badge" id="autopost-file-badge" hidden></span>
             <input type="file" name="video" accept="video/*" hidden required>
@@ -1820,12 +1821,11 @@
         previewUrl = URL.createObjectURL(file);
         dzVideo.src = previewUrl; dzVideo.hidden = false; dzEmpty.hidden = true; dropzone.classList.add('has-file');
         showFirstFrame(dzVideo);
-        const mb = file.size / 1024 / 1024;
         const tooBig = file.size > SOCIAL_MAX_UPLOAD_BYTES;
         fileBadge.hidden = false;
         fileBadge.classList.toggle('is-too-big', tooBig);
-        fileBadge.textContent = `${mb.toFixed(1)} МБ${tooBig ? ' — больше лимита 50 МБ' : ' · готово к публикации'}`;
-        if (tooBig) toast('Видео больше 50 МБ — публикация не пройдёт. Сожмите или укоротите файл.', 'error');
+        fileBadge.textContent = `${formatSize(file.size)}${tooBig ? ' — больше лимита 2 ГБ' : ' · готово к публикации'}`;
+        if (tooBig) toast('Видео больше 2 ГБ — слишком большое.', 'error');
         dzVideo.addEventListener('loadedmetadata', () => {
           const w = dzVideo.videoWidth, h = dzVideo.videoHeight, dur = dzVideo.duration || 0;
           if (!w || !h) return;
@@ -1870,30 +1870,33 @@
     const file = data.get('video');
     const platforms = data.getAll('platforms');
     if (!(file instanceof File) || !file.size) return toast('Выберите видеофайл.', 'error');
-    if (file.size > SOCIAL_MAX_UPLOAD_BYTES) return toast(`Видео ${(file.size / 1024 / 1024).toFixed(0)} МБ — превышает лимит 50 МБ. Сожмите или укоротите файл.`, 'error');
+    if (file.size > SOCIAL_MAX_UPLOAD_BYTES) return toast(`Видео ${formatSize(file.size)} — превышает лимит 2 ГБ.`, 'error');
     if (!platforms.length) return toast('Выберите хотя бы одну площадку.', 'error');
 
     setBusy(button, true, 'Загружаем видео…');
-    showBusy('Загружаем видео на сайт…', 'Не закрывайте вкладку');
-    const path = `${state.user.id}/${Date.now()}-${safeFileName(file.name)}`;
+    showBusy('Загружаем видео в хранилище…', 'Не закрывайте вкладку');
     try {
-      const { error: uploadError } = await db.storage.from('social-uploads').upload(path, file, { contentType: file.type, upsert: false });
-      if (uploadError) throw new Error(/maximum allowed size|payload too large|413/i.test(uploadError.message || '') ? 'Файл больше лимита 50 МБ.' : uploadError.message);
+      // 1. Ask the server for a short-lived direct-upload URL to R2 (bypasses the 50MB Supabase cap).
+      const { data: urlData, error: urlError } = await db.functions.invoke('social-storage', { body: { action: 'upload_url', content_type: file.type || 'video/mp4' } });
+      if (urlError || urlData?.error) throw new Error(urlData?.detail || urlData?.error || urlError?.message || 'Не удалось подготовить загрузку.');
+      const { upload_url: uploadUrl, key } = urlData;
 
+      // 2. Upload the file straight to R2 — no size limit, no proxy through our server.
+      const putResponse = await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type || 'video/mp4' } });
+      if (!putResponse.ok) throw new Error(`Не удалось загрузить видео (${putResponse.status}).`);
+
+      // 3. Record the post (bucket_id "r2" tells social-publish where to read/delete from).
       const { data: post, error: insertError } = await db.from('social_posts').insert({
         artist_id: state.artist.id,
         title: String(data.get('title') || '').trim(),
         caption: String(data.get('caption') || ''),
-        bucket_id: 'social-uploads',
-        storage_path: path,
+        bucket_id: 'r2',
+        storage_path: key,
         original_name: file.name,
         mime_type: file.type,
         size_bytes: file.size,
       }).select().single();
-      if (insertError) {
-        await db.storage.from('social-uploads').remove([path]);
-        throw insertError;
-      }
+      if (insertError) throw insertError;
 
       form.reset();
       await publishSocialPost(post.id, platforms);
@@ -1922,7 +1925,9 @@
       if (error || data?.error) {
         toast(`Ошибка публикации: ${data?.detail || data?.error || error?.message || ''}`, 'error');
       } else {
-        toast('Публикация завершена.');
+        const failed = (data?.targets || []).filter((target) => target.status === 'failed');
+        if (failed.length) toast(`Не опубликовано: ${failed.map((target) => SOCIAL_PLATFORM_LABEL[target.platform] || target.platform).join(', ')}`, 'error');
+        else toast('Опубликовано ✓');
       }
     } finally {
       hideBusy();
