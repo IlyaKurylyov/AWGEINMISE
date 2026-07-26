@@ -122,7 +122,7 @@
   const EVENT_STATUS = { planned: 'Запланировано', ready: 'Готово', completed: 'Завершено', cancelled: 'Отменено' };
   const VIEW_TITLES = {
     dashboard: ['01', 'Дашборд'], beats: ['02', 'Биты'], projects: ['03', 'Треки и релизы'], track: ['03', 'Рабочее пространство трека'], tasks: ['04', 'Задачи'], lyrics: ['05', 'Тексты'],
-    calendar: ['06', 'Календарь'], profile: ['07', 'Карточка артиста'], links: ['08', 'Ссылки'], autopost: ['09', 'Автопостинг'], invites: ['10', 'Инвайты'],
+    calendar: ['06', 'Календарь'], profile: ['07', 'Карточка артиста'], links: ['08', 'Ссылки'], autopost: ['09', 'Автопостинг'], secretary: ['10', 'Секретарь'], invites: ['11', 'Инвайты'],
   };
 
   const state = {
@@ -170,6 +170,19 @@
 
   function initialiseTheme() {
     setTheme(document.documentElement.dataset.theme || localStorage.getItem(THEME_STORAGE_KEY) || 'dark', false);
+  }
+
+  function showBusy(text, hint = '') {
+    const overlay = $('#busy-overlay');
+    if (!overlay) return;
+    $('#busy-overlay-text').textContent = text || 'Загрузка…';
+    $('#busy-overlay-hint').textContent = hint;
+    overlay.hidden = false;
+  }
+
+  function hideBusy() {
+    const overlay = $('#busy-overlay');
+    if (overlay) overlay.hidden = true;
   }
 
   function toast(message, type = 'success') {
@@ -1663,6 +1676,7 @@
   }
 
   const SOCIAL_PLATFORM_LABEL = { youtube: 'YouTube', instagram: 'Instagram' };
+  const SOCIAL_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
   function socialRedirectUri() {
     return `${location.origin}/admin/`;
@@ -1771,7 +1785,9 @@
         <form id="autopost-form" class="autopost-form">
           <label class="autopost-dropzone" id="autopost-dropzone">
             <video class="autopost-dropzone-video" id="autopost-dropzone-video" muted playsinline hidden></video>
-            <span class="autopost-dropzone-empty" id="autopost-dropzone-empty"><span class="autopost-dropzone-icon">↥</span><strong>Перетащите видео сюда</strong><small>или нажмите, чтобы выбрать файл</small></span>
+            <span class="autopost-dropzone-empty" id="autopost-dropzone-empty"><span class="autopost-dropzone-icon">↥</span><strong>Перетащите видео сюда</strong><small>или нажмите, чтобы выбрать файл · до 50 МБ</small></span>
+            <span class="autopost-orient-tag" id="autopost-orient-tag" hidden></span>
+            <span class="autopost-file-badge" id="autopost-file-badge" hidden></span>
             <input type="file" name="video" accept="video/*" hidden required>
           </label>
           <label class="field"><span>Название</span><input type="text" name="title" maxlength="120" placeholder="Название публикации" required></label>
@@ -1789,18 +1805,43 @@
     const fileInput = $('input[name="video"]', form);
     const dzVideo = $('#autopost-dropzone-video', container);
     const dzEmpty = $('#autopost-dropzone-empty', container);
+    const fileBadge = $('#autopost-file-badge', container);
+    const orientTag = $('#autopost-orient-tag', container);
     let previewUrl = '';
     const showFirstFrame = (video) => video.addEventListener('loadeddata', () => { try { video.currentTime = 0.1; } catch (e) { /* seek unsupported */ } }, { once: true });
+    const formatClip = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 
     fileInput.addEventListener('change', () => {
       const file = fileInput.files?.[0];
       if (previewUrl) URL.revokeObjectURL(previewUrl);
+      dropzone.classList.remove('is-vertical', 'is-horizontal');
+      orientTag.hidden = true;
       if (file) {
         previewUrl = URL.createObjectURL(file);
         dzVideo.src = previewUrl; dzVideo.hidden = false; dzEmpty.hidden = true; dropzone.classList.add('has-file');
         showFirstFrame(dzVideo);
+        const mb = file.size / 1024 / 1024;
+        const tooBig = file.size > SOCIAL_MAX_UPLOAD_BYTES;
+        fileBadge.hidden = false;
+        fileBadge.classList.toggle('is-too-big', tooBig);
+        fileBadge.textContent = `${mb.toFixed(1)} МБ${tooBig ? ' — больше лимита 50 МБ' : ' · готово к публикации'}`;
+        if (tooBig) toast('Видео больше 50 МБ — публикация не пройдёт. Сожмите или укоротите файл.', 'error');
+        dzVideo.addEventListener('loadedmetadata', () => {
+          const w = dzVideo.videoWidth, h = dzVideo.videoHeight, dur = dzVideo.duration || 0;
+          if (!w || !h) return;
+          const vertical = h > w;
+          const isShort = vertical && dur > 0 && dur <= 180;
+          const orient = h > w ? 'Вертикальное' : (w > h ? 'Горизонтальное' : 'Квадратное');
+          const kind = isShort ? 'Shorts' : 'Обычное видео';
+          orientTag.hidden = false;
+          orientTag.classList.toggle('is-horizontal', !vertical);
+          orientTag.textContent = `${orient} · ${kind}${dur ? ` · ${formatClip(dur)}` : ''}`;
+          dropzone.classList.toggle('is-vertical', vertical);
+          dropzone.classList.toggle('is-horizontal', !vertical);
+        }, { once: true });
       } else {
         previewUrl = ''; dzVideo.hidden = true; dzVideo.removeAttribute('src'); dzEmpty.hidden = false; dropzone.classList.remove('has-file');
+        fileBadge.hidden = true;
       }
     });
     ['dragover', 'dragenter'].forEach((ev) => dropzone.addEventListener(ev, (event) => { event.preventDefault(); dropzone.classList.add('is-dragover'); }));
@@ -1829,13 +1870,15 @@
     const file = data.get('video');
     const platforms = data.getAll('platforms');
     if (!(file instanceof File) || !file.size) return toast('Выберите видеофайл.', 'error');
+    if (file.size > SOCIAL_MAX_UPLOAD_BYTES) return toast(`Видео ${(file.size / 1024 / 1024).toFixed(0)} МБ — превышает лимит 50 МБ. Сожмите или укоротите файл.`, 'error');
     if (!platforms.length) return toast('Выберите хотя бы одну площадку.', 'error');
 
-    setBusy(button, true, 'Загружаем…');
+    setBusy(button, true, 'Загружаем видео…');
+    showBusy('Загружаем видео на сайт…', 'Не закрывайте вкладку');
     const path = `${state.user.id}/${Date.now()}-${safeFileName(file.name)}`;
     try {
       const { error: uploadError } = await db.storage.from('social-uploads').upload(path, file, { contentType: file.type, upsert: false });
-      if (uploadError) throw uploadError;
+      if (uploadError) throw new Error(/maximum allowed size|payload too large|413/i.test(uploadError.message || '') ? 'Файл больше лимита 50 МБ.' : uploadError.message);
 
       const { data: post, error: insertError } = await db.from('social_posts').insert({
         artist_id: state.artist.id,
@@ -1852,13 +1895,13 @@
         throw insertError;
       }
 
-      toast('Видео загружено, публикуем…');
       form.reset();
       await publishSocialPost(post.id, platforms);
     } catch (error) {
       toast(error.message || 'Не удалось загрузить видео.', 'error');
     } finally {
       setBusy(button, false);
+      hideBusy();
     }
   }
 
@@ -1872,11 +1915,17 @@
   }
 
   async function publishSocialPost(postId, platforms) {
-    const { data, error } = await db.functions.invoke('social-publish', { body: { post_id: postId, platforms } });
-    if (error || data?.error) {
-      toast(`Ошибка публикации: ${data?.detail || data?.error || error?.message || ''}`, 'error');
-    } else {
-      toast('Публикация завершена.');
+    const labels = platforms.map((platform) => SOCIAL_PLATFORM_LABEL[platform] || platform).join(', ');
+    showBusy(`Публикуем на площадках…`, labels ? `${labels} · это может занять минуту` : 'Это может занять минуту');
+    try {
+      const { data, error } = await db.functions.invoke('social-publish', { body: { post_id: postId, platforms } });
+      if (error || data?.error) {
+        toast(`Ошибка публикации: ${data?.detail || data?.error || error?.message || ''}`, 'error');
+      } else {
+        toast('Публикация завершена.');
+      }
+    } finally {
+      hideBusy();
     }
     renderAutopost();
   }

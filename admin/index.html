@@ -78,7 +78,8 @@
         <button class="nav-item" data-view="profile" type="button"><i>07</i><span>Карточка артиста</span></button>
         <button class="nav-item" data-view="links" type="button"><i>08</i><span>Ссылки</span></button>
         <button class="nav-item" data-view="autopost" type="button"><i>09</i><span>Автопостинг</span></button>
-        <button class="nav-item owner-only" data-view="invites" id="owner-nav" type="button" hidden><i>10</i><span>Инвайты</span><em>owner</em></button>
+        <button class="nav-item nav-section-break" data-view="secretary" type="button"><i>10</i><span>Секретарь</span><em>скоро</em></button>
+        <button class="nav-item owner-only" data-view="invites" id="owner-nav" type="button" hidden><i>11</i><span>Инвайты</span><em>owner</em></button>
       </nav>
 
       <div class="theme-control" role="group" aria-label="Цветовая тема">
@@ -231,6 +232,39 @@
           <div id="autopost-panel"></div>
         </section>
 
+        <section class="view" data-view-panel="secretary" hidden>
+          <div class="secretary-intro"><span class="eyebrow">Личный ассистент · в разработке</span><p class="section-intro">Здесь собирается всё, что происходит в кабинете: лента событий, напоминания о ближайших релизах и задачах, а также push-уведомления. Пока это предпросмотр — данные примерные.</p></div>
+          <div class="secretary-layout">
+            <section class="panel secretary-feed">
+              <header class="panel-header"><div><span class="eyebrow">Лента событий</span><h3>Что происходило</h3></div><em class="soon-badge">скоро</em></header>
+              <div class="secretary-feed-list">
+                <article class="secretary-event"><span class="secretary-event-dot"></span><div><strong>Загружено видео</strong><small>«testINMISE» → YouTube · только что</small></div></article>
+                <article class="secretary-event"><span class="secretary-event-dot"></span><div><strong>Создан релиз</strong><small>«На бит Хорор Джона» · 2 дня назад</small></div></article>
+                <article class="secretary-event"><span class="secretary-event-dot"></span><div><strong>Создан текст</strong><small>«Тест» · 3 дня назад</small></div></article>
+                <article class="secretary-event"><span class="secretary-event-dot"></span><div><strong>Загружен бит</strong><small>«срусл» · 4 дня назад</small></div></article>
+              </div>
+            </section>
+            <aside class="secretary-side">
+              <section class="panel secretary-reminders">
+                <header class="panel-header"><div><span class="eyebrow">Напоминания</span><h3>Ближайшее</h3></div></header>
+                <div class="secretary-reminder-list">
+                  <article class="secretary-reminder is-soon"><span class="secretary-reminder-dot"></span><div><strong>Релиз через 2 дня</strong><small>«На бит Хорор Джона» · 24 июл</small></div></article>
+                  <article class="secretary-reminder"><span class="secretary-reminder-dot"></span><div><strong>Задача: свести</strong><small>без даты</small></div></article>
+                </div>
+              </section>
+              <section class="panel secretary-push">
+                <header class="panel-header"><div><span class="eyebrow">Уведомления</span><h3>Push</h3></div><em class="soon-badge">скоро</em></header>
+                <div class="secretary-push-body">
+                  <label class="secretary-toggle"><span>Напоминания о релизах</span><input type="checkbox" disabled></label>
+                  <label class="secretary-toggle"><span>Дедлайны задач</span><input type="checkbox" disabled></label>
+                  <label class="secretary-toggle"><span>Статус публикаций</span><input type="checkbox" disabled></label>
+                  <button class="button button-primary" type="button" disabled>Включить push</button>
+                </div>
+              </section>
+            </aside>
+          </div>
+        </section>
+
         <section class="view owner-only" data-view-panel="invites" hidden>
           <div class="owner-banner"><span class="eyebrow">INMISE / LABEL OWNER</span><h2>Инвайты артистов</h2><p>Выберите существующую карточку артиста и укажите настоящий e-mail. Ссылка одноразовая и действует 72 часа.</p></div>
           <div class="panel invite-panel">
@@ -260,6 +294,14 @@
     <button class="button button-primary wheel-spin-button" id="wheel-spin" type="button">Крутить</button>
   </div>
   <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+  <div class="busy-overlay" id="busy-overlay" hidden aria-live="polite">
+    <div class="busy-overlay-box">
+      <div class="busy-spinner" aria-hidden="true"></div>
+      <strong id="busy-overlay-text">Загрузка…</strong>
+      <small id="busy-overlay-hint"></small>
+    </div>
+  </div>
 
   <script src="/scripts/artist-terminal.js?v=20260723-1"></script>
 </body>
