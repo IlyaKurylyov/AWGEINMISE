@@ -14,5 +14,5 @@
   // OAuth Client IDs are not secret (unlike the Client Secret, which lives only
   // in Edge Function env vars) and are safe to ship in browser code.
   window.GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || '1082370400689-12laij30j7g5mn7v6jtghf2dlhhop8gq.apps.googleusercontent.com';
-  window.META_APP_ID = window.META_APP_ID || '';
+  window.META_APP_ID = window.META_APP_ID || '1926627048031256';
 })();

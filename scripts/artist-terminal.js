@@ -2051,6 +2051,18 @@
     $('#token-connect-form').addEventListener('submit', (event) => submitTokenConnect(event, platform));
   }
 
+  async function edgeErrorDetail(error, data) {
+    if (data?.detail || data?.error) return data.detail || data.error;
+    const context = error?.context;
+    if (context && typeof context.clone === 'function') {
+      try {
+        const body = await context.clone().json();
+        if (body?.detail || body?.error) return body.detail || body.error;
+      } catch { /* тело не JSON — используем сообщение ниже */ }
+    }
+    return error?.message || 'unknown_error';
+  }
+
   async function submitTokenConnect(event, platform) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -2061,7 +2073,10 @@
     setBusy(button, true, 'Подключаем…');
     const { data, error } = await db.functions.invoke('social-connect', { body: { action: 'connect_token', platform, token, target } });
     setBusy(button, false);
-    if (error || data?.error) return toast(`Не удалось подключить ${SOCIAL_PLATFORM_LABEL[platform]}: ${data?.detail || data?.error || error?.message || ''}`, 'error');
+    if (error || data?.error) {
+      const detail = await edgeErrorDetail(error, data);
+      return toast(`Не удалось подключить ${SOCIAL_PLATFORM_LABEL[platform]}: ${detail}`, 'error');
+    }
     closeDrawer();
     toast(`${SOCIAL_PLATFORM_LABEL[platform]} подключён: ${data.account_name || ''}`);
     renderAutopost();
