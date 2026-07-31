@@ -1720,7 +1720,8 @@
       body: { action: 'exchange', platform, code, redirect_uri: socialRedirectUri() },
     });
     if (error || data?.error) {
-      toast(`Не удалось подключить ${label}: ${data?.detail || data?.error || error?.message || 'ошибка'}`, 'error');
+      const detail = await edgeErrorDetail(error, data);
+      toast(`Не удалось подключить ${label}: ${detail}`, 'error');
       return;
     }
     toast(`${label} подключён: ${data.account_name || ''}`);
