@@ -1708,8 +1708,9 @@
       client_id: window.META_APP_ID,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement',
+      scope: 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,business_management',
       state: 'instagram',
+      auth_type: 'rerequest',
     });
     location.href = `https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`;
   }
