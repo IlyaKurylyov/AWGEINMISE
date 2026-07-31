@@ -115,26 +115,21 @@ async function exchangeMetaCode(code: string, redirectUri: string) {
   if (!longLivedResponse.ok) throw new Error(`meta_long_lived_exchange_failed: ${longLivedData.error?.message}`);
   const userAccessToken = String(longLivedData.access_token);
 
-  const pagesResponse = await fetch(`${GRAPH_API}/me/accounts?access_token=${encodeURIComponent(userAccessToken)}`);
+  const pagesResponse = await fetch(
+    `${GRAPH_API}/me/accounts?fields=id,name,access_token,instagram_business_account{id,username},connected_instagram_account{id,username}&access_token=${encodeURIComponent(userAccessToken)}`,
+  );
   const pagesData = await pagesResponse.json();
   if (!pagesResponse.ok) throw new Error(`meta_pages_lookup_failed: ${pagesData.error?.message}`);
 
-  for (const page of pagesData.data || []) {
-    const igResponse = await fetch(
-      `${GRAPH_API}/${page.id}?fields=instagram_business_account&access_token=${encodeURIComponent(page.access_token)}`,
-    );
-    const igData = await igResponse.json();
-    const igAccountId = igData.instagram_business_account?.id;
+  const pages = pagesData.data || [];
+  for (const page of pages) {
+    const igAccount = page.instagram_business_account;
+    const igAccountId = igAccount?.id;
     if (!igAccountId) continue;
-
-    const igProfileResponse = await fetch(
-      `${GRAPH_API}/${igAccountId}?fields=username&access_token=${encodeURIComponent(page.access_token)}`,
-    );
-    const igProfile = await igProfileResponse.json();
 
     return {
       external_account_id: String(igAccountId),
-      external_account_name: String(igProfile.username || page.name || ""),
+      external_account_name: String(igAccount.username || page.name || ""),
       access_token: String(page.access_token),
       refresh_token: null as string | null,
       token_expires_at: new Date(Date.now() + Number(longLivedData.expires_in || 5184000) * 1000).toISOString(),
@@ -142,7 +137,15 @@ async function exchangeMetaCode(code: string, redirectUri: string) {
     };
   }
 
-  throw new Error("meta_no_instagram_business_account: link an Instagram Business account to one of your Facebook Pages");
+  // Диагностика: покажем, что реально вернул Graph, чтобы понять причину.
+  const diag = pages.length
+    ? pages
+        .map((p: Record<string, any>) =>
+          `${p.name || p.id}(business=${p.instagram_business_account?.id ? "yes" : "no"},connected=${p.connected_instagram_account?.id ? "yes" : "no"})`,
+        )
+        .join("; ")
+    : "/me/accounts вернул 0 страниц (приложению не выдали доступ к Странице)";
+  throw new Error(`meta_no_instagram_business_account: ${diag}`);
 }
 
 Deno.serve(async (request) => {
