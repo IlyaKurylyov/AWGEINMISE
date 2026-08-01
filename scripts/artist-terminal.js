@@ -1757,9 +1757,12 @@
     const connCard = (platform) => {
       const label = SOCIAL_PLATFORM_LABEL[platform];
       const info = connections[platform] || { connected: false };
+      const helpToggle = platform === 'instagram'
+        ? '<button type="button" class="autopost-help-toggle" data-ig-help aria-expanded="false">помощь <span aria-hidden="true">?</span></button>'
+        : '';
       return `<div class="autopost-conn autopost-conn-${platform} ${info.connected ? 'is-connected' : ''}">
         <span class="autopost-conn-mark">${platformMark[platform]}</span>
-        <div class="autopost-conn-body"><span class="eyebrow">${label}</span><strong><span class="autopost-conn-dot"></span>${info.connected ? escapeHTML(info.account_name || 'Подключено') : 'Не подключено'}</strong></div>
+        <div class="autopost-conn-body"><div class="autopost-conn-head"><span class="eyebrow">${label}</span>${helpToggle}</div><strong><span class="autopost-conn-dot"></span>${info.connected ? escapeHTML(info.account_name || 'Подключено') : 'Не подключено'}</strong></div>
         <button class="button ${info.connected ? 'button-danger' : 'button-primary'} autopost-conn-btn" type="button" data-social-${info.connected ? 'disconnect' : 'connect'}="${platform}">${info.connected ? 'Отключить' : 'Подключить'}</button>
       </div>`;
     };
@@ -1792,15 +1795,14 @@
     container.innerHTML = `
       <div class="autopost-connections" data-mode="video">${videoConnectionCards}</div>
       <div class="autopost-connections" data-mode="text" hidden>${textConnectionCards}</div>
-      <details class="autopost-help">
-        <summary>Как подключить Instagram? (нужен профессиональный аккаунт)</summary>
+      <div class="autopost-help" id="ig-help" hidden>
         <ol class="autopost-help-steps">
+          <li><strong>Нужен аккаунт Facebook.</strong> Именно с личного профиля Facebook создаётся Страница и выполняется вход при подключении. Нет аккаунта — сначала зарегистрируйтесь на facebook.com.</li>
           <li><strong>Сделайте Instagram бизнес-аккаунтом.</strong> В приложении Instagram: профиль → ☰ → «Настройки и конфиденциальность» → раздел «Для профессионалов» → «Тип аккаунта и инструменты» → выберите <strong>«Бизнес»</strong> (не «Автор»).</li>
           <li><strong>Создайте страницу Facebook и привяжите к ней Instagram.</strong> На facebook.com: Меню → «Страницы» → «Создать». Затем откройте <strong>Meta Business Suite</strong> → Настройки → «Аккаунты Instagram» → подключите свою инсту и свяжите со страницей.</li>
-          <li><strong>Нажмите «Подключить» выше.</strong> Войдите в Facebook и на экране согласия <strong>обязательно отметьте свою Страницу и Instagram</strong> — не снимайте разрешения.</li>
+          <li><strong>Нажмите «Подключить».</strong> Войдите в Facebook и на экране согласия <strong>обязательно отметьте свою Страницу и Instagram</strong> — не снимайте разрешения.</li>
         </ol>
-        <p class="autopost-help-note">Не получается? Напишите куратору INMISE — подключим вместе.</p>
-      </details>
+      </div>
       <section class="panel autopost-composer">
         <header class="panel-header">
           <div><span class="eyebrow">Новая публикация</span><h3 id="autopost-composer-title">Загрузить видео</h3></div>
@@ -1905,6 +1907,13 @@
       else startSocialConnect(platform);
     }));
     $$('[data-social-disconnect]', container).forEach((button) => button.addEventListener('click', () => disconnectSocial(button.dataset.socialDisconnect)));
+    const igHelpBtn = $('[data-ig-help]', container);
+    const igHelp = $('#ig-help', container);
+    if (igHelpBtn && igHelp) igHelpBtn.addEventListener('click', () => {
+      igHelp.hidden = !igHelp.hidden;
+      igHelpBtn.setAttribute('aria-expanded', String(!igHelp.hidden));
+      if (!igHelp.hidden) igHelp.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
     $$('[data-retry-post]', container).forEach((button) => button.addEventListener('click', () => retrySocialPost(button.dataset.retryPost)));
     form.addEventListener('submit', uploadSocialPost);
     } catch (error) {
