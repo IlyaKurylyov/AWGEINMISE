@@ -1722,7 +1722,7 @@
     });
     if (error || data?.error) {
       const detail = await edgeErrorDetail(error, data);
-      toast(`Не удалось подключить ${label}: ${detail}`, 'error');
+      toast(`Не удалось подключить ${label}: ${socialErrorHint(platform, detail)}`, 'error');
       return;
     }
     toast(`${label} подключён: ${data.account_name || ''}`);
@@ -1792,6 +1792,15 @@
     container.innerHTML = `
       <div class="autopost-connections" data-mode="video">${videoConnectionCards}</div>
       <div class="autopost-connections" data-mode="text" hidden>${textConnectionCards}</div>
+      <details class="autopost-help">
+        <summary>Как подключить Instagram? (нужен профессиональный аккаунт)</summary>
+        <ol class="autopost-help-steps">
+          <li><strong>Сделайте Instagram бизнес-аккаунтом.</strong> В приложении Instagram: профиль → ☰ → «Настройки и конфиденциальность» → раздел «Для профессионалов» → «Тип аккаунта и инструменты» → выберите <strong>«Бизнес»</strong> (не «Автор»).</li>
+          <li><strong>Создайте страницу Facebook и привяжите к ней Instagram.</strong> На facebook.com: Меню → «Страницы» → «Создать». Затем откройте <strong>Meta Business Suite</strong> → Настройки → «Аккаунты Instagram» → подключите свою инсту и свяжите со страницей.</li>
+          <li><strong>Нажмите «Подключить» выше.</strong> Войдите в Facebook и на экране согласия <strong>обязательно отметьте свою Страницу и Instagram</strong> — не снимайте разрешения.</li>
+        </ol>
+        <p class="autopost-help-note">Не получается? Напишите куратору INMISE — подключим вместе.</p>
+      </details>
       <section class="panel autopost-composer">
         <header class="panel-header">
           <div><span class="eyebrow">Новая публикация</span><h3 id="autopost-composer-title">Загрузить видео</h3></div>
@@ -2065,6 +2074,27 @@
     return error?.message || 'unknown_error';
   }
 
+  // Превращаем технический текст ошибки в понятную подсказку для артиста.
+  function socialErrorHint(platform, detail) {
+    const d = String(detail || '').toLowerCase();
+    if (platform === 'instagram') {
+      if (d.includes('business=no')) return 'Instagram не в режиме Business. Профиль → Настройки → Тип аккаунта → «Бизнес» (не «Автор»), затем подключите заново.';
+      if (d.includes('0 страниц') || d.includes('me/accounts')) return 'Приложение не получило доступ к вашей Странице Facebook. Нажмите «Подключить» ещё раз и на экране Facebook отметьте свою Страницу и Instagram.';
+      if (d.includes('no_instagram_business_account')) return 'Ваш Instagram (Business) должен быть привязан к странице Facebook — см. «Как подключить Instagram?» ниже.';
+      if (d.includes('not_configured') || d.includes('meta_app')) return 'Instagram ещё не настроен на стороне сервиса — сообщите куратору.';
+    }
+    if (platform === 'telegram') {
+      if (d.includes('chat not found')) return 'Канал не найден. Укажите @username канала и добавьте бота администратором канала.';
+      if (d.includes('unauthorized') || d.includes('401')) return 'Неверный токен бота. Проверьте токен из @BotFather.';
+    }
+    if (platform === 'vk') {
+      if (d.includes('invalid access_token') || d.includes('authorization failed')) return 'Неверный токен сообщества VK. Ключ создаётся в: Управление → Настройки → Работа с API.';
+      if (d.includes('access denied') || d.includes('group_id')) return 'Проверьте ID группы (число) и права токена (Управление, Стена).';
+    }
+    if (platform === 'youtube' && d.includes('refresh_token')) return 'Переподключите YouTube, разрешив доступ на экране согласия Google.';
+    return detail;
+  }
+
   async function submitTokenConnect(event, platform) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -2077,7 +2107,7 @@
     setBusy(button, false);
     if (error || data?.error) {
       const detail = await edgeErrorDetail(error, data);
-      return toast(`Не удалось подключить ${SOCIAL_PLATFORM_LABEL[platform]}: ${detail}`, 'error');
+      return toast(`Не удалось подключить ${SOCIAL_PLATFORM_LABEL[platform]}: ${socialErrorHint(platform, detail)}`, 'error');
     }
     closeDrawer();
     toast(`${SOCIAL_PLATFORM_LABEL[platform]} подключён: ${data.account_name || ''}`);
