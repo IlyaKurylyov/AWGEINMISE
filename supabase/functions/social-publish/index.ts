@@ -338,18 +338,26 @@ async function publishVideoToVk(connection: Connection, videoUrl: string, title:
     return await (await fetch(uploadUrl, { method: "POST", body: fd })).json();
   };
 
-  // Клип публикуется в раздел «Клипы» сообщества и попадает в ленту рекомендаций.
+  // Публичного метода для Клипов у VK нет: shortVideo.create отвечает
+  // "Unknown method passed". Пробуем его, но при отказе молча уходим на обычное
+  // видео — вертикальные ролики VK и так показывает в Клипах.
   if (asClip) {
-    const clip = await vk("shortVideo.create", {
-      group_id: groupId,
-      description: caption || title || "",
-      ...(title ? { name: title } : {}),
-    });
-    await uploadTo(clip.upload_url);
-    return {
-      external_post_id: String(clip.video_id ?? ""),
-      external_post_url: clip.video_id ? `https://vk.com/clip-${groupId}_${clip.video_id}` : `https://vk.com/club${groupId}`,
-    };
+    try {
+      const clip = await vk("shortVideo.create", {
+        group_id: groupId,
+        description: caption || title || "",
+        ...(title ? { name: title } : {}),
+      });
+      await uploadTo(clip.upload_url);
+      return {
+        external_post_id: String(clip.video_id ?? ""),
+        external_post_url: clip.video_id ? `https://vk.com/clip-${groupId}_${clip.video_id}` : `https://vk.com/club${groupId}`,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes("Unknown method")) throw error;
+      console.warn("vk shortVideo.create недоступен, публикуем обычным видео");
+    }
   }
 
   const saved = await vk("video.save", { group_id: groupId, name: title || "video", description: caption || "" });

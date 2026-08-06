@@ -1866,7 +1866,7 @@
           </div>
           <label class="field"><span>Название</span><input type="text" name="title" maxlength="120" placeholder="Название публикации" required></label>
           <label class="field"><span>Подпись / описание</span><textarea name="caption" rows="3" placeholder="Текст под видео…"></textarea></label>
-          <label class="autopost-clip-toggle" id="autopost-clip-toggle" hidden><input type="checkbox" name="vk_clip"><span>В VK опубликовать как <strong>Клип</strong> (вертикальное видео в раздел «Клипы»)</span></label>
+          <label class="autopost-clip-toggle" id="autopost-clip-toggle" hidden><input type="checkbox" name="vk_clip"><span>В VK попробовать опубликовать как <strong>Клип</strong> — если API откажет, уйдёт обычным видео</span></label>
           <div class="autopost-publish-row"><div class="autopost-platform-checks">${videoPills}</div><button class="button button-primary autopost-publish-btn" type="submit">Опубликовать</button></div>
         </form>
         <form id="autopost-text-form" class="autopost-form" data-mode="text" hidden>
