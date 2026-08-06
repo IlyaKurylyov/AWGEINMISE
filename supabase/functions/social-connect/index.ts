@@ -310,6 +310,35 @@ Deno.serve(async (request) => {
       return json({ connected: true, account_name: connection.external_account_name });
     }
 
+    // Токен сообщества VK — дополнение к OAuth-подключению: им публикуются
+    // записи на стену, когда пользовательский профиль бизнесовый.
+    if (action === "connect_vk_community") {
+      const token = String(payload.token || "").trim();
+      if (!token) return json({ error: "missing_token" }, 400);
+
+      const { data: existing, error: existingError } = await admin
+        .from("social_connections")
+        .select("id, external_account_id")
+        .eq("artist_id", artist.id)
+        .eq("platform", "vk")
+        .maybeSingle();
+      if (existingError) throw existingError;
+      if (!existing) return json({ error: "vk_not_connected", detail: "Сначала подключите VK." }, 400);
+
+      const checkResponse = await fetch(
+        `https://api.vk.com/method/groups.getById?group_id=${encodeURIComponent(existing.external_account_id)}&access_token=${encodeURIComponent(token)}&v=5.199`,
+      );
+      const checkData = await checkResponse.json();
+      if (checkData.error) throw new Error(`vk_community_token_invalid: ${checkData.error.error_msg}`);
+
+      const { error: updateError } = await admin
+        .from("social_connections")
+        .update({ secondary_token: token })
+        .eq("id", existing.id);
+      if (updateError) throw updateError;
+      return json({ connected: true });
+    }
+
     if (action === "disconnect") {
       const { error } = await admin
         .from("social_connections")

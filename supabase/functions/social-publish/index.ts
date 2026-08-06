@@ -50,6 +50,7 @@ type Connection = {
   token_expires_at: string | null;
   external_account_id: string;
   device_id?: string | null;
+  secondary_token?: string | null;
 };
 
 // VK привязывает токен к IP, с которого он выдан, и проверяет это на wall.post.
@@ -278,7 +279,9 @@ async function publishVideoToTelegram(connection: Connection, videoUrl: string, 
 }
 
 async function publishToVk(connection: Connection, body: string, attachments: Attachment[]) {
-  const token = connection.access_token;
+  // Стена и вложения идут токеном сообщества, если он задан: бизнес-профилям
+  // VK запрещает wall.post. Без него работает обычный пользовательский токен.
+  const token = connection.secondary_token || connection.access_token;
   const groupId = connection.external_account_id;
   const V = "5.199";
   const vk = async (method: string, params: Record<string, string>) => {
@@ -322,10 +325,12 @@ async function publishToVk(connection: Connection, body: string, attachments: At
 // Note: buffers the video in memory (edge limit ~256MB), so very large clips may
 // fail here — fine for typical uploads; can be streamed later if needed.
 async function publishVideoToVk(connection: Connection, videoUrl: string, title: string, caption: string, asClip = false) {
-  const token = connection.access_token;
   const groupId = connection.external_account_id;
   const V = "5.199";
-  const vk = async (method: string, params: Record<string, string>) => {
+  // video.save умеет только пользовательский токен (нужен scope video),
+  // а wall.post у бизнес-профилей запрещён — его берёт на себя токен сообщества.
+  const wallToken = connection.secondary_token || connection.access_token;
+  const vk = async (method: string, params: Record<string, string>, token = connection.access_token) => {
     const data = await (await fetch(`https://api.vk.com/method/${method}?${new URLSearchParams({ ...params, access_token: token, v: V })}`)).json();
     if (data.error) throw new Error(`vk_${method}_failed: ${data.error.error_msg}`);
     return data.response;
@@ -373,7 +378,7 @@ async function publishVideoToVk(connection: Connection, videoUrl: string, title:
       from_group: "1",
       message: caption || title || "",
       attachments: `video${saved.owner_id}_${saved.video_id}`,
-    });
+    }, wallToken);
     return {
       external_post_id: String(response.post_id),
       external_post_url: `https://vk.com/wall-${groupId}_${response.post_id}`,
