@@ -362,16 +362,31 @@ async function publishVideoToVk(connection: Connection, videoUrl: string, title:
 
   const saved = await vk("video.save", { group_id: groupId, name: title || "video", description: caption || "" });
   await uploadTo(saved.upload_url);
-  const response = await vk("wall.post", {
-    owner_id: `-${groupId}`,
-    from_group: "1",
-    message: caption || title || "",
-    attachments: `video${saved.owner_id}_${saved.video_id}`,
-  });
-  return {
-    external_post_id: String(response.post_id),
-    external_post_url: `https://vk.com/wall-${groupId}_${response.post_id}`,
-  };
+  const videoUrlOnVk = `https://vk.com/video${saved.owner_id}_${saved.video_id}`;
+
+  // Бизнес-профилям VK запрещает wall.post (ошибка 1051). Видео к этому моменту
+  // уже лежит в разделе «Видео» сообщества, поэтому считаем публикацию успешной
+  // и отдаём ссылку на само видео, а не на запись.
+  try {
+    const response = await vk("wall.post", {
+      owner_id: `-${groupId}`,
+      from_group: "1",
+      message: caption || title || "",
+      attachments: `video${saved.owner_id}_${saved.video_id}`,
+    });
+    return {
+      external_post_id: String(response.post_id),
+      external_post_url: `https://vk.com/wall-${groupId}_${response.post_id}`,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes("profile type")) throw error;
+    console.warn("vk wall.post недоступен для этого профиля — видео осталось в разделе «Видео»");
+    return {
+      external_post_id: String(saved.video_id ?? ""),
+      external_post_url: videoUrlOnVk,
+    };
+  }
 }
 
 Deno.serve(async (request) => {
