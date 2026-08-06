@@ -1677,7 +1677,7 @@
   }
 
   const SOCIAL_PLATFORM_LABEL = { youtube: 'YouTube', instagram: 'Instagram', telegram: 'Telegram', vk: 'VK' };
-  const SOCIAL_VIDEO_PLATFORMS = ['youtube', 'instagram', 'vk'];
+  const SOCIAL_VIDEO_PLATFORMS = ['youtube', 'instagram', 'vk', 'telegram'];
   const SOCIAL_TEXT_PLATFORMS = ['vk', 'telegram'];
   const SOCIAL_TOKEN_PLATFORMS = ['telegram', 'vk']; // connected by pasting a token, not OAuth
   const SOCIAL_MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024; // R2 staging — 2GB sanity cap

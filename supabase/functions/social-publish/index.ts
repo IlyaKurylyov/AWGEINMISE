@@ -221,6 +221,25 @@ async function publishToTelegram(connection: Connection, body: string, attachmen
   };
 }
 
+async function publishVideoToTelegram(connection: Connection, videoUrl: string, caption: string) {
+  const token = connection.access_token;
+  const chatId = connection.external_account_id;
+  const resp = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, video: videoUrl, caption: caption || undefined, supports_streaming: true }),
+  });
+  const data = await resp.json();
+  if (!data.ok) throw new Error(`telegram_sendVideo_failed: ${data.description || resp.status}`);
+  const msg = data.result;
+  const username = msg?.chat?.username;
+  const id = msg?.message_id;
+  return {
+    external_post_id: String(id ?? ""),
+    external_post_url: username && id ? `https://t.me/${username}/${id}` : "",
+  };
+}
+
 async function publishToVk(connection: Connection, body: string, attachments: Attachment[]) {
   const token = connection.access_token;
   const groupId = connection.external_account_id;
@@ -377,6 +396,8 @@ Deno.serve(async (request) => {
           result = await uploadToYouTube(connection, videoResp.body, size, post.mime_type || "video/mp4", post.title, post.caption);
         } else if (platform === "vk") {
           result = await publishVideoToVk(connection, publicUrl, post.title, post.caption);
+        } else if (platform === "telegram") {
+          result = await publishVideoToTelegram(connection, publicUrl, post.caption);
         } else {
           result = await publishToInstagram(connection, publicUrl, post.caption);
         }
