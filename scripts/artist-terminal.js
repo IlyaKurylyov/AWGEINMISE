@@ -1866,6 +1866,7 @@
           </div>
           <label class="field"><span>Название</span><input type="text" name="title" maxlength="120" placeholder="Название публикации" required></label>
           <label class="field"><span>Подпись / описание</span><textarea name="caption" rows="3" placeholder="Текст под видео…"></textarea></label>
+          <label class="autopost-clip-toggle" id="autopost-clip-toggle" hidden><input type="checkbox" name="vk_clip"><span>В VK опубликовать как <strong>Клип</strong> (вертикальное видео в раздел «Клипы»)</span></label>
           <div class="autopost-publish-row"><div class="autopost-platform-checks">${videoPills}</div><button class="button button-primary autopost-publish-btn" type="submit">Опубликовать</button></div>
         </form>
         <form id="autopost-text-form" class="autopost-form" data-mode="text" hidden>
@@ -1940,6 +1941,12 @@
           dropzone.classList.toggle('is-vertical', vertical);
           dropzone.classList.toggle('is-horizontal', !vertical);
           if (shortsHint) shortsHint.hidden = vertical;
+          // Клипы VK — формат вертикальных роликов, поэтому предлагаем их по умолчанию.
+          const clipToggle = $('#autopost-clip-toggle', container);
+          if (clipToggle) {
+            clipToggle.hidden = false;
+            $('input', clipToggle).checked = vertical;
+          }
         }, { once: true });
       } else {
         previewUrl = ''; dzVideo.hidden = true; dzVideo.removeAttribute('src'); dzEmpty.hidden = false; dropzone.classList.remove('has-file');
@@ -2099,7 +2106,7 @@
       if (insertError) throw insertError;
 
       form.reset();
-      await publishSocialPost(post.id, platforms);
+      await publishSocialPost(post.id, platforms, { vk_clip: data.get('vk_clip') === 'on' });
     } catch (error) {
       toast(error.message || 'Не удалось загрузить видео.', 'error');
     } finally {
@@ -2117,16 +2124,17 @@
     await publishSocialPost(postId, failedPlatforms);
   }
 
-  async function publishSocialPost(postId, platforms) {
+  async function publishSocialPost(postId, platforms, options = {}) {
     const labels = platforms.map((platform) => SOCIAL_PLATFORM_LABEL[platform] || platform).join(', ');
     showBusy(`Публикуем на площадках…`, labels ? `${labels} · это может занять минуту` : 'Это может занять минуту');
     try {
-      const { data, error } = await db.functions.invoke('social-publish', { body: { post_id: postId, platforms } });
+      const { data, error } = await db.functions.invoke('social-publish', { body: { post_id: postId, platforms, ...options } });
       if (error || data?.error) {
         toast(`Ошибка публикации: ${data?.detail || data?.error || error?.message || ''}`, 'error');
       } else {
         const failed = (data?.targets || []).filter((target) => target.status === 'failed');
-        if (failed.length) toast(`Не опубликовано: ${failed.map((target) => SOCIAL_PLATFORM_LABEL[target.platform] || target.platform).join(', ')}`, 'error');
+        // Показываем причину сразу: без неё приходится лезть в базу за error_message.
+        if (failed.length) toast(`Не опубликовано — ${failed.map((target) => `${SOCIAL_PLATFORM_LABEL[target.platform] || target.platform}: ${socialErrorHint(target.platform, target.error_message || 'без деталей')}`).join('; ')}`, 'error');
         else toast('Опубликовано ✓');
       }
     } finally {

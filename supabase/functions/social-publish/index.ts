@@ -286,7 +286,7 @@ async function publishToVk(connection: Connection, body: string, attachments: At
 
 // Note: buffers the video in memory (edge limit ~256MB), so very large clips may
 // fail here — fine for typical uploads; can be streamed later if needed.
-async function publishVideoToVk(connection: Connection, videoUrl: string, title: string, caption: string) {
+async function publishVideoToVk(connection: Connection, videoUrl: string, title: string, caption: string, asClip = false) {
   const token = connection.access_token;
   const groupId = connection.external_account_id;
   const V = "5.199";
@@ -295,11 +295,30 @@ async function publishVideoToVk(connection: Connection, videoUrl: string, title:
     if (data.error) throw new Error(`vk_${method}_failed: ${data.error.error_msg}`);
     return data.response;
   };
+
+  const uploadTo = async (uploadUrl: string) => {
+    const blob = await (await fetch(videoUrl)).blob();
+    const fd = new FormData();
+    fd.append("video_file", blob, "video.mp4");
+    return await (await fetch(uploadUrl, { method: "POST", body: fd })).json();
+  };
+
+  // Клип публикуется в раздел «Клипы» сообщества и попадает в ленту рекомендаций.
+  if (asClip) {
+    const clip = await vk("shortVideo.create", {
+      group_id: groupId,
+      description: caption || title || "",
+      ...(title ? { name: title } : {}),
+    });
+    await uploadTo(clip.upload_url);
+    return {
+      external_post_id: String(clip.video_id ?? ""),
+      external_post_url: clip.video_id ? `https://vk.com/clip-${groupId}_${clip.video_id}` : `https://vk.com/club${groupId}`,
+    };
+  }
+
   const saved = await vk("video.save", { group_id: groupId, name: title || "video", description: caption || "" });
-  const blob = await (await fetch(videoUrl)).blob();
-  const fd = new FormData();
-  fd.append("video_file", blob, "video.mp4");
-  await (await fetch(saved.upload_url, { method: "POST", body: fd })).json();
+  await uploadTo(saved.upload_url);
   const response = await vk("wall.post", {
     owner_id: `-${groupId}`,
     from_group: "1",
@@ -337,6 +356,7 @@ Deno.serve(async (request) => {
     ? (payload.platforms as unknown[]).map(String).filter((value): value is Platform => PLATFORMS.includes(value as Platform))
     : [];
   if (!postId || !requestedPlatforms.length) return json({ error: "missing_post_or_platforms" }, 400);
+  const vkAsClip = payload.vk_clip === true;
 
   try {
     const authorization = request.headers.get("Authorization") || "";
@@ -397,7 +417,7 @@ Deno.serve(async (request) => {
           const size = post.size_bytes || Number(videoResp.headers.get("content-length")) || 0;
           result = await uploadToYouTube(connection, videoResp.body, size, post.mime_type || "video/mp4", post.title, post.caption);
         } else if (platform === "vk") {
-          result = await publishVideoToVk(connection, publicUrl, post.title, post.caption);
+          result = await publishVideoToVk(connection, publicUrl, post.title, post.caption, vkAsClip);
         } else if (platform === "telegram") {
           result = await publishVideoToTelegram(connection, publicUrl, post.caption);
         } else {

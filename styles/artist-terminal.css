@@ -811,6 +811,10 @@ html[data-theme="light"] .autopost-help { background: linear-gradient(145deg, #f
 html[data-theme="light"] .autopost-help-steps { color: #55604f; }
 html[data-theme="light"] .autopost-help-toggle { border-color: #b9b1a0; color: #6a7360; }
 html[data-theme="light"] .autopost-help-toggle > span { background: #d9d3c4; color: #4a5142; }
+.autopost-clip-toggle { display: flex; align-items: center; gap: 9px; padding: 9px 12px; border: 1px solid var(--line); border-left: 3px solid #4a76a8; background: rgba(74,118,168,.08); color: #b7c2b4; font-size: 13px; cursor: pointer; }
+.autopost-clip-toggle input { accent-color: #4a76a8; }
+.autopost-clip-toggle strong { color: var(--text); }
+html[data-theme="light"] .autopost-clip-toggle { color: #55604f; background: rgba(74,118,168,.1); }
 .shorts-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
 .shorts-open-btn { min-height: 34px; }
 .shorts-hint { color: #e0a34e; font-size: 12px; }
