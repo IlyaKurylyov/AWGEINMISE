@@ -45,7 +45,7 @@ async function connectVk(token: string, target: string) {
   };
 }
 
-async function exchangeVkOAuth(code: string, redirectUri: string, codeVerifier: string, deviceId: string) {
+async function exchangeVkOAuth(code: string, redirectUri: string, codeVerifier: string, deviceId: string, groupId: string) {
   const clientId = Deno.env.get("VK_APP_ID");
   const clientSecret = Deno.env.get("VK_APP_SECRET");
   if (!clientId) throw new Error("vk_not_configured");
@@ -70,20 +70,32 @@ async function exchangeVkOAuth(code: string, redirectUri: string, codeVerifier: 
     throw new Error(`vk_token_exchange_failed: ${tokenData.error_description || tokenData.error || tokenResponse.status}`);
   }
   const accessToken = String(tokenData.access_token);
-
-  // У аккаунта берём сообщество с правами администратора (владелец постов).
   const V = "5.199";
-  const groupsResponse = await fetch(
-    `https://api.vk.com/method/groups.get?filter=admin&extended=1&fields=name&access_token=${encodeURIComponent(accessToken)}&v=${V}`,
+
+  // Диагностика: способен ли токен VK ID вообще вызывать методы VK API.
+  const meResponse = await fetch(
+    `https://api.vk.com/method/users.get?access_token=${encodeURIComponent(accessToken)}&v=${V}`,
   );
-  const groupsData = await groupsResponse.json();
-  if (groupsData.error) throw new Error(`vk_groups_get_failed: ${groupsData.error.error_msg}`);
-  const group = groupsData.response?.items?.[0];
-  if (!group) throw new Error("vk_no_admin_group: у аккаунта нет сообществ с правами администратора");
+  const meData = await meResponse.json();
+  if (meData.error) {
+    throw new Error(
+      `vk_token_not_api_capable: users.get → ${meData.error.error_msg} (код ${meData.error.error_code}). ` +
+      `Токен VK ID не работает с методами VK API.`,
+    );
+  }
+
+  // ID сообщества приходит с клиента — groups.get недоступен для бизнес-профилей.
+  if (!groupId) throw new Error("vk_group_id_required: не указан ID сообщества");
+  const groupResponse = await fetch(
+    `https://api.vk.com/method/groups.getById?group_id=${encodeURIComponent(groupId)}&access_token=${encodeURIComponent(accessToken)}&v=${V}`,
+  );
+  const groupData = await groupResponse.json();
+  if (groupData.error) throw new Error(`vk_groups_getById_failed: ${groupData.error.error_msg}`);
+  const group = Array.isArray(groupData.response) ? groupData.response[0] : groupData.response?.groups?.[0];
 
   return {
-    external_account_id: String(group.id),
-    external_account_name: String(group.name || `club${group.id}`),
+    external_account_id: String(group?.id || groupId),
+    external_account_name: String(group?.name || `club${groupId}`),
     access_token: accessToken,
     refresh_token: tokenData.refresh_token ? String(tokenData.refresh_token) : null,
     token_expires_at: tokenData.expires_in ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString() : null,
@@ -263,7 +275,7 @@ Deno.serve(async (request) => {
       const connection = platform === "youtube"
         ? await exchangeGoogleCode(code, redirectUri)
         : platform === "vk"
-        ? await exchangeVkOAuth(code, redirectUri, String(payload.code_verifier || ""), String(payload.device_id || ""))
+        ? await exchangeVkOAuth(code, redirectUri, String(payload.code_verifier || ""), String(payload.device_id || ""), String(payload.group_id || ""))
         : await exchangeMetaCode(code, redirectUri);
 
       const { error: upsertError } = await admin.from("social_connections").upsert({

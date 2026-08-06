@@ -1702,6 +1702,10 @@
     const redirectUri = socialRedirectUri();
     if (platform === 'vk') {
       if (!window.VK_APP_ID) return toast('VK_APP_ID не настроен в scripts/config.js.', 'error');
+      // groups.get недоступен бизнес-профилям, поэтому ID сообщества спрашиваем заранее.
+      const groupId = (prompt('ID сообщества VK (число, без «club»):', '') || '').trim();
+      if (!groupId) return;
+      sessionStorage.setItem('vk_group_id', groupId);
       const verifier = pkceRandom(64);
       sessionStorage.setItem('vk_code_verifier', verifier);
       const params = new URLSearchParams({
@@ -2609,8 +2613,10 @@
       }
       if (oauthCode && oauthState === 'vk') {
         const codeVerifier = sessionStorage.getItem('vk_code_verifier') || '';
+        const vkGroupId = sessionStorage.getItem('vk_group_id') || '';
         sessionStorage.removeItem('vk_code_verifier');
-        await completeSocialConnect('vk', oauthCode, { code_verifier: codeVerifier, device_id: query.get('device_id') || '' });
+        sessionStorage.removeItem('vk_group_id');
+        await completeSocialConnect('vk', oauthCode, { code_verifier: codeVerifier, device_id: query.get('device_id') || '', group_id: vkGroupId });
         history.replaceState({}, '', '/admin/?section=autopost');
         return goView('autopost');
       }
