@@ -149,7 +149,8 @@ async function publishToInstagram(connection: Connection, videoUrl: string, capt
   const containerId = createData.id;
 
   let statusCode = "IN_PROGRESS";
-  for (let attempt = 0; attempt < 20 && statusCode === "IN_PROGRESS"; attempt += 1) {
+  // Instagram обрабатывает видео асинхронно; опрашиваем до ~110с (лимит Edge-функции ~150с).
+  for (let attempt = 0; attempt < 36 && statusCode === "IN_PROGRESS"; attempt += 1) {
     await sleep(3000);
     const statusResponse = await fetch(
       `${GRAPH_API}/${containerId}?fields=status_code&access_token=${encodeURIComponent(connection.access_token)}`,
@@ -157,6 +158,7 @@ async function publishToInstagram(connection: Connection, videoUrl: string, capt
     const statusData = await statusResponse.json();
     statusCode = statusData.status_code;
   }
+  if (statusCode === "IN_PROGRESS") throw new Error("instagram_still_processing: видео слишком тяжёлое/длинное — сделайте Shorts (вертикальный, ≤60 сек) и повторите");
   if (statusCode !== "FINISHED") throw new Error(`instagram_processing_failed: status=${statusCode}`);
 
   const publishResponse = await fetch(`${GRAPH_API}/${connection.external_account_id}/media_publish`, {
