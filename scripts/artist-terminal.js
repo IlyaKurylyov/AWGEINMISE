@@ -1705,15 +1705,16 @@
       // groups.get недоступен бизнес-профилям, поэтому ID сообщества спрашиваем заранее.
       const groupId = (prompt('ID сообщества VK (число, без «club»):', '') || '').trim();
       if (!groupId) return;
-      sessionStorage.setItem('vk_group_id', groupId);
       const verifier = pkceRandom(64);
-      sessionStorage.setItem('vk_code_verifier', verifier);
+      // localStorage, а не sessionStorage: переживает возврат из VK в любом сценарии.
+      localStorage.setItem('vk_group_id', groupId);
+      localStorage.setItem('vk_code_verifier', verifier);
       const params = new URLSearchParams({
         response_type: 'code',
         client_id: window.VK_APP_ID,
         redirect_uri: redirectUri,
         scope: 'video wall photos docs groups',
-        state: `vk.${groupId}`,
+        state: 'vk',
         code_challenge: await pkceChallenge(verifier),
         code_challenge_method: 'S256',
       });
@@ -2616,12 +2617,12 @@
         history.replaceState({}, '', '/admin/?section=autopost');
         return goView('autopost');
       }
-      if (oauthCode && (oauthState || '').split('.')[0] === 'vk') {
-        const codeVerifier = sessionStorage.getItem('vk_code_verifier') || '';
-        // ID сообщества берём из state (VK возвращает его обратно), sessionStorage — резерв.
-        const vkGroupId = (oauthState || '').split('.')[1] || sessionStorage.getItem('vk_group_id') || '';
-        sessionStorage.removeItem('vk_code_verifier');
-        sessionStorage.removeItem('vk_group_id');
+      // VK ID не всегда возвращает state, поэтому опознаём ещё и по префиксу кода vk2.
+      if (oauthCode && ((oauthState || '').startsWith('vk') || oauthCode.startsWith('vk2.'))) {
+        const codeVerifier = localStorage.getItem('vk_code_verifier') || '';
+        const vkGroupId = localStorage.getItem('vk_group_id') || '';
+        localStorage.removeItem('vk_code_verifier');
+        localStorage.removeItem('vk_group_id');
         await completeSocialConnect('vk', oauthCode, { code_verifier: codeVerifier, device_id: query.get('device_id') || '', group_id: vkGroupId });
         history.replaceState({}, '', '/admin/?section=autopost');
         return goView('autopost');
