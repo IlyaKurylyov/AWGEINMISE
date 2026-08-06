@@ -45,6 +45,52 @@ async function connectVk(token: string, target: string) {
   };
 }
 
+async function exchangeVkOAuth(code: string, redirectUri: string, codeVerifier: string, deviceId: string) {
+  const clientId = Deno.env.get("VK_APP_ID");
+  const clientSecret = Deno.env.get("VK_APP_SECRET");
+  if (!clientId) throw new Error("vk_not_configured");
+
+  const body = new URLSearchParams({
+    grant_type: "authorization_code",
+    code,
+    code_verifier: codeVerifier,
+    client_id: clientId,
+    device_id: deviceId,
+    redirect_uri: redirectUri,
+  });
+  if (clientSecret) body.set("client_secret", clientSecret);
+
+  const tokenResponse = await fetch("https://id.vk.com/oauth2/auth", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  const tokenData = await tokenResponse.json();
+  if (!tokenResponse.ok || tokenData.error) {
+    throw new Error(`vk_token_exchange_failed: ${tokenData.error_description || tokenData.error || tokenResponse.status}`);
+  }
+  const accessToken = String(tokenData.access_token);
+
+  // У аккаунта берём сообщество с правами администратора (владелец постов).
+  const V = "5.199";
+  const groupsResponse = await fetch(
+    `https://api.vk.com/method/groups.get?filter=admin&extended=1&fields=name&access_token=${encodeURIComponent(accessToken)}&v=${V}`,
+  );
+  const groupsData = await groupsResponse.json();
+  if (groupsData.error) throw new Error(`vk_groups_get_failed: ${groupsData.error.error_msg}`);
+  const group = groupsData.response?.items?.[0];
+  if (!group) throw new Error("vk_no_admin_group: у аккаунта нет сообществ с правами администратора");
+
+  return {
+    external_account_id: String(group.id),
+    external_account_name: String(group.name || `club${group.id}`),
+    access_token: accessToken,
+    refresh_token: tokenData.refresh_token ? String(tokenData.refresh_token) : null,
+    token_expires_at: tokenData.expires_in ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString() : null,
+    scope: "video,wall,photos,docs,groups",
+  };
+}
+
 const GRAPH_API = "https://graph.facebook.com/v19.0";
 
 async function exchangeGoogleCode(code: string, redirectUri: string) {
@@ -216,6 +262,8 @@ Deno.serve(async (request) => {
 
       const connection = platform === "youtube"
         ? await exchangeGoogleCode(code, redirectUri)
+        : platform === "vk"
+        ? await exchangeVkOAuth(code, redirectUri, String(payload.code_verifier || ""), String(payload.device_id || ""))
         : await exchangeMetaCode(code, redirectUri);
 
       const { error: upsertError } = await admin.from("social_connections").upsert({

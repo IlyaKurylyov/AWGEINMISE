@@ -1679,7 +1679,7 @@
   const SOCIAL_PLATFORM_LABEL = { youtube: 'YouTube', instagram: 'Instagram', telegram: 'Telegram', vk: 'VK' };
   const SOCIAL_VIDEO_PLATFORMS = ['youtube', 'instagram', 'vk', 'telegram'];
   const SOCIAL_TEXT_PLATFORMS = ['vk', 'telegram'];
-  const SOCIAL_TOKEN_PLATFORMS = ['telegram', 'vk']; // connected by pasting a token, not OAuth
+  const SOCIAL_TOKEN_PLATFORMS = ['telegram']; // connected by pasting a token; VK/YouTube/Instagram use OAuth
   const SOCIAL_MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024; // R2 staging — 2GB sanity cap
   const formatSize = (bytes) => bytes >= 1024 * 1024 * 1024 ? `${(bytes / 1024 / 1024 / 1024).toFixed(1)} ГБ` : `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
 
@@ -1687,8 +1687,35 @@
     return `${location.origin}/admin/`;
   }
 
-  function startSocialConnect(platform) {
+  // PKCE для VK ID OAuth 2.1.
+  function pkceRandom(len) {
+    const arr = new Uint8Array(len);
+    crypto.getRandomValues(arr);
+    return btoa(String.fromCharCode(...arr)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '').slice(0, len);
+  }
+  async function pkceChallenge(verifier) {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+    return btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  async function startSocialConnect(platform) {
     const redirectUri = socialRedirectUri();
+    if (platform === 'vk') {
+      if (!window.VK_APP_ID) return toast('VK_APP_ID не настроен в scripts/config.js.', 'error');
+      const verifier = pkceRandom(64);
+      sessionStorage.setItem('vk_code_verifier', verifier);
+      const params = new URLSearchParams({
+        response_type: 'code',
+        client_id: window.VK_APP_ID,
+        redirect_uri: redirectUri,
+        scope: 'video wall photos docs groups',
+        state: 'vk',
+        code_challenge: await pkceChallenge(verifier),
+        code_challenge_method: 'S256',
+      });
+      location.href = `https://id.vk.com/authorize?${params.toString()}`;
+      return;
+    }
     if (platform === 'youtube') {
       if (!window.GOOGLE_CLIENT_ID) return toast('GOOGLE_CLIENT_ID не настроен в scripts/config.js.', 'error');
       const params = new URLSearchParams({
@@ -1715,10 +1742,10 @@
     location.href = `https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`;
   }
 
-  async function completeSocialConnect(platform, code) {
+  async function completeSocialConnect(platform, code, extra = {}) {
     const label = SOCIAL_PLATFORM_LABEL[platform] || platform;
     const { data, error } = await db.functions.invoke('social-connect', {
-      body: { action: 'exchange', platform, code, redirect_uri: socialRedirectUri() },
+      body: { action: 'exchange', platform, code, redirect_uri: socialRedirectUri(), ...extra },
     });
     if (error || data?.error) {
       const detail = await edgeErrorDetail(error, data);
@@ -2577,6 +2604,13 @@
       const oauthState = query.get('state');
       if (oauthCode && (oauthState === 'youtube' || oauthState === 'instagram')) {
         await completeSocialConnect(oauthState, oauthCode);
+        history.replaceState({}, '', '/admin/?section=autopost');
+        return goView('autopost');
+      }
+      if (oauthCode && oauthState === 'vk') {
+        const codeVerifier = sessionStorage.getItem('vk_code_verifier') || '';
+        sessionStorage.removeItem('vk_code_verifier');
+        await completeSocialConnect('vk', oauthCode, { code_verifier: codeVerifier, device_id: query.get('device_id') || '' });
         history.replaceState({}, '', '/admin/?section=autopost');
         return goView('autopost');
       }
