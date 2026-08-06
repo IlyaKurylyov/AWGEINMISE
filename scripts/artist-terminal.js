@@ -1713,7 +1713,7 @@
         client_id: window.VK_APP_ID,
         redirect_uri: redirectUri,
         scope: 'video wall photos docs groups',
-        state: 'vk',
+        state: `vk.${groupId}`,
         code_challenge: await pkceChallenge(verifier),
         code_challenge_method: 'S256',
       });
@@ -2221,8 +2221,13 @@
     return error?.message || 'unknown_error';
   }
 
-  // Превращаем технический текст ошибки в понятную подсказку для артиста.
+  // Понятная подсказка для артиста + сохранённый технический текст (нужен для диагностики).
   function socialErrorHint(platform, detail) {
+    const hint = socialErrorHintText(platform, detail);
+    return hint === detail ? detail : `${hint} [${detail}]`;
+  }
+
+  function socialErrorHintText(platform, detail) {
     const d = String(detail || '').toLowerCase();
     if (platform === 'instagram') {
       if (d.includes('business=no')) return 'Instagram не в режиме Business. Профиль → Настройки → Тип аккаунта → «Бизнес» (не «Автор»), затем подключите заново.';
@@ -2611,9 +2616,10 @@
         history.replaceState({}, '', '/admin/?section=autopost');
         return goView('autopost');
       }
-      if (oauthCode && oauthState === 'vk') {
+      if (oauthCode && (oauthState || '').split('.')[0] === 'vk') {
         const codeVerifier = sessionStorage.getItem('vk_code_verifier') || '';
-        const vkGroupId = sessionStorage.getItem('vk_group_id') || '';
+        // ID сообщества берём из state (VK возвращает его обратно), sessionStorage — резерв.
+        const vkGroupId = (oauthState || '').split('.')[1] || sessionStorage.getItem('vk_group_id') || '';
         sessionStorage.removeItem('vk_code_verifier');
         sessionStorage.removeItem('vk_group_id');
         await completeSocialConnect('vk', oauthCode, { code_verifier: codeVerifier, device_id: query.get('device_id') || '', group_id: vkGroupId });
