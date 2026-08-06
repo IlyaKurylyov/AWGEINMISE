@@ -811,6 +811,27 @@ html[data-theme="light"] .autopost-help { background: linear-gradient(145deg, #f
 html[data-theme="light"] .autopost-help-steps { color: #55604f; }
 html[data-theme="light"] .autopost-help-toggle { border-color: #b9b1a0; color: #6a7360; }
 html[data-theme="light"] .autopost-help-toggle > span { background: #d9d3c4; color: #4a5142; }
+.shorts-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+.shorts-open-btn { min-height: 34px; }
+.shorts-hint { color: #e0a34e; font-size: 12px; }
+.shorts-editor { margin-top: 12px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; border: 1px solid var(--line); background: linear-gradient(145deg, #171b17, #101410); padding: 14px; }
+.shorts-preview canvas { width: 180px; height: 320px; border-radius: 6px; background: #000; box-shadow: 0 6px 18px rgba(0,0,0,.5); display: block; }
+.shorts-controls { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.shorts-range { display: grid; gap: 5px; color: #9fb59a; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+.shorts-range input[type=range] { width: 100%; accent-color: var(--green); }
+.shorts-meta { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; color: #c3cabf; font: 500 14px 'IBM Plex Mono', monospace; }
+.shorts-warn { color: #e0a34e; font-size: 11px; text-transform: none; letter-spacing: 0; }
+.shorts-editor-actions { display: flex; gap: 10px; }
+.shorts-progress { display: flex; align-items: center; gap: 10px; color: #9fb59a; font-size: 12px; }
+.shorts-progress-bar { flex: 1; height: 6px; border-radius: 3px; background: #263026; overflow: hidden; }
+.shorts-progress-bar > span { display: block; height: 100%; width: 0; background: var(--green); transition: width .2s; }
+html[data-theme="light"] .shorts-editor { background: linear-gradient(145deg, #f4f1e8, #e6e2d6); box-shadow: inset 0 1px rgba(255,255,255,.6); }
+html[data-theme="light"] .shorts-range { color: #55604f; }
+html[data-theme="light"] .shorts-progress-bar { background: #cfc9ba; }
+@media (max-width: 620px) {
+  .shorts-editor { grid-template-columns: 1fr; }
+  .shorts-preview canvas { margin: 0 auto; }
+}
 
 /* --- Autoposting: composer --- */
 .autopost-composer, .autopost-history { margin-bottom: 16px; }

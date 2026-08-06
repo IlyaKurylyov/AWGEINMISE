@@ -1815,6 +1815,23 @@
             <span class="autopost-file-badge" id="autopost-file-badge" hidden></span>
             <input type="file" name="video" accept="video/*" hidden required>
           </label>
+          <div class="shorts-bar" id="shorts-bar" hidden>
+            <button type="button" class="button shorts-open-btn" id="shorts-open">✂ Обрезать / сделать вертикальным</button>
+            <span class="shorts-hint" id="shorts-hint" hidden>Видео горизонтальное — для Reels/Shorts сделайте его вертикальным</span>
+          </div>
+          <div class="shorts-editor" id="shorts-editor" hidden>
+            <div class="shorts-preview"><canvas id="shorts-canvas" width="270" height="480"></canvas></div>
+            <div class="shorts-controls">
+              <label class="shorts-range"><span>Начало отрезка</span><input type="range" id="shorts-start" min="0" max="100" step="0.05" value="0"></label>
+              <label class="shorts-range"><span>Конец отрезка</span><input type="range" id="shorts-end" min="0" max="100" step="0.05" value="100"></label>
+              <div class="shorts-meta"><span id="shorts-range-label">0:00 – 0:00</span><span class="shorts-warn" id="shorts-warn" hidden>&gt; 60 сек — для Shorts длинновато</span></div>
+              <div class="shorts-editor-actions">
+                <button type="button" class="button" id="shorts-cancel">Отмена</button>
+                <button type="button" class="button button-primary" id="shorts-render">Готово</button>
+              </div>
+              <div class="shorts-progress" id="shorts-progress" hidden><span class="shorts-progress-bar"><span id="shorts-progress-fill"></span></span><span id="shorts-progress-pct">Рендер… 0%</span></div>
+            </div>
+          </div>
           <label class="field"><span>Название</span><input type="text" name="title" maxlength="120" placeholder="Название публикации" required></label>
           <label class="field"><span>Подпись / описание</span><textarea name="caption" rows="3" placeholder="Текст под видео…"></textarea></label>
           <div class="autopost-publish-row"><div class="autopost-platform-checks">${videoPills}</div><button class="button button-primary autopost-publish-btn" type="submit">Опубликовать</button></div>
@@ -1871,6 +1888,8 @@
         previewUrl = URL.createObjectURL(file);
         dzVideo.src = previewUrl; dzVideo.hidden = false; dzEmpty.hidden = true; dropzone.classList.add('has-file');
         showFirstFrame(dzVideo);
+        if (shortsBar) shortsBar.hidden = !canMakeShort;
+        if (shortsEditor) shortsEditor.hidden = true;
         const tooBig = file.size > SOCIAL_MAX_UPLOAD_BYTES;
         fileBadge.hidden = false;
         fileBadge.classList.toggle('is-too-big', tooBig);
@@ -1888,10 +1907,13 @@
           orientTag.textContent = `${orient} · ${kind}${dur ? ` · ${formatClip(dur)}` : ''}`;
           dropzone.classList.toggle('is-vertical', vertical);
           dropzone.classList.toggle('is-horizontal', !vertical);
+          if (shortsHint) shortsHint.hidden = vertical;
         }, { once: true });
       } else {
         previewUrl = ''; dzVideo.hidden = true; dzVideo.removeAttribute('src'); dzEmpty.hidden = false; dropzone.classList.remove('has-file');
         fileBadge.hidden = true;
+        if (shortsBar) shortsBar.hidden = true;
+        if (shortsEditor) shortsEditor.hidden = true;
       }
     });
     ['dragover', 'dragenter'].forEach((ev) => dropzone.addEventListener(ev, (event) => { event.preventDefault(); dropzone.classList.add('is-dragover'); }));
@@ -1900,6 +1922,91 @@
       const file = event.dataTransfer?.files?.[0];
       if (file && file.type.startsWith('video/')) { fileInput.files = event.dataTransfer.files; fileInput.dispatchEvent(new Event('change')); }
     });
+
+    // --- Shorts-редактор: вертикаль + блюр-фон + обрезка ---
+    const canMakeShort = !!pickMp4Mime();
+    const shortsBar = $('#shorts-bar', container);
+    const shortsHint = $('#shorts-hint', container);
+    const shortsOpen = $('#shorts-open', container);
+    const shortsEditor = $('#shorts-editor', container);
+    const shortsCanvas = $('#shorts-canvas', container);
+    const shortsStart = $('#shorts-start', container);
+    const shortsEnd = $('#shorts-end', container);
+    const shortsRangeLabel = $('#shorts-range-label', container);
+    const shortsWarn = $('#shorts-warn', container);
+    const shortsCancel = $('#shorts-cancel', container);
+    const shortsRenderBtn = $('#shorts-render', container);
+    const shortsProgress = $('#shorts-progress', container);
+    const shortsProgressFill = $('#shorts-progress-fill', container);
+    const shortsProgressPct = $('#shorts-progress-pct', container);
+
+    if (shortsCanvas) {
+      const fmtT = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+      const drawPreview = () => {
+        const vw = dzVideo.videoWidth, vh = dzVideo.videoHeight;
+        if (!vw || !vh) return;
+        const ctx = shortsCanvas.getContext('2d');
+        const W = shortsCanvas.width, H = shortsCanvas.height;
+        ctx.filter = 'blur(10px) brightness(0.55)';
+        const bg = Math.max(W / vw, H / vh) * 1.15;
+        ctx.drawImage(dzVideo, (W - vw * bg) / 2, (H - vh * bg) / 2, vw * bg, vh * bg);
+        ctx.filter = 'none';
+        const fg = Math.min(W / vw, H / vh);
+        ctx.drawImage(dzVideo, (W - vw * fg) / 2, (H - vh * fg) / 2, vw * fg, vh * fg);
+      };
+      const bounds = () => {
+        const a = Math.min(Number(shortsStart.value), Number(shortsEnd.value));
+        const b = Math.max(Number(shortsStart.value), Number(shortsEnd.value));
+        return [a, b];
+      };
+      const updateMeta = () => {
+        const [a, b] = bounds();
+        shortsRangeLabel.textContent = `${fmtT(a)} – ${fmtT(b)}  ·  ${Math.round(b - a)} сек`;
+        shortsWarn.hidden = (b - a) <= 60;
+      };
+      const seek = (t) => { try { dzVideo.currentTime = t; } catch { /* ignore */ } };
+      dzVideo.addEventListener('seeked', () => { if (!shortsEditor.hidden) drawPreview(); });
+      shortsStart.addEventListener('input', () => { updateMeta(); seek(Number(shortsStart.value)); });
+      shortsEnd.addEventListener('input', () => { updateMeta(); seek(Number(shortsEnd.value)); });
+
+      shortsOpen.addEventListener('click', () => {
+        const dur = dzVideo.duration || 0;
+        if (!dur) return toast('Видео ещё грузится, повторите через секунду.', 'error');
+        shortsStart.max = shortsEnd.max = String(dur);
+        shortsStart.value = '0';
+        shortsEnd.value = String(Math.min(dur, 60));
+        updateMeta();
+        shortsEditor.hidden = false;
+        seek(0);
+      });
+      shortsCancel.addEventListener('click', () => { shortsEditor.hidden = true; });
+
+      shortsRenderBtn.addEventListener('click', async () => {
+        const [a, b] = bounds();
+        if (b - a < 1) return toast('Слишком короткий отрезок.', 'error');
+        const srcFile = fileInput.files && fileInput.files[0];
+        if (!srcFile) return;
+        shortsRenderBtn.disabled = true; shortsCancel.disabled = true; shortsProgress.hidden = false;
+        try {
+          const short = await renderShort(srcFile, a, b, (p) => {
+            const pct = Math.round(p * 100);
+            shortsProgressFill.style.width = `${pct}%`;
+            shortsProgressPct.textContent = `Рендер… ${pct}%`;
+          });
+          const dt = new DataTransfer();
+          dt.items.add(short);
+          fileInput.files = dt.files;
+          fileInput.dispatchEvent(new Event('change'));
+          shortsEditor.hidden = true;
+          toast('Вертикальный ролик готов — можно публиковать.');
+        } catch (e) {
+          toast(`Не удалось собрать ролик: ${e && e.message ? e.message : e}`, 'error');
+        } finally {
+          shortsRenderBtn.disabled = false; shortsCancel.disabled = false;
+          shortsProgress.hidden = true; shortsProgressFill.style.width = '0%';
+        }
+      });
+    }
 
     $$('[data-social-connect]', container).forEach((button) => button.addEventListener('click', () => {
       const platform = button.dataset.socialConnect;
@@ -2102,6 +2209,89 @@
     }
     if (platform === 'youtube' && d.includes('refresh_token')) return 'Переподключите YouTube, разрешив доступ на экране согласия Google.';
     return detail;
+  }
+
+  // Есть ли в браузере запись в MP4 (Chrome/Safari — да, Firefox — нет).
+  function pickMp4Mime() {
+    if (typeof MediaRecorder === 'undefined') return null;
+    const cands = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=h264,aac', 'video/mp4'];
+    for (const m of cands) { try { if (MediaRecorder.isTypeSupported(m)) return m; } catch { /* ignore */ } }
+    return null;
+  }
+
+  // Собирает вертикальный ролик 1080x1920 (блюр-фон + оригинал по центру) из отрезка [startSec, endSec].
+  async function renderShort(sourceFile, startSec, endSec, onProgress) {
+    const OUT_W = 1080, OUT_H = 1920, FPS = 30;
+    const mime = pickMp4Mime() || 'video/webm';
+    const url = URL.createObjectURL(sourceFile);
+    const v = document.createElement('video');
+    v.src = url; v.playsInline = true; v.preload = 'auto';
+    v.style.cssText = 'position:absolute;left:-9999px;width:1px;height:1px;opacity:0;';
+    document.body.appendChild(v);
+    const cleanup = (actx) => { try { if (actx) actx.close(); } catch { /* ignore */ } try { v.pause(); } catch { /* ignore */ } v.remove(); URL.revokeObjectURL(url); };
+
+    try {
+      await new Promise((res, rej) => { v.onloadedmetadata = () => res(); v.onerror = () => rej(new Error('не удалось прочитать видео')); });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = OUT_W; canvas.height = OUT_H;
+      const ctx = canvas.getContext('2d');
+
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const actx = new AC();
+      let audioTrack = null;
+      try {
+        const dest = actx.createMediaStreamDestination();
+        actx.createMediaElementSource(v).connect(dest);
+        audioTrack = dest.stream.getAudioTracks()[0] || null;
+      } catch { /* видео без звука — ок */ }
+
+      const stream = canvas.captureStream(FPS);
+      if (audioTrack) stream.addTrack(audioTrack);
+      const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8000000 });
+      const chunks = [];
+      recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+
+      const draw = () => {
+        const vw = v.videoWidth, vh = v.videoHeight;
+        if (!vw || !vh) return;
+        ctx.filter = 'blur(28px) brightness(0.55)';
+        const bg = Math.max(OUT_W / vw, OUT_H / vh) * 1.15;
+        ctx.drawImage(v, (OUT_W - vw * bg) / 2, (OUT_H - vh * bg) / 2, vw * bg, vh * bg);
+        ctx.filter = 'none';
+        const fg = Math.min(OUT_W / vw, OUT_H / vh);
+        ctx.drawImage(v, (OUT_W - vw * fg) / 2, (OUT_H - vh * fg) / 2, vw * fg, vh * fg);
+      };
+
+      await new Promise((resolve, reject) => {
+        let raf = 0;
+        const tick = () => {
+          if (v.currentTime >= endSec || v.ended) {
+            cancelAnimationFrame(raf);
+            if (recorder.state !== 'inactive') recorder.stop();
+            return;
+          }
+          draw();
+          if (onProgress) onProgress(Math.min(1, (v.currentTime - startSec) / Math.max(0.1, endSec - startSec)));
+          raf = requestAnimationFrame(tick);
+        };
+        recorder.onstop = () => resolve();
+        recorder.onerror = (e) => reject(e.error || new Error('ошибка записи'));
+        const run = () => { draw(); recorder.start(200); v.play().then(() => { raf = requestAnimationFrame(tick); }).catch(reject); };
+        const onSeeked = () => { v.removeEventListener('seeked', onSeeked); if (actx.state === 'suspended') actx.resume().finally(run); else run(); };
+        v.addEventListener('seeked', onSeeked);
+        v.currentTime = Math.max(0, startSec);
+      });
+
+      const blob = new Blob(chunks, { type: mime });
+      const ext = mime.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
+      cleanup(actx);
+      if (!blob.size) throw new Error('пустой результат');
+      return new File([blob], `short_${Date.now()}.${ext}`, { type: mime.split(';')[0] });
+    } catch (err) {
+      cleanup();
+      throw err;
+    }
   }
 
   async function submitTokenConnect(event, platform) {
