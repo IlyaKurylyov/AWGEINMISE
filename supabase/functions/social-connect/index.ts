@@ -99,6 +99,8 @@ async function exchangeVkOAuth(code: string, redirectUri: string, codeVerifier: 
     access_token: accessToken,
     refresh_token: tokenData.refresh_token ? String(tokenData.refresh_token) : null,
     token_expires_at: tokenData.expires_in ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString() : null,
+    // Нужен для refresh: VK ID требует device_id, а токен привязан к IP выдачи.
+    device_id: deviceId || null,
     scope: "video,wall,photos,docs,groups",
   };
 }

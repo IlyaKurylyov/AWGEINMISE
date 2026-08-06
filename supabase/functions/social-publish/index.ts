@@ -49,7 +49,42 @@ type Connection = {
   refresh_token: string | null;
   token_expires_at: string | null;
   external_account_id: string;
+  device_id?: string | null;
 };
+
+// VK привязывает токен к IP, с которого он выдан, и проверяет это на wall.post.
+// Edge-функция публикует с другого адреса, поэтому обновляем токен прямо перед
+// публикацией — новый выдаётся на текущий IP. Refresh-токены VK ID одноразовые.
+async function refreshVkToken(admin: ReturnType<typeof createClient>, connection: Connection) {
+  const clientId = Deno.env.get("VK_APP_ID");
+  const clientSecret = Deno.env.get("VK_APP_SECRET");
+  if (!clientId || !connection.refresh_token || !connection.device_id) return connection;
+
+  const body = new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: connection.refresh_token,
+    client_id: clientId,
+    device_id: connection.device_id,
+  });
+  if (clientSecret) body.set("client_secret", clientSecret);
+
+  const response = await fetch("https://id.vk.com/oauth2/auth", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  const data = await response.json();
+  // Не роняем публикацию: если обновить не вышло, пробуем старым токеном.
+  if (!response.ok || data.error || !data.access_token) return connection;
+
+  const patch = {
+    access_token: String(data.access_token),
+    refresh_token: data.refresh_token ? String(data.refresh_token) : connection.refresh_token,
+    token_expires_at: data.expires_in ? new Date(Date.now() + Number(data.expires_in) * 1000).toISOString() : null,
+  };
+  await admin.from("social_connections").update(patch).eq("id", connection.id);
+  return { ...connection, ...patch };
+}
 
 async function refreshIfNeeded(admin: ReturnType<typeof createClient>, connection: Connection, platform: Platform) {
   const expiresAt = connection.token_expires_at ? new Date(connection.token_expires_at).getTime() : 0;
@@ -405,6 +440,8 @@ Deno.serve(async (request) => {
 
         const connection = (platform === "youtube" || platform === "instagram")
           ? await refreshIfNeeded(admin, rawConnection as Connection, platform as "youtube" | "instagram")
+          : platform === "vk"
+          ? await refreshVkToken(admin, rawConnection as Connection)
           : (rawConnection as Connection);
         let result;
         if (isText) {
