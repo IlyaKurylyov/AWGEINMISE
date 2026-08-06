@@ -37,7 +37,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
   headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
 });
 
-const PLATFORMS = ["youtube", "instagram"] as const;
+const PLATFORMS = ["youtube", "instagram", "telegram", "vk"] as const;
 type Platform = typeof PLATFORMS[number];
 
 const GRAPH_API = "https://graph.facebook.com/v19.0";
