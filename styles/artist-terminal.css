@@ -1628,3 +1628,22 @@ html[data-theme="light"] .notes-toolbar-btn:hover {
   .secretary-item-when, .secretary-item-go { grid-column: 2; justify-self: start; }
 }
 .nav-item > b.is-alert { border-color: #6d3b34; color: var(--red); }
+.secretary-subhead { border-top: 1px solid var(--line); }
+.secretary-chan { display: grid; grid-template-columns: 40px minmax(0,1fr) auto; gap: 14px; align-items: center; border-top: 1px solid var(--line); padding: 15px 18px; }
+.secretary-chan-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 9px; color: var(--muted); font: 700 15px 'IBM Plex Mono', monospace; box-shadow: inset 0 0 0 1px var(--line-hi); }
+.secretary-chan.is-on .secretary-chan-ic { color: var(--green); box-shadow: inset 0 0 0 1px currentColor; }
+.secretary-chan b { display: block; font-weight: 400; font-size: 16px; }
+.secretary-chan small { display: block; color: var(--muted); font-size: 14px; }
+.secretary-chan.is-on small { color: var(--green); }
+.secretary-chan-actions { display: flex; gap: 14px; align-items: center; }
+.secretary-chan-actions .text-button { font-size: 15px; }
+.secretary-matrix { width: 100%; border-collapse: collapse; }
+.secretary-matrix th, .secretary-matrix td { padding: 13px 18px; border-top: 1px solid var(--line); text-align: left; }
+.secretary-matrix thead th { color: var(--muted); font: 400 13px 'IBM Plex Mono', monospace; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+.secretary-mx-ch { width: 110px; text-align: center !important; }
+.secretary-mx-ch input { width: 18px; height: 18px; margin: 0; accent-color: var(--green); }
+.secretary-mx-ev strong { display: block; font-weight: 400; font-size: 16px; }
+.secretary-mx-ev small { color: var(--muted); font-size: 14px; }
+.secretary-mx-fixed { color: var(--muted); font-size: 14px; }
+.secretary-matrix select { border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; font-size: 14px; padding: 5px 8px; }
+.secretary-note { margin: 0; border-top: 1px solid var(--line); padding: 14px 18px; color: var(--amber); font-size: 15px; }

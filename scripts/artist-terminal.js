@@ -271,7 +271,15 @@
   // --- Секретарь -------------------------------------------------------------
   const SECRETARY_TABS = [
     ['now', 'Требует внимания'],
+    ['notify', 'Уведомления'],
     ['log', 'История всего'],
+  ];
+  // Матрица «событие × канал». timing задаёт варианты «когда» для каждого типа.
+  const NOTIFY_EVENTS = [
+    { type: 'release_soon', title: 'Скоро релиз', hint: 'дата стоит в календаре', timing: [['3d', 'за 3 дня'], ['1d', 'за день'], ['0d', 'в день релиза']] },
+    { type: 'task_due', title: 'Пора браться за задачу', hint: 'наступил запланированный день', timing: [['default', 'в день задачи']] },
+    { type: 'task_overdue', title: 'Задача просрочена', hint: 'срок прошёл, задача открыта', timing: [['daily', 'каждый день'], ['once', 'один раз']] },
+    { type: 'publish_failed', title: 'Публикация не прошла', hint: 'площадка вернула ошибку', timing: [['default', 'сразу']] },
   ];
   const EVENT_KIND_LABEL = {
     release: 'релиз', task: 'задача', publication: 'публикация',
@@ -341,6 +349,114 @@
     </section>`;
   }
 
+  function secretaryNotifyMarkup() {
+    const channels = state.secretaryChannels || [];
+    const rules = state.secretaryRules || [];
+    const mail = channels.find((row) => row.kind === 'email');
+    const tg = channels.find((row) => row.kind === 'telegram');
+    const rule = (type, kind) => rules.find((row) => row.event_type === type && row.channel_kind === kind) || { enabled: false, timing: 'default' };
+
+    const channelCard = (kind, icon, name, row, hint) => `<div class="secretary-chan ${row?.verified ? 'is-on' : ''}">
+      <span class="secretary-chan-ic" aria-hidden="true">${icon}</span>
+      <div><b>${name}</b><small>${row?.verified ? `${escapeHTML(row.address)} · подключён` : hint}</small></div>
+      <div class="secretary-chan-actions">
+        ${row?.verified ? `<button class="text-button" type="button" data-notify-test="${kind}">Проверить</button>` : ''}
+        <button class="text-button" type="button" data-notify-setup="${kind}">${row?.verified ? 'изменить' : 'подключить'}</button>
+      </div>
+    </div>`;
+
+    return `<section class="panel">
+      <header class="panel-header"><div><span class="eyebrow">Шаг 1</span><h3>Куда присылать</h3></div></header>
+      ${channelCard('email', '@', 'Почта', mail, 'письма о задачах и релизах')}
+      ${channelCard('telegram', 'TG', 'Telegram', tg, 'в личку через вашего бота из автопостинга')}
+      <header class="panel-header secretary-subhead"><div><span class="eyebrow">Шаг 2</span><h3>О чём предупреждать</h3></div></header>
+      <div class="secretary-log-wrap">
+        <table class="secretary-matrix">
+          <thead><tr><th>Событие</th><th class="secretary-mx-ch">Почта</th><th class="secretary-mx-ch">Telegram</th><th>Когда</th></tr></thead>
+          <tbody>
+            ${NOTIFY_EVENTS.map((event) => {
+              const mailRule = rule(event.type, 'email');
+              const tgRule = rule(event.type, 'telegram');
+              const timing = mailRule.enabled ? mailRule.timing : tgRule.timing;
+              const options = event.timing.map(([value, label]) => `<option value="${value}" ${timing === value ? 'selected' : ''}>${label}</option>`).join('');
+              return `<tr>
+                <td class="secretary-mx-ev"><strong>${event.title}</strong><small>${event.hint}</small></td>
+                <td class="secretary-mx-ch"><input type="checkbox" data-notify-rule="${event.type}:email" ${mailRule.enabled ? 'checked' : ''} ${mail?.verified ? '' : 'disabled'} aria-label="${event.title} на почту"></td>
+                <td class="secretary-mx-ch"><input type="checkbox" data-notify-rule="${event.type}:telegram" ${tgRule.enabled ? 'checked' : ''} ${tg?.verified ? '' : 'disabled'} aria-label="${event.title} в Telegram"></td>
+                <td>${event.timing.length > 1 ? `<select data-notify-timing="${event.type}" aria-label="Когда предупреждать: ${event.title}">${options}</select>` : `<span class="secretary-mx-fixed">${event.timing[0][1]}</span>`}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${mail?.verified || tg?.verified ? '' : '<p class="secretary-note">Сначала подключите хотя бы один канал — до этого галочки недоступны.</p>'}
+    </section>`;
+  }
+
+  function openNotifyEmailDrawer() {
+    const current = (state.secretaryChannels || []).find((row) => row.kind === 'email');
+    openDrawer('СЕКРЕТАРЬ / ПОЧТА', 'Адрес для писем', `<form id="notify-email-form">
+      <p class="drawer-note">Сюда будут приходить напоминания о задачах и релизах. Проверьте, что письма не уходят в спам — первое письмо можно отправить кнопкой «Проверить».</p>
+      <label class="field"><span>E-mail</span><input name="address" type="email" value="${escapeHTML(current?.address || state.user?.email || '')}" required></label>
+      <div class="drawer-actions"><span></span><button class="button button-primary" type="submit">Сохранить</button></div>
+    </form>`);
+    $('#notify-email-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = $('button[type="submit"]', event.currentTarget);
+      const address = $('[name="address"]', event.currentTarget).value.trim();
+      setBusy(button, true, 'Сохраняем…');
+      const { data, error } = await db.functions.invoke('secretary-notify', { body: { action: 'save_email', address } });
+      setBusy(button, false);
+      if (error || data?.error) return toast(`Не сохранилось: ${await edgeErrorDetail(error, data)}`, 'error');
+      closeDrawer();
+      toast('Почта подключена.');
+      state.secretaryLoaded = false;
+      renderSecretary();
+    });
+  }
+
+  // Личный chat_id забираем из истории бота: артист пишет ему «Старт»,
+  // мы читаем последнее личное сообщение — вебхук не нужен.
+  async function linkNotifyTelegram() {
+    openDrawer('СЕКРЕТАРЬ / TELEGRAM', 'Уведомления в Telegram', `<div>
+      <p class="drawer-note">Новый бот не нужен — используем того же, что подключён в автопостинге.</p>
+      <ol class="autopost-help-steps">
+        <li>Откройте своего бота в Telegram (того, чей токен вы вставляли в автопостинге).</li>
+        <li>Напишите ему <strong>«Старт»</strong> — любое сообщение в личку.</li>
+        <li>Вернитесь сюда и нажмите кнопку ниже.</li>
+      </ol>
+      <div class="drawer-actions"><span></span><button class="button button-primary" id="notify-tg-check" type="button">Я написал боту</button></div>
+    </div>`);
+    $('#notify-tg-check').addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+      setBusy(button, true, 'Ищем сообщение…');
+      const { data, error } = await db.functions.invoke('secretary-notify', { body: { action: 'link_telegram' } });
+      setBusy(button, false);
+      if (error || data?.error) return toast(`Не получилось: ${await edgeErrorDetail(error, data)}`, 'error');
+      closeDrawer();
+      toast(`Telegram подключён: ${data.address || ''}`);
+      state.secretaryLoaded = false;
+      renderSecretary();
+    });
+  }
+
+  async function saveNotifyRule(type, kind, enabled, timing) {
+    const rules = state.secretaryRules || [];
+    const existing = rules.find((row) => row.event_type === type && row.channel_kind === kind);
+    const payload = {
+      artist_id: state.artist.id,
+      event_type: type,
+      channel_kind: kind,
+      enabled,
+      timing: timing || existing?.timing || 'default',
+    };
+    const { error } = await db.from('notification_rules').upsert(payload, { onConflict: 'artist_id,event_type,channel_kind' });
+    if (error) return toast(error.message || 'Не удалось сохранить настройку.', 'error');
+    if (existing) Object.assign(existing, payload);
+    else rules.push(payload);
+    state.secretaryRules = rules;
+  }
+
   // Срочное видно в сайдбаре, чтобы не приходилось открывать раздел.
   function updateSecretaryBadge() {
     const badge = $('#nav-secretary-count');
@@ -359,18 +475,24 @@
 
     if (!state.secretaryLoaded) {
       panel.innerHTML = '<p class="track-workspace-empty">Загружаем…</p>';
-      const [events, failures] = await Promise.all([
+      const [events, failures, channels, rules] = await Promise.all([
         safeQuery(db.from('artist_events').select('*').eq('artist_id', state.artist.id).order('created_at', { ascending: false }).limit(200)),
         safeQuery(db.from('social_post_targets').select('platform, status, error_message, created_at').eq('artist_id', state.artist.id).eq('status', 'failed').order('created_at', { ascending: false }).limit(10)),
+        safeQuery(db.from('notification_channels').select('*').eq('artist_id', state.artist.id)),
+        safeQuery(db.from('notification_rules').select('*').eq('artist_id', state.artist.id)),
       ]);
       state.secretaryEvents = events;
       state.secretaryFailures = failures;
+      state.secretaryChannels = channels;
+      state.secretaryRules = rules;
       state.secretaryLoaded = true;
     }
 
     const counts = { now: secretaryAttention().length, log: (state.secretaryEvents || []).length };
     tabsHost.innerHTML = SECRETARY_TABS.map(([key, label]) => `<button type="button" role="tab" aria-selected="${key === active}" data-secretary-tab="${key}">${label}${counts[key] ? `<span class="secretary-tab-count ${key === 'now' ? 'is-alert' : ''}">${counts[key]}</span>` : ''}</button>`).join('');
-    panel.innerHTML = active === 'log' ? secretaryLogMarkup() : secretaryAttentionMarkup();
+    panel.innerHTML = active === 'log' ? secretaryLogMarkup()
+      : active === 'notify' ? secretaryNotifyMarkup()
+      : secretaryAttentionMarkup();
 
     $$('[data-secretary-tab]', tabsHost).forEach((button) => button.addEventListener('click', () => {
       state.secretaryTab = button.dataset.secretaryTab;
@@ -379,6 +501,29 @@
     $$('[data-secretary-filter]', panel).forEach((button) => button.addEventListener('click', () => {
       state.secretaryFilter = button.dataset.secretaryFilter;
       renderSecretary();
+    }));
+    $$('[data-notify-rule]', panel).forEach((box) => box.addEventListener('change', () => {
+      const [type, kind] = box.dataset.notifyRule.split(':');
+      saveNotifyRule(type, kind, box.checked);
+    }));
+    $$('[data-notify-timing]', panel).forEach((select) => select.addEventListener('change', () => {
+      const type = select.dataset.notifyTiming;
+      // «Когда» одно для события, поэтому пишем его в оба канала.
+      ['email', 'telegram'].forEach((kind) => {
+        const existing = (state.secretaryRules || []).find((row) => row.event_type === type && row.channel_kind === kind);
+        if (existing) saveNotifyRule(type, kind, existing.enabled, select.value);
+      });
+    }));
+    $$('[data-notify-setup]', panel).forEach((button) => button.addEventListener('click', () => {
+      if (button.dataset.notifySetup === 'email') openNotifyEmailDrawer();
+      else linkNotifyTelegram();
+    }));
+    $$('[data-notify-test]', panel).forEach((button) => button.addEventListener('click', async () => {
+      setBusy(button, true, 'Отправляем…');
+      const { data, error } = await db.functions.invoke('secretary-notify', { body: { action: 'test', kind: button.dataset.notifyTest } });
+      setBusy(button, false);
+      if (error || data?.error) return toast(`Не отправилось: ${await edgeErrorDetail(error, data)}`, 'error');
+      toast('Проверочное сообщение отправлено.');
     }));
     $$('[data-secretary-go]', panel).forEach((button) => button.addEventListener('click', async () => {
       const view = button.dataset.secretaryGo;
