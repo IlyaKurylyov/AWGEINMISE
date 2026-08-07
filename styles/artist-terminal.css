@@ -1705,14 +1705,14 @@ html[data-theme="light"] .dashboard-notice { background: rgba(169,111,36,.12); }
 .cassette { width: 64px; height: 52px; overflow: visible; }
 @keyframes cassette-orbit { to { transform: rotate(360deg); } }
 
-.cassette-body { fill: #20251f; stroke: var(--green); stroke-width: 1.6; }
-.cassette-window { fill: #0b0f0b; stroke: var(--line-hi); stroke-width: 1; }
-.cassette-reel { fill: none; stroke: var(--green); stroke-width: 1.6; stroke-dasharray: 3 3; animation: cassette-reel 1.1s linear infinite; transform-origin: 23px 19.5px; }
+.cassette-body { fill: #23281f; stroke: #7fd189; stroke-width: 1.6; }
+.cassette-window { fill: #0f130e; stroke: #5f6b58; stroke-width: 1; }
+.cassette-reel { fill: none; stroke: #7fd189; stroke-width: 1.6; stroke-dasharray: 3 3; animation: cassette-reel 1.1s linear infinite; transform-origin: 23px 19.5px; }
 .cassette-reel-b { transform-origin: 41px 19.5px; }
 @keyframes cassette-reel { to { transform: rotate(360deg); } }
-.cassette-eye { fill: var(--green); }
-.cassette-smile { fill: none; stroke: var(--green); stroke-width: 1.6; stroke-linecap: round; }
-.cassette-arm rect, .cassette-leg rect { fill: var(--green); }
+.cassette-eye { fill: #7fd189; }
+.cassette-smile { fill: none; stroke: #7fd189; stroke-width: 1.6; stroke-linecap: round; }
+.cassette-arm rect, .cassette-leg rect { fill: #4f8a57; }
 .cassette-arm-l { transform-origin: 10px 22px; animation: cassette-arm .42s ease-in-out infinite alternate; }
 .cassette-arm-r { transform-origin: 54px 22px; animation: cassette-arm .42s ease-in-out infinite alternate-reverse; }
 @keyframes cassette-arm { from { transform: rotate(-24deg); } to { transform: rotate(26deg); } }
@@ -1721,9 +1721,13 @@ html[data-theme="light"] .dashboard-notice { background: rgba(169,111,36,.12); }
 @keyframes cassette-leg { from { transform: rotate(20deg); } to { transform: rotate(-20deg); } }
 
 html[data-theme="light"] .materials-hint-card { background: #f4f1e8; }
-html[data-theme="light"] .cassette-body { fill: #e5e1d5; }
-html[data-theme="light"] .cassette-window { fill: #cfc9ba; }
+html[data-theme="light"] .materials-hint-backdrop { background: rgba(40,36,28,.5); }
+html[data-theme="light"] .cassette-arm rect, html[data-theme="light"] .cassette-leg rect { fill: #2f6b39; }
 
 @media (prefers-reduced-motion: reduce) {
   .cassette-orbit, .cassette-hold, .cassette-reel, .cassette-arm, .cassette-leg { animation: none; }
 }
+
+/* Ссылки-кнопки в светлой теме были слишком светлыми: #7e9d7f на беже
+   почти не читался. */
+html[data-theme="light"] .text-button { color: #2f6b39; }
