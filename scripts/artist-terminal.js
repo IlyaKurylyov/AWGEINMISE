@@ -136,6 +136,11 @@
     files: [],
     tasks: [],
     beatTab: 'private',
+    secretaryTab: 'now',
+    secretaryFilter: 'all',
+    secretaryEvents: [],
+    secretaryFailures: [],
+    secretaryLoaded: false,
     calendarDate: new Date(),
     dashboardDate: new Date(),
     dashboardSearch: '',
@@ -260,6 +265,127 @@
     if (view === 'tasks') renderTasksView();
     if (view === 'invites') loadInviteArtists();
     if (view === 'autopost') renderAutopost();
+    if (view === 'secretary') renderSecretary();
+  }
+
+  // --- Секретарь -------------------------------------------------------------
+  const SECRETARY_TABS = [
+    ['now', 'Требует внимания'],
+    ['log', 'История всего'],
+  ];
+  const EVENT_KIND_LABEL = {
+    release: 'релиз', task: 'задача', publication: 'публикация',
+    beat: 'бит', lyrics: 'текст', file: 'файл', platform: 'площадка', system: 'система',
+  };
+  const dayStart = (date) => { const d = new Date(date); d.setHours(0, 0, 0, 0); return d; };
+  const daysUntil = (value) => Math.round((dayStart(value) - dayStart(new Date())) / 86400000);
+
+  // «Требует внимания» считается из уже существующих данных: отдельных
+  // напоминаний в базе нет, поэтому ничего не рассинхронизируется.
+  function secretaryAttention() {
+    const items = [];
+    (state.tasks || []).filter((task) => !task.is_done && task.due_at).forEach((task) => {
+      const left = daysUntil(task.due_at);
+      if (left < 0) {
+        items.push({ level: 'crit', title: 'Задача просрочена', detail: task.title, when: `${Math.abs(left)} ${plural(Math.abs(left), 'день', 'дня', 'дней')}`, action: 'К задаче', view: 'tasks', sort: left });
+      } else if (left === 0) {
+        items.push({ level: 'ok', title: 'Пора браться', detail: task.title, when: 'сегодня', action: 'Начать', view: 'tasks', sort: 0.5 });
+      } else if (left <= 3) {
+        items.push({ level: 'soon', title: 'Срок задачи близко', detail: task.title, when: `через ${left} ${plural(left, 'день', 'дня', 'дней')}`, action: 'К задаче', view: 'tasks', sort: left });
+      }
+    });
+    (state.projects || []).filter((project) => project.release_at && project.status === 'scheduled').forEach((project) => {
+      const left = daysUntil(project.release_at);
+      if (left >= 0 && left <= 7) {
+        items.push({ level: left <= 2 ? 'soon' : 'ok', title: 'Скоро релиз', detail: project.title || 'Без названия', when: left === 0 ? 'сегодня' : `через ${left} ${plural(left, 'день', 'дня', 'дней')}`, action: 'К релизу', view: 'track', id: project.id, sort: left });
+      }
+    });
+    (state.secretaryFailures || []).forEach((row) => {
+      items.push({ level: 'crit', title: `${SOCIAL_PLATFORM_LABEL[row.platform] || row.platform}: публикация не прошла`, detail: socialErrorHint(row.platform, row.error_message || 'без деталей'), when: formatDate(row.created_at), action: 'К автопостингу', view: 'autopost', sort: -100 });
+    });
+    return items.sort((a, b) => a.sort - b.sort);
+  }
+
+  function secretaryAttentionMarkup() {
+    const items = secretaryAttention();
+    if (!items.length) {
+      return `<section class="panel"><div class="secretary-empty"><b>Всё под контролем</b>Просроченных задач нет, сбоев публикаций нет, ближайшие релизы не горят.</div></section>`;
+    }
+    return `<section class="panel">
+      <header class="panel-header"><div><span class="eyebrow">Сегодня</span><h3>Что нужно сделать</h3></div><span class="secretary-count-note">${items.length} ${plural(items.length, 'пункт', 'пункта', 'пунктов')}</span></header>
+      ${items.map((item) => `<div class="secretary-item is-${item.level}">
+        <span class="secretary-item-bar" aria-hidden="true"></span>
+        <div><strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(item.detail || '')}</small></div>
+        <span class="secretary-item-when">${escapeHTML(item.when)}</span>
+        <button class="secretary-item-go" type="button" data-secretary-go="${item.view}" ${item.id ? `data-secretary-id="${item.id}"` : ''}>${item.action}</button>
+      </div>`).join('')}
+    </section>`;
+  }
+
+  function secretaryLogMarkup() {
+    const filter = state.secretaryFilter || 'all';
+    const all = state.secretaryEvents || [];
+    const rows = filter === 'all' ? all : all.filter((row) => row.kind === filter);
+    const kinds = ['all', ...Array.from(new Set(all.map((row) => row.kind)))];
+    const filters = kinds.map((kind) => `<button type="button" data-secretary-filter="${kind}" aria-pressed="${filter === kind}">${kind === 'all' ? 'Всё' : EVENT_KIND_LABEL[kind] || kind}</button>`).join('');
+    const body = rows.length
+      ? `<div class="secretary-log-wrap"><table class="secretary-log"><tbody>${rows.map((row) => `<tr>
+          <td class="secretary-log-ts">${formatDate(row.created_at)}</td>
+          <td><span class="secretary-log-kind">${EVENT_KIND_LABEL[row.kind] || row.kind}</span></td>
+          <td class="secretary-log-obj"><strong>${escapeHTML(row.title)}</strong>${row.detail ? `<small>${escapeHTML(row.detail)}</small>` : ''}</td>
+        </tr>`).join('')}</tbody></table></div>`
+      : '<p class="track-workspace-empty">Событий пока нет — журнал заполняется по мере работы в кабинете.</p>';
+    return `<section class="panel">
+      <header class="panel-header"><div><span class="eyebrow">Журнал</span><h3>История всего</h3></div><div class="secretary-filters">${filters}</div></header>
+      ${body}
+    </section>`;
+  }
+
+  // Срочное видно в сайдбаре, чтобы не приходилось открывать раздел.
+  function updateSecretaryBadge() {
+    const badge = $('#nav-secretary-count');
+    if (!badge) return;
+    const urgent = secretaryAttention().filter((item) => item.level === 'crit').length;
+    badge.textContent = urgent;
+    badge.hidden = !urgent;
+    badge.classList.toggle('is-alert', !!urgent);
+  }
+
+  async function renderSecretary() {
+    const tabsHost = $('#secretary-tabs');
+    const panel = $('#secretary-panel');
+    if (!tabsHost || !panel) return;
+    const active = state.secretaryTab || 'now';
+
+    if (!state.secretaryLoaded) {
+      panel.innerHTML = '<p class="track-workspace-empty">Загружаем…</p>';
+      const [events, failures] = await Promise.all([
+        safeQuery(db.from('artist_events').select('*').eq('artist_id', state.artist.id).order('created_at', { ascending: false }).limit(200)),
+        safeQuery(db.from('social_post_targets').select('platform, status, error_message, created_at').eq('artist_id', state.artist.id).eq('status', 'failed').order('created_at', { ascending: false }).limit(10)),
+      ]);
+      state.secretaryEvents = events;
+      state.secretaryFailures = failures;
+      state.secretaryLoaded = true;
+    }
+
+    const counts = { now: secretaryAttention().length, log: (state.secretaryEvents || []).length };
+    tabsHost.innerHTML = SECRETARY_TABS.map(([key, label]) => `<button type="button" role="tab" aria-selected="${key === active}" data-secretary-tab="${key}">${label}${counts[key] ? `<span class="secretary-tab-count ${key === 'now' ? 'is-alert' : ''}">${counts[key]}</span>` : ''}</button>`).join('');
+    panel.innerHTML = active === 'log' ? secretaryLogMarkup() : secretaryAttentionMarkup();
+
+    $$('[data-secretary-tab]', tabsHost).forEach((button) => button.addEventListener('click', () => {
+      state.secretaryTab = button.dataset.secretaryTab;
+      renderSecretary();
+    }));
+    $$('[data-secretary-filter]', panel).forEach((button) => button.addEventListener('click', () => {
+      state.secretaryFilter = button.dataset.secretaryFilter;
+      renderSecretary();
+    }));
+    $$('[data-secretary-go]', panel).forEach((button) => button.addEventListener('click', async () => {
+      const view = button.dataset.secretaryGo;
+      const id = button.dataset.secretaryId;
+      if (view === 'track' && id) { await openProjectEditor(id, 'idea', 'secretary'); return; }
+      goView(view);
+    }));
   }
 
   function withTimeout(promise, timeoutMs, message) {
@@ -351,6 +477,7 @@
     hydrateProfile();
     $('#nav-beats-count').textContent = state.beats.length;
     $('#nav-tasks-count').textContent = state.tasks.filter((task) => (task.workflow_status || (task.is_done ? 'uploaded' : 'idea')) !== 'uploaded').length;
+    updateSecretaryBadge();
   }
 
   const WHEEL_COLORS = ['#c91c78', '#1fa8a9', '#d9c53f', '#5c3593', '#2f9e6b', '#e0672b', '#2758a8', '#a8296b'];
@@ -809,6 +936,7 @@
       renderDashboard(); renderTasksView(); renderCalendar();
       if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
       closeDrawer(); toast(task ? 'Задача обновлена.' : 'Задача добавлена.');
+      logEvent('task', task ? 'Задача изменена' : 'Создана задача', payload.title, { view: 'tasks' });
     } catch (error) { toast(error.message || 'Не удалось сохранить задачу.', 'error'); }
     finally { setBusy(button, false); }
   }
@@ -824,6 +952,7 @@
     try {
       const { error } = await db.from('project_tasks').update({ is_done: isDone, workflow_status: workflowStatus }).eq('id', id).eq('artist_id', state.artist.id);
       if (error) throw error;
+      logEvent('task', isDone ? 'Задача закрыта' : 'Задача снова открыта', task?.title || '', { view: 'tasks', id });
       renderDashboard(); renderTasksView(); renderCalendar();
       if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
     } catch (error) {
@@ -1062,6 +1191,7 @@
       await refreshBeats();
       closeDrawer();
       toast(beat ? 'Бит обновлён.' : 'Бит загружен.');
+      logEvent('beat', beat ? 'Бит обновлён' : 'Загружен бит', payload.title || '', { view: 'beats' });
     } catch (error) {
       toast(error.message || 'Не удалось сохранить бит.', 'error');
     } finally { setBusy(submit, false); }
@@ -1128,6 +1258,7 @@
     state.projects = [saved, ...state.projects];
     state.tasks = await safeQuery(db.from('project_tasks').select('*').eq('artist_id', state.artist.id).order('is_done').order('sort_order').order('due_at'));
     state.freshDraftProjectId = saved.id;
+    logEvent('release', 'Создан релиз', saved.title || 'Без названия', { view: 'track', id: saved.id });
     return saved.id;
   }
 
@@ -1562,6 +1693,7 @@
       goView(state.projectReturnView === 'dashboard' ? 'dashboard' : 'projects');
       closeDrawer();
       toast('Релиз удалён.');
+      logEvent('release', 'Релиз удалён', project.title || '');
     } catch (error) {
       toast(error.message || 'Не удалось удалить релиз.', 'error');
     }
@@ -1682,6 +1814,25 @@
   const SOCIAL_TOKEN_PLATFORMS = ['telegram']; // connected by pasting a token; VK/YouTube/Instagram use OAuth
   const SOCIAL_MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024; // R2 staging — 2GB sanity cap
   const formatSize = (bytes) => bytes >= 1024 * 1024 * 1024 ? `${(bytes / 1024 / 1024 / 1024).toFixed(1)} ГБ` : `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
+  // Журнал «Секретаря». Событие — побочная запись: если она не легла, основное
+  // действие всё равно считается успешным, поэтому ошибку только логируем.
+  async function logEvent(kind, title, detail = '', target = {}) {
+    if (!state.artist?.id) return;
+    try {
+      await db.from('artist_events').insert({
+        artist_id: state.artist.id,
+        kind,
+        title,
+        detail: String(detail || ''),
+        target_view: target.view || null,
+        target_id: target.id || null,
+      });
+      state.secretaryLoaded = false;
+    } catch (error) {
+      console.warn('event log skipped', error);
+    }
+  }
+
   // Отмеченные площадки берём из активного списка «Куда публикуем».
   const selectedPlatforms = () => $$('.autopost-dests:not([hidden]) input[name="platforms"]:checked').map((el) => el.value);
   const plural = (n, one, few, many) => {
@@ -1767,6 +1918,7 @@
       return;
     }
     toast(`${label} подключён: ${data.account_name || ''}`);
+    logEvent('platform', `Подключён ${label}`, data.account_name || '', { view: 'autopost' });
   }
 
   async function disconnectSocial(platform) {
@@ -1775,6 +1927,7 @@
     const { data, error } = await db.functions.invoke('social-connect', { body: { action: 'disconnect', platform } });
     if (error || data?.error) return toast(`Не удалось отключить ${label}.`, 'error');
     toast(`${label} отключён.`);
+    logEvent('platform', `Отключён ${label}`, '', { view: 'autopost' });
     renderAutopost();
   }
 
@@ -2237,10 +2390,14 @@
       if (error || data?.error) {
         toast(`Ошибка публикации: ${data?.detail || data?.error || error?.message || ''}`, 'error');
       } else {
-        const failed = (data?.targets || []).filter((target) => target.status === 'failed');
+        const targets = data?.targets || [];
+        const failed = targets.filter((target) => target.status === 'failed');
+        const done = targets.filter((target) => target.status === 'success').map((t) => SOCIAL_PLATFORM_LABEL[t.platform] || t.platform);
         // Показываем причину сразу: без неё приходится лезть в базу за error_message.
         if (failed.length) toast(`Не опубликовано — ${failed.map((target) => `${SOCIAL_PLATFORM_LABEL[target.platform] || target.platform}: ${socialErrorHint(target.platform, target.error_message || 'без деталей')}`).join('; ')}`, 'error');
         else toast('Опубликовано ✓');
+        if (done.length) logEvent('publication', 'Опубликовано', done.join(', '), { view: 'autopost' });
+        failed.forEach((target) => logEvent('publication', `${SOCIAL_PLATFORM_LABEL[target.platform] || target.platform}: публикация не прошла`, target.error_message || '', { view: 'autopost' }));
       }
     } finally {
       hideBusy();
@@ -2492,6 +2649,7 @@
     }
     closeDrawer();
     toast(`${SOCIAL_PLATFORM_LABEL[platform]} подключён: ${data.account_name || ''}`);
+    logEvent('platform', `Подключён ${SOCIAL_PLATFORM_LABEL[platform]}`, data.account_name || '', { view: 'autopost' });
     renderAutopost();
   }
 
