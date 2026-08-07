@@ -116,6 +116,9 @@
   const PROJECT_STATUS_HINT = { idea: 'Мечтаем', demo: 'Записываем', mix: 'Работаем', scheduled: 'Добавлен в календарь!', released: 'Ожидаем успеха', archived: 'Архив' };
   const TASK_WORKFLOW = { idea: 'Придумал', doing: 'Делаю', uploaded: 'Загружено' };
   const DEFAULT_PROJECT_TASKS = ['Сделать обложку', 'Записать вокал', 'Свести'];
+  // Закрытая дефолтная задача продвигает трек по этапам. Назад не откатываем:
+  // если этап уже дальше, закрытие более раннней задачи ничего не меняет.
+  const TASK_STAGE_ADVANCE = { 'записать вокал': 'demo', 'свести': 'scheduled' };
   const DEFAULT_LYRICS_CATEGORIES = ['На альбом', 'Ипишка', 'В работе'];
   const LINK_CATEGORIES = { social: 'Соцсети', distribution: 'Дистрибуция', cloud: 'Облако', reference: 'Референсы', other: 'Другое' };
   const LINKS_VIEW_STORAGE_KEY = 'inmise-artist-links-view';
@@ -1127,6 +1130,60 @@
     finally { setBusy(button, false); }
   }
 
+  // Трек едет по этапам сам, когда закрывают ключевую задачу.
+  async function advanceProjectStage(task) {
+    const target = TASK_STAGE_ADVANCE[String(task.title || '').trim().toLowerCase()];
+    if (!target) return;
+    const project = state.projects.find((item) => item.id === task.project_id);
+    if (!project) return;
+
+    const order = Object.keys(PROJECT_STATUS);
+    // Легаси-статус master соответствует этапу «Сведение».
+    const current = project.status === 'master' ? 'mix' : (project.status || 'idea');
+    if (order.indexOf(target) <= order.indexOf(current)) return;
+
+    const { error } = await db.from('artist_projects').update({ status: target }).eq('id', project.id).eq('artist_id', state.artist.id);
+    if (error) return toast(error.message || 'Не удалось обновить этап трека.', 'error');
+    project.status = target;
+    toast(`«${project.title || 'Трек'}» → ${PROJECT_STATUS[target]}`);
+    logEvent('release', `Этап: ${PROJECT_STATUS[target]}`, project.title || '', { view: 'track', id: project.id });
+    if (target === 'scheduled' && !project.release_at) offerReleaseDate(project);
+  }
+
+  // «Запланирован» без даты не попадёт в календарь, поэтому спрашиваем сразу.
+  function offerReleaseDate(project) {
+    openDrawer('TRACK / РЕЛИЗ', 'Дата релиза', `<form id="release-date-form">
+      <p class="drawer-note">Трек перешёл на этап «Запланирован». Поставьте дату — тогда он появится в календаре, а секретарь напомнит о нём заранее.</p>
+      <label class="field"><span>Когда выходит</span><input name="release_at" type="datetime-local" required></label>
+      <div class="drawer-actions">
+        <button class="text-button" id="release-date-skip" type="button">Позже</button>
+        <button class="button button-primary" type="submit">Сохранить дату</button>
+      </div>
+    </form>`);
+    $('#release-date-skip').addEventListener('click', () => {
+      closeDrawer(true);
+      toast('Дата не задана — трека пока не будет в календаре.');
+    });
+    $('#release-date-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = $('button[type="submit"]', event.currentTarget);
+      const value = String(new FormData(event.currentTarget).get('release_at') || '');
+      if (!value) return;
+      setBusy(button, true, 'Сохраняем…');
+      try {
+        const releaseAt = new Date(value).toISOString();
+        const { error } = await db.from('artist_projects').update({ release_at: releaseAt }).eq('id', project.id).eq('artist_id', state.artist.id);
+        if (error) throw error;
+        project.release_at = releaseAt;
+        closeDrawer(true);
+        toast('Дата релиза сохранена.');
+        renderCalendar(); renderDashboard();
+        if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
+      } catch (error) { toast(error.message || 'Не удалось сохранить дату.', 'error'); }
+      finally { setBusy(button, false); }
+    });
+  }
+
   async function toggleTask(id, isDone) {
     const previous = state.tasks.find((task) => task.id === id)?.is_done;
     const task = state.tasks.find((item) => item.id === id);
@@ -1139,6 +1196,7 @@
       const { error } = await db.from('project_tasks').update({ is_done: isDone, workflow_status: workflowStatus }).eq('id', id).eq('artist_id', state.artist.id);
       if (error) throw error;
       logEvent('task', isDone ? 'Задача закрыта' : 'Задача снова открыта', task?.title || '', { view: 'tasks', id });
+      if (isDone && task?.project_id) await advanceProjectStage(task);
       renderDashboard(); renderTasksView(); renderCalendar();
       if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
     } catch (error) {
