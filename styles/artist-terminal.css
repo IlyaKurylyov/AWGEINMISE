@@ -1731,3 +1731,5 @@ html[data-theme="light"] .cassette-arm rect, html[data-theme="light"] .cassette-
 /* Ссылки-кнопки в светлой теме были слишком светлыми: #7e9d7f на беже
    почти не читался. */
 html[data-theme="light"] .text-button { color: #2f6b39; }
+.track-workspace-list-row.is-link { text-decoration: none; }
+.track-workspace-list-row.is-link small::after { content: ' ↗'; }

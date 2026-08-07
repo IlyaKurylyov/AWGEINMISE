@@ -1222,14 +1222,52 @@
         <p>Без больших системных мощностей, поэтому не можем хранить все ваши материалы здесь. Но вы можете добавить их на Яндекс Диск или ещё куда-нибудь, а ссылки разместить здесь — обещаем никогда их не потерять.</p>
         <div class="materials-hint-actions">
           <button class="button button-primary" type="button" data-hint-links>Добавить ссылку</button>
-          <button class="text-button" type="button" data-hint-upload>Всё равно загрузить файл</button>
         </div>
       </div>`;
     document.body.appendChild(host);
     const close = () => host.remove();
     $$('[data-hint-close]', host).forEach((element) => element.addEventListener('click', close));
-    $('[data-hint-links]', host).addEventListener('click', () => { close(); goView('links'); openLinkEditor(); });
-    $('[data-hint-upload]', host).addEventListener('click', () => { close(); openFileUploader(initialProjectId); });
+    $('[data-hint-links]', host).addEventListener('click', () => { close(); openMaterialLinkDrawer(initialProjectId); });
+  }
+
+  function openMaterialLinkDrawer(projectId) {
+    openDrawer('TRACK / МАТЕРИАЛЫ', 'Ссылка на материал', `<form id="material-link-form">
+      <label class="field"><span>Что это</span><input name="title" placeholder="Мастер, стемы, обложка…" required></label>
+      <label class="field"><span>Ссылка</span><input name="url" type="url" placeholder="https://disk.yandex.ru/…" required><small>Проверьте, что доступ по ссылке открыт — иначе её никто не откроет.</small></label>
+      <label class="field"><span>Тип</span><select name="file_kind">
+        <option value="master">Мастер</option>
+        <option value="demo">Демо</option>
+        <option value="stem">Стемы</option>
+        <option value="cover">Обложка</option>
+        <option value="document">Документы</option>
+        <option value="other" selected>Другое</option>
+      </select></label>
+      <div class="drawer-actions"><span></span><button class="button button-primary" type="submit">Добавить</button></div>
+    </form>`);
+    $('#material-link-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = $('button[type="submit"]', event.currentTarget);
+      const data = new FormData(event.currentTarget);
+      setBusy(button, true, 'Добавляем…');
+      try {
+        const { error } = await db.from('project_files').insert({
+          artist_id: state.artist.id,
+          project_id: projectId,
+          file_kind: String(data.get('file_kind') || 'other'),
+          bucket_id: 'link',
+          storage_path: null,
+          link_url: String(data.get('url') || '').trim(),
+          original_name: String(data.get('title') || '').trim(),
+        });
+        if (error) throw error;
+        state.files = await safeQuery(db.from('project_files').select('*').eq('artist_id', state.artist.id).order('created_at', { ascending: false }));
+        closeDrawer(true);
+        toast('Ссылка добавлена в материалы.');
+        logEvent('file', 'Добавлена ссылка на материал', String(data.get('title') || ''), { view: 'track', id: projectId });
+        if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
+      } catch (error) { toast(error.message || 'Не удалось добавить ссылку.', 'error'); }
+      finally { setBusy(button, false); }
+    });
   }
 
   function openFileUploader(initialProjectId = '') {
@@ -1561,7 +1599,11 @@
         <label><input type="checkbox" data-track-task-check="${task.id}" ${task.is_done ? 'checked' : ''}><span></span></label>
         <button data-open-task="${task.id}" type="button"><strong>${escapeHTML(task.title)}</strong><small>${task.due_at ? formatDate(task.due_at, { year: undefined }) : 'без даты'} · ${TASK_WORKFLOW[taskWorkflow(task)]}</small></button>
       </article>`).join('') : '<p class="track-workspace-empty">Задач пока нет.</p>';
-    const fileRows = linkedFiles.length ? linkedFiles.map((file) => `<button class="track-workspace-list-row" data-download-file="${file.id}" type="button"><span>${escapeHTML(file.original_name)}</span><small>${escapeHTML(file.file_kind)} · ${formatFileSize(file.size_bytes)}</small></button>`).join('') : '<p class="track-workspace-empty">Файлов пока нет.</p>';
+    const fileRows = linkedFiles.length
+      ? linkedFiles.map((file) => (file.link_url
+        ? `<a class="track-workspace-list-row is-link" href="${escapeHTML(file.link_url)}" target="_blank" rel="noopener"><span>${escapeHTML(file.original_name)}</span><small>${escapeHTML(file.file_kind)} · внешняя ссылка</small></a>`
+        : `<button class="track-workspace-list-row" data-download-file="${file.id}" type="button"><span>${escapeHTML(file.original_name)}</span><small>${escapeHTML(file.file_kind)} · ${formatFileSize(file.size_bytes)}</small></button>`)).join('')
+      : '<p class="track-workspace-empty">Материалов пока нет — добавьте ссылку на облако.</p>';
     // Пустое поле сразу пишущее: черновик хранится локально и подхватится,
     // когда текст создадут — так «Добавить» не обязательно нажимать первым.
     const lyricRows = linkedLyrics.length
@@ -1616,7 +1658,7 @@
           </section>
 
           <section class="panel track-workspace-files">
-            <header class="panel-header"><div><span class="eyebrow">Необязательно</span><h3>Материалы проекта</h3><p>Обложки, документы и финальные версии. Аудио загружать не требуется.</p></div>${project ? '<button class="text-button" id="track-add-file" type="button">+ Файл</button>' : ''}</header>
+            <header class="panel-header"><div><span class="eyebrow">Необязательно</span><h3>Материалы проекта</h3><p>Ссылки на обложки, мастера и стемы в вашем облаке. Файлы храните у себя.</p></div>${project ? '<button class="text-button" id="track-add-file" type="button">+ Ссылка</button>' : ''}</header>
             <div class="track-workspace-list">${project ? fileRows : '<p class="track-workspace-empty">Сначала сохраните трек.</p>'}</div>
           </section>
 
