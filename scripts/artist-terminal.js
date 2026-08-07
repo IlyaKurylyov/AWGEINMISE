@@ -1792,7 +1792,7 @@
       const helpToggle = platform === 'instagram'
         ? '<button type="button" class="autopost-help-toggle" data-ig-help aria-expanded="false">помощь <span aria-hidden="true">?</span></button>'
         : (platform === 'vk' && info.connected
-          ? '<button type="button" class="autopost-help-toggle" data-vk-community title="Нужен, если ваш профиль VK — бизнес-аккаунт">+ токен сообщества</button>'
+          ? `<button type="button" class="autopost-help-toggle ${info.has_community_token ? '' : 'is-required'}" data-vk-community title="Нужен для записей на стене: токен VK ID их публиковать не может">${info.has_community_token ? 'токен сообщества ✓' : '⚠ нужен токен сообщества'}</button>`
           : '');
       return `<div class="autopost-conn autopost-conn-${platform} ${info.connected ? 'is-connected' : ''}">
         <span class="autopost-conn-mark">${platformMark[platform]}</span>
@@ -2212,9 +2212,15 @@
   }
 
   function openVkCommunityTokenDrawer() {
-    openDrawer('VK / СТЕНА', 'Токен сообщества', `<form id="vk-community-form">
-      <p class="drawer-note">VK запрещает публикацию на стену бизнес-профилям. Если ваш аккаунт бизнесовый, добавьте токен сообщества — им будут публиковаться записи, а видео останется на пользовательском токене. Обычным аккаунтам это не нужно.</p>
-      <label class="field"><span>Токен сообщества VK</span><input name="token" placeholder="vk1.a...." required><small>Сообщество → Управление → Настройки → Работа с API → Ключи доступа. Права: Управление, Стена, Фотографии, Документы.</small></label>
+    openDrawer('VK / ТОКЕН', 'Токен сообщества', `<form id="vk-community-form">
+      <p class="drawer-note">Нужен, чтобы публиковать <strong>посты, фото и записи на стене</strong> сообщества. Видео работает отдельно — через кнопку «Подключить». Вставить нужно один раз.</p>
+      <ol class="autopost-help-steps">
+        <li>Откройте своё сообщество VK → <strong>Управление</strong>.</li>
+        <li><strong>Настройки → Работа с API → Ключи доступа</strong> → «Создать ключ».</li>
+        <li>Отметьте права: <strong>Управление, Стена, Фотографии, Документы</strong>.</li>
+        <li>Скопируйте ключ (начинается на <code>vk1.a.</code>) и вставьте ниже.</li>
+      </ol>
+      <label class="field"><span>Токен сообщества VK</span><input name="token" placeholder="vk1.a...." required></label>
       <div class="drawer-actions"><span></span><button class="button button-primary" type="submit">Сохранить</button></div>
     </form>`);
     $('#vk-community-form').addEventListener('submit', async (event) => {

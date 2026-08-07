@@ -254,14 +254,20 @@ Deno.serve(async (request) => {
     if (action === "status") {
       const { data: connections, error } = await admin
         .from("social_connections")
-        .select("platform, external_account_name, token_expires_at")
+        .select("platform, external_account_name, token_expires_at, secondary_token")
         .eq("artist_id", artist.id);
       if (error) throw error;
       const byPlatform: Record<string, unknown> = {};
       for (const platformName of PLATFORMS) {
         const connection = connections?.find((row) => row.platform === platformName);
         byPlatform[platformName] = connection
-          ? { connected: true, account_name: connection.external_account_name, expires_at: connection.token_expires_at }
+          ? {
+            connected: true,
+            account_name: connection.external_account_name,
+            expires_at: connection.token_expires_at,
+            // Сам токен наружу не отдаём — только факт его наличия.
+            has_community_token: Boolean(connection.secondary_token),
+          }
           : { connected: false };
       }
       return json({ connections: byPlatform });
