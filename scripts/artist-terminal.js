@@ -1603,7 +1603,7 @@
       ? linkedFiles.map((file) => (file.link_url
         ? `<a class="track-workspace-list-row is-link" href="${escapeHTML(file.link_url)}" target="_blank" rel="noopener"><span>${escapeHTML(file.original_name)}</span><small>${escapeHTML(file.file_kind)} · внешняя ссылка</small></a>`
         : `<button class="track-workspace-list-row" data-download-file="${file.id}" type="button"><span>${escapeHTML(file.original_name)}</span><small>${escapeHTML(file.file_kind)} · ${formatFileSize(file.size_bytes)}</small></button>`)).join('')
-      : '<p class="track-workspace-empty">Материалов пока нет — добавьте ссылку на облако.</p>';
+      : '<p class="track-workspace-empty">Файлов пока нет.</p>';
     // Пустое поле сразу пишущее: черновик хранится локально и подхватится,
     // когда текст создадут — так «Добавить» не обязательно нажимать первым.
     const lyricRows = linkedLyrics.length
@@ -1658,7 +1658,7 @@
           </section>
 
           <section class="panel track-workspace-files">
-            <header class="panel-header"><div><span class="eyebrow">Необязательно</span><h3>Материалы проекта</h3><p>Ссылки на обложки, мастера и стемы в вашем облаке. Файлы храните у себя.</p></div>${project ? '<button class="text-button" id="track-add-file" type="button">+ Ссылка</button>' : ''}</header>
+            <header class="panel-header"><div><span class="eyebrow">Необязательно</span><h3>Материалы проекта</h3><p>Обложки, документы и финальные версии. Аудио загружать не требуется.</p></div>${project ? '<button class="text-button" id="track-add-file" type="button">+ Файл</button>' : ''}</header>
             <div class="track-workspace-list">${project ? fileRows : '<p class="track-workspace-empty">Сначала сохраните трек.</p>'}</div>
           </section>
 
