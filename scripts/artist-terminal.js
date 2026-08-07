@@ -1682,6 +1682,15 @@
   const SOCIAL_TOKEN_PLATFORMS = ['telegram']; // connected by pasting a token; VK/YouTube/Instagram use OAuth
   const SOCIAL_MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024; // R2 staging — 2GB sanity cap
   const formatSize = (bytes) => bytes >= 1024 * 1024 * 1024 ? `${(bytes / 1024 / 1024 / 1024).toFixed(1)} ГБ` : `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
+  // Отмеченные площадки берём из активного списка «Куда публикуем».
+  const selectedPlatforms = () => $$('.autopost-dests:not([hidden]) input[name="platforms"]:checked').map((el) => el.value);
+  const plural = (n, one, few, many) => {
+    const mod100 = n % 100, mod10 = n % 10;
+    if (mod100 >= 11 && mod100 <= 14) return many;
+    if (mod10 === 1) return one;
+    if (mod10 >= 2 && mod10 <= 4) return few;
+    return many;
+  };
 
   function socialRedirectUri() {
     return `${location.origin}/admin/`;
@@ -1786,29 +1795,29 @@
     const connections = statusResult?.data?.connections || {};
 
     const platformMark = { youtube: 'YT', instagram: 'IG', telegram: 'TG', vk: 'VK' };
-    const connCard = (platform) => {
-      const label = SOCIAL_PLATFORM_LABEL[platform];
-      const info = connections[platform] || { connected: false };
-      const helpToggle = platform === 'instagram'
-        ? '<button type="button" class="autopost-help-toggle" data-ig-help aria-expanded="false">помощь <span aria-hidden="true">?</span></button>'
-        : (platform === 'vk' && info.connected
-          ? `<button type="button" class="autopost-help-toggle ${info.has_community_token ? '' : 'is-required'}" data-vk-community title="Нужен для записей на стене: токен VK ID их публиковать не может">${info.has_community_token ? 'токен сообщества ✓' : '⚠ нужен токен сообщества'}</button>`
-          : '');
-      return `<div class="autopost-conn autopost-conn-${platform} ${info.connected ? 'is-connected' : ''}">
-        <span class="autopost-conn-mark">${platformMark[platform]}</span>
-        <div class="autopost-conn-body"><div class="autopost-conn-head"><span class="eyebrow">${label}</span>${helpToggle}</div><strong><span class="autopost-conn-dot"></span>${info.connected ? escapeHTML(info.account_name || 'Подключено') : 'Не подключено'}</strong></div>
-        <button class="button ${info.connected ? 'button-danger' : 'button-primary'} autopost-conn-btn" type="button" data-social-${info.connected ? 'disconnect' : 'connect'}="${platform}">${info.connected ? 'Отключить' : 'Подключить'}</button>
-      </div>`;
+    // Одна строка на площадку: и выбор «публиковать сюда», и состояние, и настройки.
+    // Раньше это были карточки сверху и отдельные галочки внизу — два места про одно.
+    const destState = (platform, info) => {
+      if (!info.connected) return { cls: 'is-off', text: 'не подключено' };
+      if (platform === 'vk' && !info.has_community_token) return { cls: 'is-warn', text: 'лента недоступна' };
+      return { cls: 'is-ok', text: 'подключено' };
     };
-    const videoConnectionCards = SOCIAL_VIDEO_PLATFORMS.map(connCard).join('');
-    const textConnectionCards = SOCIAL_TEXT_PLATFORMS.map(connCard).join('');
-
-    const pill = (platform) => {
+    const destRow = (platform, mode) => {
       const info = connections[platform] || { connected: false };
-      return `<label class="autopost-pill ${info.connected ? '' : 'is-disabled'}"${info.connected ? '' : ' title="Подключите площадку выше"'}><input type="checkbox" name="platforms" value="${platform}" ${info.connected ? '' : 'disabled'}><span>${SOCIAL_PLATFORM_LABEL[platform]}</span></label>`;
+      const state = destState(platform, info);
+      const sub = platform === 'vk' && mode === 'video'
+        ? `<div class="autopost-dest-sub" id="autopost-clip-toggle" hidden><label><input type="checkbox" name="vk_clip"><span>Опубликовать вертикальным клипом</span></label></div>`
+        : '';
+      return `<div class="autopost-dest autopost-dest-${platform} ${state.cls}" data-dest="${platform}">
+        <input type="checkbox" name="platforms" value="${platform}" ${info.connected ? 'checked' : 'disabled'} aria-label="Публиковать в ${SOCIAL_PLATFORM_LABEL[platform]}">
+        <span class="autopost-dest-mark">${platformMark[platform]}</span>
+        <span class="autopost-dest-acct">${info.connected ? escapeHTML(info.account_name || SOCIAL_PLATFORM_LABEL[platform]) : SOCIAL_PLATFORM_LABEL[platform]}</span>
+        <span class="autopost-dest-state"><i aria-hidden="true"></i>${state.text}</span>
+        <button class="autopost-dest-gear" type="button" data-dest-settings="${platform}" aria-expanded="false">${info.connected ? 'настройки' : 'подключить'}</button>
+      </div>${sub}`;
     };
-    const videoPills = SOCIAL_VIDEO_PLATFORMS.map(pill).join('');
-    const textPills = SOCIAL_TEXT_PLATFORMS.map(pill).join('');
+    const videoDests = SOCIAL_VIDEO_PLATFORMS.map((p) => destRow(p, 'video')).join('');
+    const textDests = SOCIAL_TEXT_PLATFORMS.map((p) => destRow(p, 'text')).join('');
 
     const historyRows = (posts || []).map((post) => {
       const postTargets = (targets || []).filter((target) => target.post_id === post.id);
@@ -1818,17 +1827,27 @@
         if (target.status === 'failed') return `<span class="autopost-target-badge is-failed" title="${escapeHTML(target.error_message || '')}">${label}: ошибка</span>`;
         return `<span class="autopost-target-badge">${label}: ${escapeHTML(target.status)}</span>`;
       }).join('');
-      const canRetry = post.storage_path && postTargets.some((target) => target.status === 'failed');
-      return `<article class="autopost-history-row">
-        <div><strong>${escapeHTML(post.title || 'Без названия')}</strong><small>${formatDate(post.created_at)}</small></div>
-        <div class="autopost-target-badges">${targetBadges || '<span class="autopost-target-badge">нет площадок</span>'}</div>
-        ${canRetry ? `<button class="text-button" data-retry-post="${post.id}" type="button">Повторить</button>` : ''}
-      </article>`;
-    }).join('') || '<p class="track-workspace-empty">Публикаций пока нет.</p>';
+      const failed = postTargets.filter((target) => target.status === 'failed');
+      const canRetry = post.storage_path && failed.length;
+      const retryLabel = failed.length === 1
+        ? `Повторить ${SOCIAL_PLATFORM_LABEL[failed[0].platform] || failed[0].platform}`
+        : 'Повторить';
+      return `<tr>
+        <td><span class="autopost-history-name">${escapeHTML(post.title || 'Без названия')}</span><small>${formatDate(post.created_at)}</small></td>
+        <td><div class="autopost-target-badges">${targetBadges || '<span class="autopost-target-badge">нет площадок</span>'}</div></td>
+        <td class="autopost-history-action">${canRetry ? `<button class="text-button" data-retry-post="${post.id}" type="button">${retryLabel}</button>` : ''}</td>
+      </tr>`;
+    }).join('');
 
     container.innerHTML = `
-      <div class="autopost-connections" data-mode="video">${videoConnectionCards}</div>
-      <div class="autopost-connections" data-mode="text" hidden>${textConnectionCards}</div>
+      <section class="panel autopost-dests-panel">
+        <header class="panel-header">
+          <div><span class="eyebrow">Шаг 1</span><h3>Куда публикуем</h3></div>
+          <span class="autopost-dests-count" id="autopost-dests-count"></span>
+        </header>
+        <div class="autopost-dests" data-mode="video">${videoDests}</div>
+        <div class="autopost-dests" data-mode="text" hidden>${textDests}</div>
+      </section>
       <div class="autopost-help" id="ig-help" hidden>
         <ol class="autopost-help-steps">
           <li><strong>Нужен аккаунт Facebook.</strong> Именно с личного профиля Facebook создаётся Страница и выполняется вход при подключении. Нет аккаунта — сначала зарегистрируйтесь на facebook.com.</li>
@@ -1836,12 +1855,14 @@
           <li><strong>Создайте страницу Facebook и привяжите к ней Instagram.</strong> На facebook.com: Меню → «Страницы» → «Создать». Затем откройте <strong>Meta Business Suite</strong> → Настройки → «Аккаунты Instagram» → подключите свою инсту и свяжите со страницей.</li>
           <li><strong>Нажмите «Подключить».</strong> Войдите в Facebook и на экране согласия <strong>обязательно отметьте свою Страницу и Instagram</strong> — не снимайте разрешения.</li>
         </ol>
+        <div class="autopost-help-foot"><button class="text-button" type="button" data-ig-help-close>Понятно</button></div>
       </div>
       <section class="panel autopost-composer">
         <header class="panel-header">
-          <div><span class="eyebrow">Новая публикация</span><h3 id="autopost-composer-title">Загрузить видео</h3></div>
+          <div><span class="eyebrow">Шаг 2</span><h3 id="autopost-composer-title">Видео и подпись</h3></div>
         </header>
-        <form id="autopost-form" class="autopost-form" data-mode="video">
+        <form id="autopost-form" class="autopost-form autopost-form-video" data-mode="video">
+          <div class="autopost-col-media">
           <label class="autopost-dropzone" id="autopost-dropzone">
             <video class="autopost-dropzone-video" id="autopost-dropzone-video" muted playsinline hidden></video>
             <span class="autopost-dropzone-empty" id="autopost-dropzone-empty"><span class="autopost-dropzone-icon">↥</span><strong>Перетащите видео сюда</strong><small>или нажмите, чтобы выбрать файл</small></span>
@@ -1850,8 +1871,8 @@
             <input type="file" name="video" accept="video/*" hidden required>
           </label>
           <div class="shorts-bar" id="shorts-bar" hidden>
-            <button type="button" class="button shorts-open-btn" id="shorts-open">✂ Обрезать / сделать вертикальным</button>
-            <span class="shorts-hint" id="shorts-hint" hidden>Видео горизонтальное — для Reels/Shorts сделайте его вертикальным</span>
+            <button type="button" class="button shorts-open-btn" id="shorts-open">Обрезать и сделать вертикальным</button>
+            <span class="shorts-hint" id="shorts-hint" hidden>Горизонтальное видео — для Shorts и Reels нужна вертикальная версия</span>
           </div>
           <div class="shorts-editor" id="shorts-editor" hidden>
             <div class="shorts-preview"><canvas id="shorts-canvas" width="270" height="480"></canvas></div>
@@ -1866,10 +1887,13 @@
               <div class="shorts-progress" id="shorts-progress" hidden><span class="shorts-progress-bar"><span id="shorts-progress-fill"></span></span><span id="shorts-progress-pct">Рендер… 0%</span></div>
             </div>
           </div>
-          <label class="field"><span>Название</span><input type="text" name="title" maxlength="120" placeholder="Название публикации" required></label>
-          <label class="field"><span>Подпись / описание</span><textarea name="caption" rows="3" placeholder="Текст под видео…"></textarea></label>
-          <label class="autopost-clip-toggle" id="autopost-clip-toggle" hidden><input type="checkbox" name="vk_clip"><span>В VK попробовать опубликовать как <strong>Клип</strong> — если API откажет, уйдёт обычным видео</span></label>
-          <div class="autopost-publish-row"><div class="autopost-platform-checks">${videoPills}</div><button class="button button-primary autopost-publish-btn" type="submit">Опубликовать</button></div>
+          </div>
+          <div class="autopost-col-meta">
+            <label class="field"><span>Название</span><input type="text" name="title" maxlength="120" placeholder="Название публикации" required></label>
+            <label class="field"><span>Подпись / описание</span><textarea name="caption" rows="4" placeholder="Текст под видео…"></textarea></label>
+            <button class="button button-primary autopost-publish-btn" type="submit" data-publish-btn>Опубликовать</button>
+            <p class="autopost-publish-note" data-publish-note></p>
+          </div>
         </form>
         <form id="autopost-text-form" class="autopost-form" data-mode="text" hidden>
           <label class="field"><span>Текст поста</span><textarea name="body" rows="6" placeholder="Текст поста для VK и Telegram…" required></textarea></label>
@@ -1882,12 +1906,17 @@
             <div class="autopost-attach-list" id="autopost-audio-list"></div>
             <small class="autopost-attach-note">В VK аудио отправится как файл-документ (ограничение API VK).</small>
           </div>
-          <div class="autopost-publish-row"><div class="autopost-platform-checks">${textPills}</div><button class="button button-primary autopost-publish-btn" type="submit">Опубликовать</button></div>
+          <div class="autopost-publish-row"><p class="autopost-publish-note" data-publish-note></p><button class="button button-primary autopost-publish-btn" type="submit" data-publish-btn>Опубликовать</button></div>
         </form>
       </section>
       <section class="panel autopost-history">
         <header class="panel-header"><div><span class="eyebrow">История</span><h3>Публикации</h3></div></header>
-        <div class="autopost-history-list">${historyRows}</div>
+        ${historyRows
+          ? `<div class="autopost-history-wrap"><table class="autopost-history-table">
+              <thead><tr><th>Публикация</th><th>Площадки</th><th></th></tr></thead>
+              <tbody>${historyRows}</tbody>
+            </table></div>`
+          : '<p class="track-workspace-empty">Публикаций пока нет.</p>'}
       </section>`;
 
     // Mode toggle lives in the workspace header, next to the "Автопостинг" title.
@@ -1899,7 +1928,8 @@
       const mode = btn.dataset.autopostMode;
       $$('[data-autopost-mode]', viewActions).forEach((b) => b.classList.toggle('is-active', b === btn));
       modeEls.forEach((el) => { el.hidden = el.dataset.mode !== mode; });
-      composerTitle.textContent = mode === 'text' ? 'Написать пост' : 'Загрузить видео';
+      composerTitle.textContent = mode === 'text' ? 'Текст и вложения' : 'Видео и подпись';
+      syncDests();
     }));
     bindTextComposer(container);
 
@@ -2049,21 +2079,91 @@
       });
     }
 
-    $$('[data-social-connect]', container).forEach((button) => button.addEventListener('click', () => {
-      const platform = button.dataset.socialConnect;
+    // Настройки открываются у своей строки — какую площадку нажал, ту и настраиваешь.
+    const closeDestPopovers = (except) => {
+      $$('.autopost-dest-pop', container).forEach((pop) => { if (pop !== except) pop.remove(); });
+      $$('[data-dest-settings]', container).forEach((btn) => {
+        if (!btn.parentElement.querySelector('.autopost-dest-pop')) btn.setAttribute('aria-expanded', 'false');
+      });
+    };
+    const connectPlatform = (platform) => {
       if (SOCIAL_TOKEN_PLATFORMS.includes(platform)) openTokenConnectDrawer(platform);
       else startSocialConnect(platform);
+    };
+    $$('[data-dest-settings]', container).forEach((button) => button.addEventListener('click', () => {
+      const platform = button.dataset.destSettings;
+      const row = button.closest('.autopost-dest');
+      const existing = row.querySelector('.autopost-dest-pop');
+      closeDestPopovers();
+      if (existing) return;
+
+      const info = connections[platform] || { connected: false };
+      const pop = document.createElement('div');
+      pop.className = 'autopost-dest-pop';
+      const igHelpLink = platform === 'instagram'
+        ? '<div class="autopost-dest-pop-row"><span>Нужен бизнес-аккаунт и страница Facebook</span><button class="text-button" data-pop-action="ig-help" type="button">что нужно</button></div>'
+        : '';
+
+      if (!info.connected) {
+        pop.innerHTML = `<strong>${SOCIAL_PLATFORM_LABEL[platform]}</strong>
+          ${igHelpLink}
+          <div class="autopost-dest-pop-actions">
+            <span></span>
+            <button class="text-button" data-pop-action="reconnect" type="button">Подключить</button>
+          </div>`;
+      } else {
+        const vkRows = platform === 'vk'
+          ? `<div class="autopost-dest-pop-row"><span>Загрузка видео</span><b class="is-ok">работает</b></div>
+             <div class="autopost-dest-pop-row"><span>Лента и текстовые посты</span>${info.has_community_token
+               ? '<button class="text-button" data-pop-action="vk-token" type="button">ключ добавлен · заменить</button>'
+               : '<button class="text-button is-warn" data-pop-action="vk-token" type="button">добавить ключ</button>'}</div>`
+          : '';
+        pop.innerHTML = `<strong>${escapeHTML(info.account_name || SOCIAL_PLATFORM_LABEL[platform])}</strong>
+          ${vkRows}${igHelpLink}
+          <div class="autopost-dest-pop-actions">
+            <button class="text-button" data-pop-action="reconnect" type="button">Переподключить</button>
+            <button class="text-button is-danger" data-pop-action="disconnect" type="button">Отключить</button>
+          </div>`;
+      }
+      row.appendChild(pop);
+      button.setAttribute('aria-expanded', 'true');
+      pop.addEventListener('click', (event) => {
+        const action = event.target.dataset?.popAction;
+        if (!action) return;
+        closeDestPopovers();
+        if (action === 'vk-token') openVkCommunityTokenDrawer();
+        else if (action === 'reconnect') connectPlatform(platform);
+        else if (action === 'disconnect') disconnectSocial(platform);
+        else if (action === 'ig-help') {
+          const help = $('#ig-help', container);
+          help.hidden = false;
+          help.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      });
     }));
-    $$('[data-social-disconnect]', container).forEach((button) => button.addEventListener('click', () => disconnectSocial(button.dataset.socialDisconnect)));
-    const vkCommunityBtn = $('[data-vk-community]', container);
-    if (vkCommunityBtn) vkCommunityBtn.addEventListener('click', openVkCommunityTokenDrawer);
-    const igHelpBtn = $('[data-ig-help]', container);
-    const igHelp = $('#ig-help', container);
-    if (igHelpBtn && igHelp) igHelpBtn.addEventListener('click', () => {
-      igHelp.hidden = !igHelp.hidden;
-      igHelpBtn.setAttribute('aria-expanded', String(!igHelp.hidden));
-      if (!igHelp.hidden) igHelp.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.autopost-dest')) closeDestPopovers();
     });
+
+    // Счётчик и подпись кнопки: видно, куда именно уйдёт публикация.
+    const destsCount = $('#autopost-dests-count', container);
+    const syncDests = () => {
+      const list = $('.autopost-dests:not([hidden])', container);
+      if (!list) return;
+      const boxes = $$('input[name="platforms"]', list);
+      const chosen = boxes.filter((box) => box.checked);
+      if (destsCount) destsCount.textContent = `Отмечено ${chosen.length} из ${boxes.length}`;
+      const names = chosen.map((box) => SOCIAL_PLATFORM_LABEL[box.value] || box.value);
+      $$('[data-publish-btn]', container).forEach((btn) => {
+        btn.textContent = chosen.length ? `Опубликовать в ${chosen.length} ${plural(chosen.length, 'площадку', 'площадки', 'площадок')}` : 'Опубликовать';
+      });
+      $$('[data-publish-note]', container).forEach((note) => { note.textContent = names.join(', '); });
+    };
+    $$('.autopost-dests input[name="platforms"]', container).forEach((box) => box.addEventListener('change', syncDests));
+    syncDests();
+
+    const igHelpClose = $('[data-ig-help-close]', container);
+    if (igHelpClose) igHelpClose.addEventListener('click', () => { $('#ig-help', container).hidden = true; });
     $$('[data-retry-post]', container).forEach((button) => button.addEventListener('click', () => retrySocialPost(button.dataset.retryPost)));
     form.addEventListener('submit', uploadSocialPost);
     } catch (error) {
@@ -2079,7 +2179,8 @@
     const button = $('button[type="submit"]', form);
     const data = new FormData(form);
     const file = data.get('video');
-    const platforms = data.getAll('platforms');
+    // Площадки живут в списке «Куда публикуем», а не внутри формы.
+    const platforms = selectedPlatforms();
     if (!(file instanceof File) || !file.size) return toast('Выберите видеофайл.', 'error');
     if (file.size > SOCIAL_MAX_UPLOAD_BYTES) return toast(`Видео ${formatSize(file.size)} — превышает лимит 2 ГБ.`, 'error');
     if (!platforms.length) return toast('Выберите хотя бы одну площадку.', 'error');
@@ -2110,7 +2211,7 @@
       if (insertError) throw insertError;
 
       form.reset();
-      await publishSocialPost(post.id, platforms, { vk_clip: data.get('vk_clip') === 'on' });
+      await publishSocialPost(post.id, platforms, { vk_clip: !!$('.autopost-dests:not([hidden]) input[name="vk_clip"]:checked') });
     } catch (error) {
       toast(error.message || 'Не удалось загрузить видео.', 'error');
     } finally {
@@ -2176,7 +2277,7 @@
     const form = event.currentTarget;
     const button = $('button[type="submit"]', form);
     const body = $('textarea[name="body"]', form).value.trim();
-    const platforms = $$('input[name="platforms"]:checked', form).map((el) => el.value);
+    const platforms = selectedPlatforms();
     const files = [...attachments.image.map((file) => ({ file, type: 'image' })), ...attachments.audio.map((file) => ({ file, type: 'audio' }))];
     if (!body && !files.length) return toast('Введите текст или прикрепите файл.', 'error');
     if (!platforms.length) return toast('Выберите хотя бы одну площадку.', 'error');
