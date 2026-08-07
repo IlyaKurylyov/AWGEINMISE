@@ -295,24 +295,41 @@
     (state.tasks || []).filter((task) => !task.is_done && task.due_at).forEach((task) => {
       const left = daysUntil(task.due_at);
       if (left < 0) {
-        items.push({ level: 'crit', title: 'Задача просрочена', detail: task.title, when: `${Math.abs(left)} ${plural(Math.abs(left), 'день', 'дня', 'дней')}`, action: 'К задаче', view: 'tasks', sort: left });
+        items.push({ key: `overdue:${task.id}`, level: 'crit', title: 'Задача просрочена', detail: task.title, when: `${Math.abs(left)} ${plural(Math.abs(left), 'день', 'дня', 'дней')}`, action: 'К задаче', view: 'tasks', sort: left });
       } else if (left === 0) {
-        items.push({ level: 'ok', title: 'Пора браться', detail: task.title, when: 'сегодня', action: 'Начать', view: 'tasks', sort: 0.5 });
+        items.push({ key: `due:${task.id}`, level: 'ok', title: 'Пора браться', detail: task.title, when: 'сегодня', action: 'Начать', view: 'tasks', sort: 0.5 });
       } else if (left <= 3) {
-        items.push({ level: 'soon', title: 'Срок задачи близко', detail: task.title, when: `через ${left} ${plural(left, 'день', 'дня', 'дней')}`, action: 'К задаче', view: 'tasks', sort: left });
+        items.push({ key: `soon:${task.id}:${left}`, level: 'soon', title: 'Срок задачи близко', detail: task.title, when: `через ${left} ${plural(left, 'день', 'дня', 'дней')}`, action: 'К задаче', view: 'tasks', sort: left });
       }
     });
     (state.projects || []).filter((project) => project.release_at && project.status === 'scheduled').forEach((project) => {
       const left = daysUntil(project.release_at);
       if (left >= 0 && left <= 7) {
-        items.push({ level: left <= 2 ? 'soon' : 'ok', title: 'Скоро релиз', detail: project.title || 'Без названия', when: left === 0 ? 'сегодня' : `через ${left} ${plural(left, 'день', 'дня', 'дней')}`, action: 'К релизу', view: 'track', id: project.id, sort: left });
+        items.push({ key: `release:${project.id}:${left}`, level: left <= 2 ? 'soon' : 'ok', title: 'Скоро релиз', detail: project.title || 'Без названия', when: left === 0 ? 'сегодня' : `через ${left} ${plural(left, 'день', 'дня', 'дней')}`, action: 'К релизу', view: 'track', id: project.id, sort: left });
       }
     });
     (state.secretaryFailures || []).forEach((row) => {
-      items.push({ level: 'crit', title: `${SOCIAL_PLATFORM_LABEL[row.platform] || row.platform}: публикация не прошла`, detail: socialErrorHint(row.platform, row.error_message || 'без деталей'), when: formatDate(row.created_at), action: 'К автопостингу', view: 'autopost', sort: -100 });
+      items.push({ key: `fail:${row.platform}:${row.created_at}`, level: 'crit', title: `${SOCIAL_PLATFORM_LABEL[row.platform] || row.platform}: публикация не прошла`, detail: socialErrorHint(row.platform, row.error_message || 'без деталей'), when: formatDate(row.created_at), action: 'К автопостингу', view: 'autopost', sort: -100 });
     });
     return items.sort((a, b) => a.sort - b.sort);
   }
+
+  // Цифра на вкладке — индикатор непросмотренного, а не просто счётчик:
+  // ключи увиденных пунктов запоминаем локально.
+  const SEEN_KEY = 'inmise-secretary-seen';
+  const seenKeys = () => {
+    try { return new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || '[]')); } catch { return new Set(); }
+  };
+  const markSeen = (items) => {
+    const seen = seenKeys();
+    items.forEach((item) => seen.add(item.key));
+    // Держим список коротким: старые ключи исчезают вместе с поводом.
+    try { localStorage.setItem(SEEN_KEY, JSON.stringify(Array.from(seen).slice(-200))); } catch { /* приватный режим */ }
+  };
+  const unseenCount = (items) => {
+    const seen = seenKeys();
+    return items.filter((item) => !seen.has(item.key)).length;
+  };
 
   function secretaryAttentionMarkup() {
     const items = secretaryAttention();
@@ -356,20 +373,26 @@
     const tg = channels.find((row) => row.kind === 'telegram');
     const rule = (type, kind) => rules.find((row) => row.event_type === type && row.channel_kind === kind) || { enabled: false, timing: 'default' };
 
-    const channelCard = (kind, icon, name, row, hint) => `<div class="secretary-chan ${row?.verified ? 'is-on' : ''}">
+    const channelCard = (kind, icon, name, row, hint) => `<div class="secretary-chan secretary-chan-${kind} ${row?.verified ? 'is-on' : ''}">
       <span class="secretary-chan-ic" aria-hidden="true">${icon}</span>
-      <div><b>${name}</b><small>${row?.verified ? `${escapeHTML(row.address)} · подключён` : hint}</small></div>
+      <b>${name}</b>
+      <small>${row?.verified ? `${escapeHTML(row.address)} · подключён` : hint}</small>
       <div class="secretary-chan-actions">
-        ${row?.verified ? `<button class="text-button" type="button" data-notify-test="${kind}">Проверить</button>` : ''}
         <button class="text-button" type="button" data-notify-setup="${kind}">${row?.verified ? 'изменить' : 'подключить'}</button>
+        ${row?.verified ? `<button class="text-button" type="button" data-notify-test="${kind}">Проверить</button>` : ''}
       </div>
     </div>`;
 
-    return `<section class="panel">
-      <header class="panel-header"><div><span class="eyebrow">Шаг 1</span><h3>Куда присылать</h3></div></header>
-      ${channelCard('email', '@', 'Почта', mail, 'письма о задачах и релизах')}
-      ${channelCard('telegram', 'TG', 'Telegram', tg, 'в личку через вашего бота из автопостинга')}
-      <header class="panel-header secretary-subhead"><div><span class="eyebrow">Шаг 2</span><h3>О чём предупреждать</h3></div></header>
+    return `<section class="panel secretary-notify">
+      <div class="secretary-zone secretary-zone-channels">
+        <div class="secretary-zone-head" data-step="1"><span class="eyebrow">Куда присылать</span><h3>Каналы</h3></div>
+        <div class="secretary-chans">
+          ${channelCard('email', '@', 'Почта', mail, 'письма о задачах и релизах')}
+          ${channelCard('telegram', 'TG', 'Telegram', tg, 'в личку через вашего бота из автопостинга')}
+        </div>
+      </div>
+      <div class="secretary-zone">
+        <div class="secretary-zone-head" data-step="2"><span class="eyebrow">О чём предупреждать</span><h3>Правила</h3></div>
       <div class="secretary-log-wrap">
         <table class="secretary-matrix">
           <thead><tr><th>Событие</th><th class="secretary-mx-ch">Почта</th><th class="secretary-mx-ch">Telegram</th><th>Когда</th></tr></thead>
@@ -389,7 +412,8 @@
           </tbody>
         </table>
       </div>
-      ${mail?.verified || tg?.verified ? '' : '<p class="secretary-note">Сначала подключите хотя бы один канал — до этого галочки недоступны.</p>'}
+      ${mail?.verified || tg?.verified ? '' : '<p class="secretary-note">Сначала подключите канал — до этого галочки недоступны.</p>'}
+      </div>
     </section>`;
   }
 
@@ -461,10 +485,10 @@
   function updateSecretaryBadge() {
     const badge = $('#nav-secretary-count');
     if (!badge) return;
-    const urgent = secretaryAttention().filter((item) => item.level === 'crit').length;
-    badge.textContent = urgent;
-    badge.hidden = !urgent;
-    badge.classList.toggle('is-alert', !!urgent);
+    const unseen = unseenCount(secretaryAttention());
+    badge.textContent = unseen;
+    badge.hidden = !unseen;
+    badge.classList.toggle('is-alert', !!unseen);
   }
 
   async function renderSecretary() {
@@ -488,11 +512,19 @@
       state.secretaryLoaded = true;
     }
 
-    const counts = { now: secretaryAttention().length, log: (state.secretaryEvents || []).length };
+    const attention = secretaryAttention();
+    const counts = { now: unseenCount(attention), log: (state.secretaryEvents || []).length };
     tabsHost.innerHTML = SECRETARY_TABS.map(([key, label]) => `<button type="button" role="tab" aria-selected="${key === active}" data-secretary-tab="${key}">${label}${counts[key] ? `<span class="secretary-tab-count ${key === 'now' ? 'is-alert' : ''}">${counts[key]}</span>` : ''}</button>`).join('');
     panel.innerHTML = active === 'log' ? secretaryLogMarkup()
       : active === 'notify' ? secretaryNotifyMarkup()
       : secretaryAttentionMarkup();
+
+    // Открыли вкладку — значит просмотрели: гасим цифру и здесь, и в сайдбаре.
+    if (active === 'now' && attention.length) {
+      markSeen(attention);
+      $$('.secretary-tab-count.is-alert', tabsHost).forEach((el) => el.remove());
+      updateSecretaryBadge();
+    }
 
     $$('[data-secretary-tab]', tabsHost).forEach((button) => button.addEventListener('click', () => {
       state.secretaryTab = button.dataset.secretaryTab;

@@ -1628,22 +1628,54 @@ html[data-theme="light"] .notes-toolbar-btn:hover {
   .secretary-item-when, .secretary-item-go { grid-column: 2; justify-self: start; }
 }
 .nav-item > b.is-alert { border-color: #6d3b34; color: var(--red); }
-.secretary-subhead { border-top: 1px solid var(--line); }
-.secretary-chan { display: grid; grid-template-columns: 40px minmax(0,1fr) auto; gap: 14px; align-items: center; border-top: 1px solid var(--line); padding: 15px 18px; }
-.secretary-chan-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 9px; color: var(--muted); font: 700 15px 'IBM Plex Mono', monospace; box-shadow: inset 0 0 0 1px var(--line-hi); }
-.secretary-chan.is-on .secretary-chan-ic { color: var(--green); box-shadow: inset 0 0 0 1px currentColor; }
-.secretary-chan b { display: block; font-weight: 400; font-size: 16px; }
-.secretary-chan small { display: block; color: var(--muted); font-size: 14px; }
-.secretary-chan.is-on small { color: var(--green); }
-.secretary-chan-actions { display: flex; gap: 14px; align-items: center; }
 .secretary-chan-actions .text-button { font-size: 15px; }
 .secretary-matrix { width: 100%; border-collapse: collapse; }
-.secretary-matrix th, .secretary-matrix td { padding: 13px 18px; border-top: 1px solid var(--line); text-align: left; }
-.secretary-matrix thead th { color: var(--muted); font: 400 13px 'IBM Plex Mono', monospace; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
 .secretary-mx-ch { width: 110px; text-align: center !important; }
 .secretary-mx-ch input { width: 18px; height: 18px; margin: 0; accent-color: var(--green); }
 .secretary-mx-ev strong { display: block; font-weight: 400; font-size: 16px; }
 .secretary-mx-ev small { color: var(--muted); font-size: 14px; }
 .secretary-mx-fixed { color: var(--muted); font-size: 14px; }
 .secretary-matrix select { border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; font-size: 14px; padding: 5px 8px; }
-.secretary-note { margin: 0; border-top: 1px solid var(--line); padding: 14px 18px; color: var(--amber); font-size: 15px; }
+
+/* Зоны в «Уведомлениях» разделены поверхностью и крупной цифрой шага,
+   а не линиями: линии тут только зашумляют. */
+.secretary-notify { padding: 0; }
+.secretary-zone { padding: 20px 22px 24px; }
+.secretary-zone-channels { background: rgba(255,255,255,.022); }
+.secretary-zone-head { position: relative; padding-left: 62px; margin-bottom: 16px; }
+.secretary-zone-head::before {
+  content: attr(data-step);
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  font: 500 54px 'Oswald', sans-serif; line-height: 1;
+  color: transparent; -webkit-text-stroke: 1px var(--line-hi); opacity: .8;
+}
+.secretary-zone-head h3 { margin: 2px 0 0; font: 500 22px 'Oswald', sans-serif; letter-spacing: .03em; }
+.secretary-chans { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; }
+.secretary-chan {
+  display: grid; grid-template-columns: 44px minmax(0,1fr); grid-template-areas: 'ic name' 'ic hint' 'act act';
+  gap: 3px 14px; padding: 16px; background: var(--panel-2);
+  box-shadow: inset 0 0 0 1px var(--line), inset 3px 0 var(--line-hi);
+}
+.secretary-chan-ic { grid-area: ic; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; color: var(--muted); font: 700 16px 'IBM Plex Mono', monospace; background: rgba(255,255,255,.03); }
+.secretary-chan b { grid-area: name; align-self: end; font-weight: 400; font-size: 17px; }
+.secretary-chan small { grid-area: hint; align-self: start; color: var(--muted); font-size: 14px; }
+.secretary-chan-actions { grid-area: act; display: flex; gap: 18px; margin-top: 12px; }
+.secretary-chan-actions .text-button { font-size: 15px; }
+.secretary-chan-email { box-shadow: inset 0 0 0 1px var(--line), inset 3px 0 #8a6aa8; }
+.secretary-chan-telegram { box-shadow: inset 0 0 0 1px var(--line), inset 3px 0 #2ca5e0; }
+.secretary-chan-email .secretary-chan-ic { color: #b48ad4; }
+.secretary-chan-telegram .secretary-chan-ic { color: #4fb6e6; }
+.secretary-chan.is-on b::after { content: ' ✓'; color: var(--green); }
+.secretary-chan.is-on small { color: var(--green); }
+.secretary-matrix th, .secretary-matrix td { padding: 14px 16px; text-align: left; }
+.secretary-matrix thead th { color: var(--muted); font: 400 13px 'IBM Plex Mono', monospace; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+/* Полосы вместо линий: строки чередуются, колонки каналов подсвечены. */
+.secretary-matrix tbody tr:nth-child(odd) { background: rgba(255,255,255,.028); }
+.secretary-matrix th.secretary-mx-ch, .secretary-matrix td.secretary-mx-ch { background: rgba(112,238,121,.045); }
+.secretary-matrix tbody tr:first-child td:first-child { border-radius: 0; }
+.secretary-note { margin: 14px 0 0; padding: 12px 16px; background: rgba(213,154,77,.1); color: var(--amber); font-size: 15px; }
+html[data-theme="light"] .secretary-zone-channels { background: rgba(73,82,71,.04); }
+html[data-theme="light"] .secretary-matrix tbody tr:nth-child(odd) { background: rgba(73,82,71,.045); }
+html[data-theme="light"] .secretary-matrix th.secretary-mx-ch, html[data-theme="light"] .secretary-matrix td.secretary-mx-ch { background: rgba(35,139,53,.07); }
+html[data-theme="light"] .secretary-chan-ic { background: rgba(73,82,71,.05); }
+html[data-theme="light"] .secretary-note { background: rgba(169,111,36,.12); }
