@@ -1193,6 +1193,45 @@
     }
   }
 
+  // Хранить чужие мастера и стемы нам не по карману, поэтому предлагаем
+  // держать файлы в облаке, а здесь — ссылки. Загрузка всё равно доступна.
+  function showMaterialsHint(initialProjectId = '') {
+    const host = document.createElement('div');
+    host.className = 'materials-hint';
+    host.innerHTML = `<div class="materials-hint-backdrop" data-hint-close></div>
+      <div class="materials-hint-card" role="dialog" aria-label="О хранении материалов">
+        <button class="icon-button materials-hint-x" type="button" data-hint-close aria-label="Закрыть">×</button>
+        <div class="cassette-stage" aria-hidden="true">
+          <div class="cassette-orbit"><div class="cassette-hold">
+            <svg class="cassette" viewBox="0 0 64 52" role="img">
+              <g class="cassette-arm cassette-arm-l"><rect x="1" y="20" width="9" height="4" rx="2"/></g>
+              <g class="cassette-arm cassette-arm-r"><rect x="54" y="20" width="9" height="4" rx="2"/></g>
+              <g class="cassette-leg cassette-leg-l"><rect x="20" y="36" width="4" height="13" rx="2"/><rect x="17" y="47" width="10" height="4" rx="2"/></g>
+              <g class="cassette-leg cassette-leg-r"><rect x="40" y="36" width="4" height="13" rx="2"/><rect x="37" y="47" width="10" height="4" rx="2"/></g>
+              <rect class="cassette-body" x="8" y="6" width="48" height="33" rx="4"/>
+              <rect class="cassette-window" x="14" y="12" width="36" height="15" rx="2"/>
+              <circle class="cassette-reel" cx="23" cy="19.5" r="4.2"/>
+              <circle class="cassette-reel cassette-reel-b" cx="41" cy="19.5" r="4.2"/>
+              <circle class="cassette-eye" cx="24" cy="33" r="1.7"/>
+              <circle class="cassette-eye" cx="40" cy="33" r="1.7"/>
+              <path class="cassette-smile" d="M27 35.5 q5 3.5 10 0"/>
+            </svg>
+          </div></div>
+        </div>
+        <h3>Мы ещё только начинающий лейбл</h3>
+        <p>Без больших системных мощностей, поэтому не можем хранить все ваши материалы здесь. Но вы можете добавить их на Яндекс Диск или ещё куда-нибудь, а ссылки разместить здесь — обещаем никогда их не потерять.</p>
+        <div class="materials-hint-actions">
+          <button class="button button-primary" type="button" data-hint-links>Добавить ссылку</button>
+          <button class="text-button" type="button" data-hint-upload>Всё равно загрузить файл</button>
+        </div>
+      </div>`;
+    document.body.appendChild(host);
+    const close = () => host.remove();
+    $$('[data-hint-close]', host).forEach((element) => element.addEventListener('click', close));
+    $('[data-hint-links]', host).addEventListener('click', () => { close(); goView('links'); openLinkEditor(); });
+    $('[data-hint-upload]', host).addEventListener('click', () => { close(); openFileUploader(initialProjectId); });
+  }
+
   function openFileUploader(initialProjectId = '') {
     if (!state.projects.length) return toast('Сначала создайте проект трека.', 'error');
     const projectOptions = state.projects.map((project) => `<option value="${project.id}" ${project.id === initialProjectId ? 'selected' : ''}>${escapeHTML(project.title)}</option>`).join('');
@@ -1661,7 +1700,7 @@
       $$('[data-track-task-check]', container).forEach((input) => input.addEventListener('change', () => toggleTask(input.dataset.trackTaskCheck, input.checked)));
       bindTaskButtons($('#track-tasks-list', container));
       $('#track-add-task').addEventListener('click', () => openTaskEditor('idea', project.id));
-      $('#track-add-file').addEventListener('click', () => openFileUploader(project.id));
+      $('#track-add-file').addEventListener('click', () => showMaterialsHint(project.id));
       // Если текст у трека уже есть, кнопка открывает его, а не пустую форму.
       $('#track-add-lyrics').addEventListener('click', () => openLyricsDrawer(linkedLyrics[0]?.id || null, project.id));
       $('#track-lyrics-draft')?.addEventListener('input', (event) => setLyricsDraft(project.id, event.target.value));
