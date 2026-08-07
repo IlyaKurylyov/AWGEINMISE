@@ -222,7 +222,12 @@
     }
   }
 
+  // Если в шторке что-то напечатали и не сохранили, закрытие спрашивает.
+  let drawerDirty = false;
+  const markDrawerDirty = () => { drawerDirty = true; };
+
   function openDrawer(code, title, content) {
+    drawerDirty = false;
     $('#drawer-code').textContent = code;
     $('#drawer-title').textContent = title;
     $('#drawer-body').innerHTML = content;
@@ -231,7 +236,9 @@
     document.body.style.overflow = 'hidden';
   }
 
-  function closeDrawer() {
+  function closeDrawer(force = false) {
+    if (drawerDirty && !force && !confirm('Изменения не сохранены. Закрыть и потерять их?')) return;
+    drawerDirty = false;
     $('#drawer').hidden = true;
     $('#drawer-backdrop').hidden = true;
     $('#drawer-body').innerHTML = '';
@@ -280,6 +287,7 @@
     { type: 'task_due', title: 'Пора браться за задачу', hint: 'наступил запланированный день', timing: [['default', 'в день задачи']] },
     { type: 'task_overdue', title: 'Задача просрочена', hint: 'срок прошёл, задача открыта', timing: [['daily', 'каждый день'], ['once', 'один раз']] },
     { type: 'publish_failed', title: 'Публикация не прошла', hint: 'площадка вернула ошибку', timing: [['default', 'сразу']] },
+    { type: 'tasks_unplanned', title: 'Задачи без сроков', hint: 'висят без даты и тонут', timing: [['weekly', 'раз в неделю']] },
   ];
   const EVENT_KIND_LABEL = {
     release: 'релиз', task: 'задача', publication: 'публикация',
@@ -524,6 +532,7 @@
       markSeen(attention);
       $$('.secretary-tab-count.is-alert', tabsHost).forEach((el) => el.remove());
       updateSecretaryBadge();
+    renderUnplannedNotice();
     }
 
     $$('[data-secretary-tab]', tabsHost).forEach((button) => button.addEventListener('click', () => {
@@ -1514,7 +1523,11 @@
         <button data-open-task="${task.id}" type="button"><strong>${escapeHTML(task.title)}</strong><small>${task.due_at ? formatDate(task.due_at, { year: undefined }) : 'без даты'} · ${TASK_WORKFLOW[taskWorkflow(task)]}</small></button>
       </article>`).join('') : '<p class="track-workspace-empty">Задач пока нет.</p>';
     const fileRows = linkedFiles.length ? linkedFiles.map((file) => `<button class="track-workspace-list-row" data-download-file="${file.id}" type="button"><span>${escapeHTML(file.original_name)}</span><small>${escapeHTML(file.file_kind)} · ${formatFileSize(file.size_bytes)}</small></button>`).join('') : '<p class="track-workspace-empty">Файлов пока нет.</p>';
-    const lyricRows = linkedLyrics.length ? linkedLyrics.map((doc) => `<article class="track-lyrics-inline" data-track-lyrics-inline="${doc.id}"><textarea data-inline-lyrics-body="${doc.id}" placeholder="Слова, строки, идеи…">${escapeHTML(doc.body || '')}</textarea><footer><button class="text-button" data-project-lyrics="${doc.id}" type="button">Открыть полностью</button><button class="button button-primary" data-save-inline-lyrics="${doc.id}" type="button">Сохранить</button></footer></article>`).join('') : '<p class="track-workspace-empty">Текст ещё не привязан.</p>';
+    // Пустое поле сразу пишущее: черновик хранится локально и подхватится,
+    // когда текст создадут — так «Добавить» не обязательно нажимать первым.
+    const lyricRows = linkedLyrics.length
+      ? linkedLyrics.map((doc) => `<article class="track-lyrics-inline" data-track-lyrics-inline="${doc.id}"><textarea data-inline-lyrics-body="${doc.id}" placeholder="Слова, строки, идеи…">${escapeHTML(doc.body || '')}</textarea><footer><button class="text-button" data-project-lyrics="${doc.id}" type="button">Открыть полностью</button><button class="button button-primary" data-save-inline-lyrics="${doc.id}" type="button">Сохранить</button></footer></article>`).join('')
+      : `<article class="track-lyrics-inline"><textarea id="track-lyrics-draft" placeholder="Слова, строки, идеи… Текст создастся при сохранении.">${escapeHTML(lyricsDraft(id))}</textarea><footer><button class="button button-primary" id="track-lyrics-draft-save" type="button">Сохранить текст</button></footer></article>`;
     const container = $('#track-workspace');
     container.innerHTML = `
       <div class="track-workspace-toolbar">
@@ -1649,7 +1662,10 @@
       bindTaskButtons($('#track-tasks-list', container));
       $('#track-add-task').addEventListener('click', () => openTaskEditor('idea', project.id));
       $('#track-add-file').addEventListener('click', () => openFileUploader(project.id));
-      $('#track-add-lyrics').addEventListener('click', () => openLyricsDrawer(null, project.id));
+      // Если текст у трека уже есть, кнопка открывает его, а не пустую форму.
+      $('#track-add-lyrics').addEventListener('click', () => openLyricsDrawer(linkedLyrics[0]?.id || null, project.id));
+      $('#track-lyrics-draft')?.addEventListener('input', (event) => setLyricsDraft(project.id, event.target.value));
+      $('#track-lyrics-draft-save')?.addEventListener('click', () => openLyricsDrawer(null, project.id));
       $('#delete-project')?.addEventListener('click', () => deleteProject(project));
 
       const dirtyLyrics = new Set();
@@ -1841,6 +1857,7 @@
       goView('track');
       const url = new URL(location.href); url.searchParams.set('section', 'track'); url.searchParams.set('project', saved.id); history.replaceState({}, '', `${url.pathname}${url.search}`);
       toast('Проект обновлён.');
+      offerTaskDates(saved.id);
     } catch (error) { toast(error.message || 'Не удалось сохранить проект.', 'error'); }
     finally { setBusy(submit, false); }
   }
@@ -1934,13 +1951,94 @@
     return `${count} ${word}`;
   }
 
+  // Черновик текста до создания документа: живёт локально, привязан к треку.
+  const LYRICS_DRAFT_KEY = 'inmise-lyrics-draft';
+  const lyricsDrafts = () => {
+    try { return JSON.parse(localStorage.getItem(LYRICS_DRAFT_KEY) || '{}'); } catch { return {}; }
+  };
+  const lyricsDraft = (projectId) => (projectId ? (lyricsDrafts()[projectId] || '') : '');
+  const setLyricsDraft = (projectId, value) => {
+    if (!projectId) return;
+    const drafts = lyricsDrafts();
+    if (value.trim()) drafts[projectId] = value; else delete drafts[projectId];
+    try { localStorage.setItem(LYRICS_DRAFT_KEY, JSON.stringify(drafts)); } catch { /* приватный режим */ }
+  };
+  const clearLyricsDraft = (projectId) => setLyricsDraft(projectId, '');
+
+  const unplannedTasks = (projectId = null) => (state.tasks || []).filter((task) => !task.is_done && !task.due_at && (!projectId || task.project_id === projectId));
+
+  // После сохранения трека предлагаем сроки его задачам: без дат они не попадают
+  // ни в календарь, ни в напоминания.
+  function offerTaskDates(projectId) {
+    const pending = unplannedTasks(projectId);
+    if (!pending.length) return;
+    openDrawer('TRACK / ПЛАН', 'Сроки задач', `<form id="task-dates-form">
+      <p class="drawer-note">У этих задач нет даты, поэтому в календаре их не видно. Поставьте сроки — хотя бы примерные, потом поправите.</p>
+      ${pending.map((task) => `<label class="field"><span>${escapeHTML(task.title)}</span><input type="date" name="due:${task.id}"></label>`).join('')}
+      <div class="drawer-actions">
+        <button class="text-button" id="task-dates-skip" type="button">Позже</button>
+        <button class="button button-primary" type="submit">Сохранить сроки</button>
+      </div>
+    </form>`);
+    $('#task-dates-skip').addEventListener('click', () => {
+      closeDrawer(true);
+      toast('Хорошо. Секретарь напомнит о задачах без сроков.');
+    });
+    $('#task-dates-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = $('button[type="submit"]', event.currentTarget);
+      const data = new FormData(event.currentTarget);
+      const updates = [];
+      pending.forEach((task) => {
+        const value = String(data.get(`due:${task.id}`) || '');
+        if (value) updates.push({ id: task.id, due_at: new Date(`${value}T12:00`).toISOString() });
+      });
+      if (!updates.length) return toast('Ни одной даты не выбрано.', 'error');
+      setBusy(button, true, 'Сохраняем…');
+      try {
+        for (const update of updates) {
+          const { error } = await db.from('project_tasks').update({ due_at: update.due_at }).eq('id', update.id).eq('artist_id', state.artist.id);
+          if (error) throw error;
+        }
+        state.tasks = await safeQuery(db.from('project_tasks').select('*').eq('artist_id', state.artist.id).order('is_done').order('sort_order').order('due_at'));
+        closeDrawer(true);
+        toast(`Сроки расставлены: ${updates.length}.`);
+        renderCalendar(); renderTasksView(); renderDashboard();
+      } catch (error) { toast(error.message || 'Не удалось сохранить сроки.', 'error'); }
+      finally { setBusy(button, false); }
+    });
+  }
+
+  // Ненавязчивая полоска на дашборде: не модалка и не тост, закрывается на день.
+  function renderUnplannedNotice() {
+    const host = $('#dashboard-notice');
+    if (!host) return;
+    const pending = unplannedTasks();
+    const hiddenUntil = localStorage.getItem('inmise-unplanned-hidden') || '';
+    const todayKey = new Date().toISOString().slice(0, 10);
+    if (!pending.length || hiddenUntil === todayKey) { host.hidden = true; host.innerHTML = ''; return; }
+    host.hidden = false;
+    host.innerHTML = `<span>У вас ${pending.length} ${plural(pending.length, 'задача', 'задачи', 'задач')} без срока — в календаре их не видно.</span>
+      <span class="dashboard-notice-actions">
+        <button class="text-button" data-notice-plan type="button">Расставить</button>
+        <button class="text-button" data-notice-hide type="button" aria-label="Скрыть до завтра">×</button>
+      </span>`;
+    $('[data-notice-plan]', host).addEventListener('click', () => offerTaskDates(null));
+    $('[data-notice-hide]', host).addEventListener('click', () => {
+      try { localStorage.setItem('inmise-unplanned-hidden', todayKey); } catch { /* приватный режим */ }
+      host.hidden = true;
+    });
+  }
+
   function openLyricsDrawer(id = null, initialProjectId = '') {
     const doc = state.lyrics.find((item) => item.id === id) || null;
+    // Новый текст открываем уже с тем, что успели напечатать в панели трека.
+    const draftBody = doc ? '' : lyricsDraft(initialProjectId);
     const selectedProjectId = doc?.project_id || initialProjectId;
     const projectOptions = ['<option value="">Не привязан к треку</option>', ...state.projects.map((project) => `<option value="${project.id}" ${selectedProjectId === project.id ? 'selected' : ''}>${escapeHTML(project.title)}</option>`)].join('');
     const selectedCategory = doc?.category || 'В работе';
     const categoryOptions = lyricsCategories().map((category) => `<option value="${escapeHTML(category)}" ${selectedCategory === category ? 'selected' : ''}>${escapeHTML(category)}</option>`).join('');
-    openDrawer('TEXT / LYRICS', doc ? 'Редактирование текста' : 'Новый текст', `<form id="lyrics-drawer-form"><div class="form-grid two"><label class="field"><span>Название</span><input name="title" value="${escapeHTML(doc?.title || '')}" required></label><label class="field"><span>Статус</span><select name="document_status"><option value="draft" ${doc?.document_status === 'draft' ? 'selected' : ''}>Черновик</option><option value="ready" ${doc?.document_status === 'ready' ? 'selected' : ''}>Готов</option><option value="archived" ${doc?.document_status === 'archived' ? 'selected' : ''}>Архив</option></select></label></div><div class="form-grid two"><label class="field"><span>Трек</span><select name="project_id">${projectOptions}</select></label><label class="field"><span>Категория</span><select name="category">${categoryOptions}<option value="__custom__">+ Своя категория…</option></select></label></div><label class="field lyrics-custom-category" id="lyrics-drawer-custom-category" hidden><span>Название своей категории</span><input name="custom_category" maxlength="40" placeholder="Например: Второй альбом"></label><label class="field"><span>Текст</span><textarea class="lyrics-body lyrics-body-autogrow" name="body" placeholder="Начните писать…">${escapeHTML(doc?.body || '')}</textarea></label><div class="drawer-actions">${doc ? '<button class="button button-danger" id="delete-lyrics-drawer" type="button">Удалить</button>' : '<span></span>'}<button class="button button-primary" type="submit">Сохранить текст</button></div></form>`);
+    openDrawer('TEXT / LYRICS', doc ? 'Редактирование текста' : 'Новый текст', `<form id="lyrics-drawer-form"><div class="form-grid two"><label class="field"><span>Название</span><input name="title" value="${escapeHTML(doc?.title || '')}" required></label><label class="field"><span>Статус</span><select name="document_status"><option value="draft" ${doc?.document_status === 'draft' ? 'selected' : ''}>Черновик</option><option value="ready" ${doc?.document_status === 'ready' ? 'selected' : ''}>Готов</option><option value="archived" ${doc?.document_status === 'archived' ? 'selected' : ''}>Архив</option></select></label></div><div class="form-grid two"><label class="field"><span>Трек</span><select name="project_id">${projectOptions}</select></label><label class="field"><span>Категория</span><select name="category">${categoryOptions}<option value="__custom__">+ Своя категория…</option></select></label></div><label class="field lyrics-custom-category" id="lyrics-drawer-custom-category" hidden><span>Название своей категории</span><input name="custom_category" maxlength="40" placeholder="Например: Второй альбом"></label><label class="field"><span>Текст</span><textarea class="lyrics-body lyrics-body-autogrow" name="body" placeholder="Начните писать…">${escapeHTML(doc?.body || draftBody)}</textarea></label><div class="drawer-actions">${doc ? '<button class="button button-danger" id="delete-lyrics-drawer" type="button">Удалить</button>' : '<span></span>'}<button class="button button-primary" type="submit">Сохранить текст</button></div></form>`);
     const categorySelect = $('[name="category"]', $('#lyrics-drawer-form'));
     const customCategory = $('#lyrics-drawer-custom-category');
     categorySelect.addEventListener('change', () => {
@@ -1968,6 +2066,8 @@
       const query = doc ? db.from('lyrics_documents').update(payload).eq('id', doc.id).eq('artist_id', state.artist.id) : db.from('lyrics_documents').insert(payload);
       const { error } = await query; if (error) throw error;
       state.lyrics = await safeQuery(db.from('lyrics_documents').select('*').eq('artist_id', state.artist.id).order('updated_at', { ascending: false }));
+      if (payload.project_id) clearLyricsDraft(payload.project_id);
+      drawerDirty = false;
       closeDrawer();
       toast('Текст сохранён.');
       if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
@@ -3185,7 +3285,10 @@
     $$('.nav-item').forEach((button) => button.addEventListener('click', () => goView(button.dataset.view)));
     $$('[data-go-view]').forEach((button) => button.addEventListener('click', () => goView(button.dataset.goView)));
     $('#mobile-menu').addEventListener('click', () => $('#sidebar').classList.toggle('is-open'));
-    $('#drawer-close').addEventListener('click', closeDrawer); $('#drawer-backdrop').addEventListener('click', closeDrawer);
+    $('#drawer-body').addEventListener('input', markDrawerDirty);
+    // Отправка формы — намерение сохранить, значит предупреждать больше не о чем.
+    $('#drawer-body').addEventListener('submit', () => { drawerDirty = false; });
+    $('#drawer-close').addEventListener('click', () => closeDrawer()); $('#drawer-backdrop').addEventListener('click', () => closeDrawer());
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeDrawer(); });
     $('#dashboard-wheel-trigger').addEventListener('click', openWheel);
     $('#wheel-modal-close').addEventListener('click', closeWheel);

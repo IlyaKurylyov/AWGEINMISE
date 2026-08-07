@@ -701,11 +701,11 @@ html[data-theme="light"] .pipeline-board .pipeline-column.is-dragover, html[data
 .track-workspace-list-row small { flex: none; color: #687268; font-size: 12px; }
 .track-workspace-empty { margin: 0; padding: 24px 18px; color: #596359; font-size: 14px; }
 .track-workspace-empty.large { padding: 45px 18px; text-align: center; }
-.track-lyrics-inline { flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: minmax(180px, 1fr) auto; gap: 8px; margin: 8px 8px 8px 0; padding: 0; background: transparent; }
+.track-lyrics-inline { flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: minmax(220px, auto) auto; gap: 8px; margin: 8px 8px 8px 0; padding: 0; background: transparent; }
 .track-lyrics-inline header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .track-lyrics-inline strong { overflow: hidden; color: #d9e1d3; text-overflow: ellipsis; white-space: nowrap; font: 500 17px 'IBM Plex Mono', monospace; }
 .track-lyrics-inline small { flex: none; color: #768176; font-size: 12px; }
-.track-lyrics-inline textarea { width: 100%; min-height: 0; height: 100%; resize: none; border: 1px solid #2e382e; padding: 10px; color: #cfd8cb; background: #080b08; outline: 0; font: 500 15px/1.45 'IBM Plex Mono', monospace; }
+.track-lyrics-inline textarea { width: 100%; min-height: 220px; height: auto; resize: vertical; border: 1px solid #2e382e; padding: 12px; color: #cfd8cb; background: #080b08; outline: 0; font: 500 16px/1.5 'IBM Plex Mono', monospace; }
 .track-lyrics-inline textarea:focus { border-color: var(--green); box-shadow: 0 0 14px rgba(112,238,121,.08); }
 .track-lyrics-inline footer { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .track-lyrics-inline .button { min-height: 34px; padding: 0 12px; font-size: 12px; }
@@ -1679,3 +1679,12 @@ html[data-theme="light"] .secretary-matrix tbody tr:nth-child(odd) { background:
 html[data-theme="light"] .secretary-matrix th.secretary-mx-ch, html[data-theme="light"] .secretary-matrix td.secretary-mx-ch { background: rgba(35,139,53,.07); }
 html[data-theme="light"] .secretary-chan-ic { background: rgba(73,82,71,.05); }
 html[data-theme="light"] .secretary-note { background: rgba(169,111,36,.12); }
+
+/* Текст в шторке тоже тянется руками, а не только автоматически. */
+.lyrics-body, .lyrics-body-autogrow { resize: vertical; min-height: 220px; }
+/* Полоска о незапланированных задачах: заметная, но не перехватывает внимание. */
+.dashboard-notice { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; padding: 11px 16px; background: rgba(213,154,77,.1); color: var(--amber); font-size: 15px; }
+.dashboard-notice-actions { display: flex; align-items: center; gap: 16px; }
+.dashboard-notice .text-button { color: var(--amber); font-size: 15px; text-decoration: underline; text-underline-offset: 3px; }
+.dashboard-notice .text-button:hover { color: var(--text); }
+html[data-theme="light"] .dashboard-notice { background: rgba(169,111,36,.12); }

@@ -17,6 +17,7 @@ const EVENT_TITLES: Record<string, string> = {
   task_overdue: "Задача просрочена",
   publish_failed: "Публикация не прошла",
   weekly_digest: "Сводка за неделю",
+  tasks_unplanned: "Задачи без сроков",
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -83,6 +84,18 @@ async function collectDue(admin: any, artistId: string, rules: any[]) {
           due.push({ type: "release_soon", key: `${project.id}:${lead}`, line: `«${project.title || "Без названия"}» выходит ${left === 0 ? "сегодня" : `через ${left} дн.`}` });
         }
       }
+    }
+  }
+
+  // Задачи без дат напоминают о себе раз в неделю, одним сообщением на все.
+  if (enabled("tasks_unplanned").length) {
+    const { data: unplanned } = await admin.from("project_tasks")
+      .select("id").eq("artist_id", artistId).eq("is_done", false).is("due_at", null);
+    const count = (unplanned || []).length;
+    if (count) {
+      const now = new Date();
+      const week = `${now.getUTCFullYear()}-w${Math.ceil(((now.getTime() - Date.UTC(now.getUTCFullYear(), 0, 1)) / 86400000 + 1) / 7)}`;
+      due.push({ type: "tasks_unplanned", key: week, line: `Без даты висит задач: ${count}. Поставьте сроки, иначе они утонут.` });
     }
   }
 
