@@ -1288,6 +1288,18 @@
     $('[data-hint-links]', host).addEventListener('click', () => { close(); openMaterialLinkDrawer(initialProjectId); });
   }
 
+  async function deleteMaterialLink(fileId) {
+    const file = (state.files || []).find((item) => item.id === fileId);
+    if (!file) return;
+    if (!confirm(`Удалить ссылку «${file.original_name}»? Файл в вашем облаке останется.`)) return;
+    const { error } = await db.from('project_files').delete().eq('id', fileId).eq('artist_id', state.artist.id);
+    if (error) return toast(error.message || 'Не удалось удалить ссылку.', 'error');
+    state.files = state.files.filter((item) => item.id !== fileId);
+    toast('Ссылка удалена.');
+    logEvent('file', 'Удалена ссылка на материал', file.original_name || '', { view: 'track', id: file.project_id });
+    if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
+  }
+
   function openMaterialLinkDrawer(projectId) {
     openDrawer('TRACK / МАТЕРИАЛЫ', 'Ссылка на материал', `<form id="material-link-form">
       <label class="field"><span>Что это</span><input name="title" placeholder="Мастер, стемы, обложка…" required></label>
@@ -1659,7 +1671,7 @@
       </article>`).join('') : '<p class="track-workspace-empty">Задач пока нет.</p>';
     const fileRows = linkedFiles.length
       ? linkedFiles.map((file) => (file.link_url
-        ? `<a class="track-workspace-list-row is-link" href="${escapeHTML(file.link_url)}" target="_blank" rel="noopener"><span>${escapeHTML(file.original_name)}</span><small>${escapeHTML(file.file_kind)} · внешняя ссылка</small></a>`
+        ? `<div class="track-material-row"><a class="track-workspace-list-row is-link" href="${escapeHTML(file.link_url)}" target="_blank" rel="noopener"><span>${escapeHTML(file.original_name)}</span><small>${escapeHTML(file.file_kind)} · внешняя ссылка</small></a><button class="track-material-del" data-delete-file="${file.id}" type="button" aria-label="Удалить ссылку «${escapeHTML(file.original_name)}»" title="Удалить">×</button></div>`
         : `<button class="track-workspace-list-row" data-download-file="${file.id}" type="button"><span>${escapeHTML(file.original_name)}</span><small>${escapeHTML(file.file_kind)} · ${formatFileSize(file.size_bytes)}</small></button>`)).join('')
       : '<p class="track-workspace-empty">Файлов пока нет.</p>';
     // Пустое поле сразу пишущее: черновик хранится локально и подхватится,
@@ -1800,7 +1812,12 @@
       $$('[data-track-task-check]', container).forEach((input) => input.addEventListener('change', () => toggleTask(input.dataset.trackTaskCheck, input.checked)));
       bindTaskButtons($('#track-tasks-list', container));
       $('#track-add-task').addEventListener('click', () => openTaskEditor('idea', project.id));
-      $('#track-add-file').addEventListener('click', () => showMaterialsHint(project.id));
+      // Объяснять про хранение нужно один раз: если ссылки уже есть, сразу форма.
+      $('#track-add-file').addEventListener('click', () => {
+        if (linkedFiles.some((file) => file.link_url)) openMaterialLinkDrawer(project.id);
+        else showMaterialsHint(project.id);
+      });
+      $$('[data-delete-file]', container).forEach((button) => button.addEventListener('click', () => deleteMaterialLink(button.dataset.deleteFile)));
       // Если текст у трека уже есть, кнопка открывает его, а не пустую форму.
       $('#track-add-lyrics').addEventListener('click', () => openLyricsDrawer(linkedLyrics[0]?.id || null, project.id));
       $('#track-lyrics-draft')?.addEventListener('input', (event) => setLyricsDraft(project.id, event.target.value));

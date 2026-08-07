@@ -1733,3 +1733,9 @@ html[data-theme="light"] .cassette-arm rect, html[data-theme="light"] .cassette-
 html[data-theme="light"] .text-button { color: #2f6b39; }
 .track-workspace-list-row.is-link { text-decoration: none; }
 .track-workspace-list-row.is-link small::after { content: ' ↗'; }
+/* Ссылка на материал: сама строка открывает, крестик удаляет. */
+.track-material-row { display: flex; align-items: stretch; gap: 3px; }
+.track-material-row + .track-material-row, .track-material-row + .track-workspace-list-row, .track-workspace-list-row + .track-material-row { margin-top: 3px; }
+.track-material-row .track-workspace-list-row { flex: 1; min-width: 0; }
+.track-material-del { flex: none; width: 44px; border: 0; color: #7f8a7c; background: rgba(255,255,255,.018); font-size: 20px; line-height: 1; cursor: pointer; }
+.track-material-del:hover, .track-material-del:focus-visible { color: var(--red); background: rgba(212,85,73,.1); outline: none; }
