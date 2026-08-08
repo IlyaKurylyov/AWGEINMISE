@@ -1365,6 +1365,7 @@
         <option value="master">Мастер</option>
         <option value="demo">Демо</option>
         <option value="stem">Стемы</option>
+        <option value="video">Видео</option>
         <option value="cover">Обложка</option>
         <option value="document">Документы</option>
         <option value="other" selected>Другое</option>
@@ -1785,7 +1786,7 @@
           </section>
 
           <section class="panel track-workspace-files">
-            <header class="panel-header"><div><span class="eyebrow">Необязательно</span><h3>Материалы проекта</h3><p>Обложки, документы и финальные версии. Аудио загружать не требуется.</p></div>${project ? '<button class="text-button" id="track-add-file" type="button">+ Файл</button>' : ''}</header>
+            <header class="panel-header"><div><span class="eyebrow">Необязательно</span><h3>Материалы проекта</h3><p>Обложки, документы, стемы, видео, аудио и всё, всё, всё</p></div>${project ? '<button class="text-button" id="track-add-file" type="button">+ Файл</button>' : ''}</header>
             <div class="track-workspace-list">${project ? fileRows : '<p class="track-workspace-empty">Сначала сохраните трек.</p>'}</div>
           </section>
 
