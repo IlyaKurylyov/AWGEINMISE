@@ -141,6 +141,7 @@
     beatTab: 'private',
     secretaryTab: 'now',
     secretaryFilter: 'all',
+    secretaryProjectFilter: 'all',
     secretaryEvents: [],
     secretaryFailures: [],
     secretaryLoaded: false,
@@ -372,19 +373,44 @@
 
   function secretaryLogMarkup() {
     const filter = state.secretaryFilter || 'all';
+    const projectFilter = state.secretaryProjectFilter || 'all';
     const all = state.secretaryEvents || [];
-    const rows = filter === 'all' ? all : all.filter((row) => row.kind === filter);
+    const rows = all
+      .filter((row) => filter === 'all' || row.kind === filter)
+      .filter((row) => projectFilter === 'all'
+        || (projectFilter === 'none' ? !row.project_id : row.project_id === projectFilter));
+
     const kinds = ['all', ...Array.from(new Set(all.map((row) => row.kind)))];
     const filters = kinds.map((kind) => `<button type="button" data-secretary-filter="${kind}" aria-pressed="${filter === kind}">${kind === 'all' ? 'Всё' : EVENT_KIND_LABEL[kind] || kind}</button>`).join('');
+
+    // Фильтр по релизам показываем только здесь — на других вкладках он не нужен.
+    const usedProjects = Array.from(new Set(all.map((row) => row.project_id).filter(Boolean)));
+    const projectOptions = ['<option value="all">Все релизы</option>',
+      ...usedProjects.map((pid) => `<option value="${pid}" ${projectFilter === pid ? 'selected' : ''}>${escapeHTML(projectById(pid)?.title || 'Удалённый релиз')}</option>`),
+      `<option value="none" ${projectFilter === 'none' ? 'selected' : ''}>Без релиза</option>`].join('');
+
     const body = rows.length
-      ? `<div class="secretary-log-wrap"><table class="secretary-log"><tbody>${rows.map((row) => `<tr>
-          <td class="secretary-log-ts">${formatDate(row.created_at)}</td>
-          <td><span class="secretary-log-kind">${EVENT_KIND_LABEL[row.kind] || row.kind}</span></td>
-          <td class="secretary-log-obj"><strong>${escapeHTML(row.title)}</strong>${row.detail ? `<small>${escapeHTML(row.detail)}</small>` : ''}</td>
-        </tr>`).join('')}</tbody></table></div>`
-      : '<p class="track-workspace-empty">Событий пока нет — журнал заполняется по мере работы в кабинете.</p>';
+      ? `<div class="secretary-log-wrap"><table class="secretary-log"><tbody>${rows.map((row) => {
+          const project = row.project_id ? projectById(row.project_id) : null;
+          const release = row.project_id
+            ? `<em class="secretary-log-release">${escapeHTML(project?.title || 'Удалённый релиз')}</em>`
+            : '<em class="secretary-log-release is-none">не связано с релизом</em>';
+          return `<tr>
+            <td class="secretary-log-ts">${formatDate(row.created_at)}</td>
+            <td><span class="secretary-log-kind">${EVENT_KIND_LABEL[row.kind] || row.kind}</span></td>
+            <td class="secretary-log-obj"><strong>${escapeHTML(row.title)}</strong>${row.detail ? `<small>${escapeHTML(row.detail)}</small>` : ''}${release}</td>
+          </tr>`;
+        }).join('')}</tbody></table></div>`
+      : '<p class="track-workspace-empty">Под эти фильтры событий нет.</p>';
+
     return `<section class="panel">
-      <header class="panel-header"><div><span class="eyebrow">Журнал</span><h3>История всего</h3></div><div class="secretary-filters">${filters}</div></header>
+      <header class="panel-header">
+        <div><span class="eyebrow">Журнал</span><h3>История всего</h3></div>
+        <div class="secretary-log-filters">
+          <div class="secretary-filters">${filters}</div>
+          <label class="secretary-release-filter"><span>Релиз</span><select data-secretary-project>${projectOptions}</select></label>
+        </div>
+      </header>
       ${body}
     </section>`;
   }
@@ -558,6 +584,10 @@
       state.secretaryFilter = button.dataset.secretaryFilter;
       renderSecretary();
     }));
+    $('[data-secretary-project]', panel)?.addEventListener('change', (event) => {
+      state.secretaryProjectFilter = event.target.value;
+      renderSecretary();
+    });
     $$('[data-notify-rule]', panel).forEach((box) => box.addEventListener('change', () => {
       const [type, kind] = box.dataset.notifyRule.split(':');
       saveNotifyRule(type, kind, box.checked);
@@ -1152,7 +1182,7 @@
       renderDashboard(); renderTasksView(); renderCalendar();
       if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
       closeDrawer(); toast(task ? 'Задача обновлена.' : 'Задача добавлена.');
-      logEvent('task', task ? 'Задача изменена' : 'Создана задача', payload.title, { view: 'tasks' });
+      logEvent('task', task ? 'Задача изменена' : 'Создана задача', payload.title, { view: 'tasks', project: payload.project_id });
     } catch (error) { toast(error.message || 'Не удалось сохранить задачу.', 'error'); }
     finally { setBusy(button, false); }
   }
@@ -1173,7 +1203,7 @@
     if (error) return toast(error.message || 'Не удалось обновить этап трека.', 'error');
     project.status = target;
     toast(`«${project.title || 'Трек'}» → ${PROJECT_STATUS[target]}`);
-    logEvent('release', `Этап: ${PROJECT_STATUS[target]}`, project.title || '', { view: 'track', id: project.id });
+    logEvent('release', `Этап: ${PROJECT_STATUS[target]}`, project.title || '', { view: 'track', id: project.id, project: project.id });
     if (target === 'scheduled' && !project.release_at) offerReleaseDate(project);
   }
 
@@ -1222,7 +1252,7 @@
     try {
       const { error } = await db.from('project_tasks').update({ is_done: isDone, workflow_status: workflowStatus }).eq('id', id).eq('artist_id', state.artist.id);
       if (error) throw error;
-      logEvent('task', isDone ? 'Задача закрыта' : 'Задача снова открыта', task?.title || '', { view: 'tasks', id });
+      logEvent('task', isDone ? 'Задача закрыта' : 'Задача снова открыта', task?.title || '', { view: 'tasks', id, project: task?.project_id });
       if (isDone && task?.project_id) await advanceProjectStage(task);
       renderDashboard(); renderTasksView(); renderCalendar();
       if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
@@ -1323,7 +1353,7 @@
     if (error) return toast(error.message || 'Не удалось удалить ссылку.', 'error');
     state.files = state.files.filter((item) => item.id !== fileId);
     toast('Ссылка удалена.');
-    logEvent('file', 'Удалена ссылка на материал', file.original_name || '', { view: 'track', id: file.project_id });
+    logEvent('file', 'Удалена ссылка на материал', file.original_name || '', { view: 'track', id: file.project_id, project: file.project_id });
     if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
   }
 
@@ -1360,7 +1390,7 @@
         state.files = await safeQuery(db.from('project_files').select('*').eq('artist_id', state.artist.id).order('created_at', { ascending: false }));
         closeDrawer(true);
         toast('Ссылка добавлена в материалы.');
-        logEvent('file', 'Добавлена ссылка на материал', String(data.get('title') || ''), { view: 'track', id: projectId });
+        logEvent('file', 'Добавлена ссылка на материал', String(data.get('title') || ''), { view: 'track', id: projectId, project: projectId });
         if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
       } catch (error) { toast(error.message || 'Не удалось добавить ссылку.', 'error'); }
       finally { setBusy(button, false); }
@@ -1618,7 +1648,7 @@
     state.projects = [saved, ...state.projects];
     state.tasks = await safeQuery(db.from('project_tasks').select('*').eq('artist_id', state.artist.id).order('is_done').order('sort_order').order('due_at'));
     state.freshDraftProjectId = saved.id;
-    logEvent('release', 'Создан релиз', saved.title || 'Без названия', { view: 'track', id: saved.id });
+    logEvent('release', 'Создан релиз', saved.title || 'Без названия', { view: 'track', id: saved.id, project: saved.id });
     return saved.id;
   }
 
@@ -2286,6 +2316,7 @@
         detail: String(detail || ''),
         target_view: target.view || null,
         target_id: target.id || null,
+        project_id: target.project || null,
       });
       state.secretaryLoaded = false;
     } catch (error) {

@@ -1745,3 +1745,10 @@ html[data-theme="light"] .text-button { color: #2f6b39; }
 .track-material-row .track-workspace-list-row { flex: 1; min-width: 0; }
 .track-material-del { flex: none; width: 44px; border: 0; color: #7f8a7c; background: rgba(255,255,255,.018); font-size: 20px; line-height: 1; cursor: pointer; }
 .track-material-del:hover, .track-material-del:focus-visible { color: var(--red); background: rgba(212,85,73,.1); outline: none; }
+/* Журнал: к какому релизу относится событие и фильтр по релизам. */
+.secretary-log-filters { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
+.secretary-release-filter { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
+.secretary-release-filter select { border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; font-size: 14px; letter-spacing: 0; text-transform: none; padding: 6px 9px; max-width: 220px; }
+.secretary-log-release { display: block; margin-top: 3px; color: #7fa5c8; font-size: 14px; font-style: normal; }
+.secretary-log-release.is-none { color: var(--muted); opacity: .75; }
+html[data-theme="light"] .secretary-log-release { color: #3f6d94; }
