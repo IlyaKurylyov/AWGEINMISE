@@ -143,6 +143,7 @@
     secretaryFilter: 'all',
     secretaryProjectFilter: 'all',
     secretaryPrefs: null,
+    stages: [],
     secretaryEvents: [],
     secretaryFailures: [],
     secretaryLoaded: false,
@@ -714,8 +715,9 @@
       safeQuery(db.from('release_events').select('*').eq('artist_id', artistId).order('starts_at')),
       safeQuery(db.from('project_files').select('*').eq('artist_id', artistId).order('created_at', { ascending: false })),
       safeQuery(db.from('project_tasks').select('*').eq('artist_id', artistId).order('is_done').order('sort_order').order('due_at')),
+      safeQuery(db.from('release_stages').select('*').eq('artist_id', artistId).order('sort_order')),
     ]);
-    const keys = ['beats', 'projects', 'lyrics', 'links', 'events', 'files', 'tasks'];
+    const keys = ['beats', 'projects', 'lyrics', 'links', 'events', 'files', 'tasks', 'stages'];
     results.forEach((result, index) => {
       if (result.status === 'fulfilled') state[keys[index]] = result.value;
       else {
@@ -846,10 +848,235 @@
     renderDashboardProjectSelect();
     renderDashboardCalendar();
     renderDashboardTasks(dashboardTasks, selectedProject);
-    renderDashboardProjectFocus(selectedProject);
-    renderDashboardPipeline();
-    renderDashboardFiles();
     renderDashboardSearchResults();
+    renderRollout();
+  }
+
+  // Шаблон роллаута: смещения в днях от дня выхода. Профессиональный план
+  // считается назад от даты релиза, поэтому здесь отрицательные числа.
+  const ROLLOUT_TEMPLATES = {
+    single: { label: 'Сингл · 5 недель', stages: [
+      { day: -35, title: 'Права и фиты', repeat: 'once' },
+      { day: -28, title: 'Дистрибуция и питч', repeat: 'once' },
+      { day: -21, title: 'Обложка и сведение', repeat: 'once' },
+      { day: -14, title: 'Пресейв и тизеры', repeat: 'every_2_days' },
+      { day: 0, title: 'День Х — во все площадки', repeat: 'once' },
+      { day: 7, title: 'Реакции', repeat: 'once' },
+      { day: 31, title: 'Итоги', repeat: 'once' },
+    ] },
+    ep: { label: 'EP · 8 недель', stages: [
+      { day: -56, title: 'Права и фиты', repeat: 'once' },
+      { day: -42, title: 'Дистрибуция и питч', repeat: 'once' },
+      { day: -28, title: 'Обложки и сведение', repeat: 'once' },
+      { day: -21, title: 'Лид-сингл', repeat: 'once' },
+      { day: -14, title: 'Пресейв и тизеры', repeat: 'every_2_days' },
+      { day: 0, title: 'День Х — во все площадки', repeat: 'once' },
+      { day: 7, title: 'Реакции', repeat: 'once' },
+      { day: 31, title: 'Итоги', repeat: 'once' },
+    ] },
+  };
+  const REPEAT_LABEL = { once: 'один раз', every_2_days: 'раз в 2 дня до дня Х', weekly: 'раз в неделю' };
+  const shortDate = (value) => new Date(value).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  const isoDate = (value) => new Date(value).toISOString().slice(0, 10);
+  const addDays = (value, days) => { const d = new Date(value); d.setDate(d.getDate() + days); return d; };
+
+  async function generateRollout(project, templateKey = 'single') {
+    if (!project || !project.release_at) return toast('Сначала задайте дату релиза.', 'error');
+    const template = ROLLOUT_TEMPLATES[templateKey] || ROLLOUT_TEMPLATES.single;
+    await db.from('release_stages').delete().eq('project_id', project.id).eq('artist_id', state.artist.id);
+    const rows = template.stages.map((stage, index) => ({
+      artist_id: state.artist.id,
+      project_id: project.id,
+      title: stage.title,
+      stage_date: isoDate(addDays(project.release_at, stage.day)),
+      day_offset: stage.day,
+      repeat_rule: stage.repeat,
+      sort_order: index,
+    }));
+    const { error } = await db.from('release_stages').insert(rows);
+    if (error) return toast(error.message || 'Не удалось собрать план.', 'error');
+    state.stages = await safeQuery(db.from('release_stages').select('*').eq('artist_id', state.artist.id).order('sort_order'));
+    toast('План собран: ' + rows.length + ' этапов.');
+    logEvent('release', 'Собран план выпуска', project.title || '', { view: 'dashboard', project: project.id });
+    renderRollout();
+  }
+
+  // Релиз для пути: выбранный в фокусе, иначе ближайший по дате выхода.
+  function rolloutProject() {
+    const selected = selectedDashboardProject();
+    if (selected) return selected;
+    const dated = state.projects
+      .filter((project) => project.release_at && project.status !== 'archived')
+      .sort((a, b) => new Date(a.release_at) - new Date(b.release_at));
+    return dated[0] || null;
+  }
+
+  function renderRollout() {
+    const host = $('#dashboard-rollout');
+    if (!host) return;
+    const project = rolloutProject();
+    const undated = state.projects.filter((item) => !item.release_at && !['released', 'archived'].includes(item.status));
+    const depot = undated.length
+      ? '<div class="rollout-depot">' + undated.map((item) => '<div class="rollout-depot-row">'
+        + '<div><strong>' + escapeHTML(item.title || 'Без названия') + '</strong><small>даты нет — путь не считается</small></div>'
+        + '<button class="text-button" type="button" data-rollout-setdate="' + item.id + '">Поставить дату</button>'
+        + '</div>').join('') + '</div>'
+      : '';
+
+    if (!project || !project.release_at) {
+      host.innerHTML = '<header class="panel-header"><div><span class="eyebrow">План выпуска</span><h3>Путь релиза</h3></div>'
+        + '<button class="text-button" id="dashboard-new-project" type="button">+ Проект</button></header>'
+        + '<p class="track-workspace-empty">Ни у одного релиза нет даты выхода. Поставьте дату — путь построится сам.</p>' + depot;
+      bindRollout(host, project);
+      return;
+    }
+
+    const stages = (state.stages || []).filter((stage) => stage.project_id === project.id).sort((a, b) => a.sort_order - b.sort_order);
+    if (!stages.length) {
+      host.innerHTML = '<header class="panel-header"><div><span class="eyebrow">План выпуска</span><h3>' + escapeHTML(project.title || 'Без названия') + '</h3></div>'
+        + '<button class="text-button" id="dashboard-new-project" type="button">+ Проект</button></header>'
+        + '<div class="rollout-empty"><p>Плана выпуска ещё нет. Соберём его назад от ' + shortDate(project.release_at)
+        + ': права, дистрибуция, сведение, тизеры, день Х.</p><div class="rollout-empty-actions">'
+        + '<select class="rollout-template" aria-label="Шаблон плана">'
+        + Object.keys(ROLLOUT_TEMPLATES).map((key) => '<option value="' + key + '">' + ROLLOUT_TEMPLATES[key].label + '</option>').join('')
+        + '</select><button class="button button-primary" type="button" data-rollout-build>Собрать план</button></div></div>' + depot;
+      bindRollout(host, project);
+      return;
+    }
+
+    // Ось строим от крайних дат, включая сегодня, чтобы всё уместилось.
+    const times = stages.map((stage) => dayStart(stage.stage_date).getTime());
+    const today = dayStart(new Date()).getTime();
+    const from = Math.min.apply(null, times.concat([today]));
+    const to = Math.max.apply(null, times.concat([today]));
+    const span = Math.max(1, to - from);
+    const pct = (time) => ((time - from) / span) * 100;
+    const releaseTime = dayStart(project.release_at).getTime();
+    const left = daysUntil(project.release_at);
+
+    const nodes = stages.map((stage) => {
+      const time = dayStart(stage.stage_date).getTime();
+      const isRelease = stage.day_offset === 0;
+      const missed = !stage.is_done && !isRelease && time < today;
+      const cls = stage.is_done ? 'is-done' : (missed ? 'is-missed' : (isRelease ? 'is-release' : ''));
+      return '<button class="rollout-node ' + cls + '" type="button" style="left:' + pct(time) + '%" data-stage="' + stage.id + '">'
+        + '<i></i><em><b>' + escapeHTML(stage.title) + '</b><span>' + shortDate(stage.stage_date) + (missed ? ' · пропущено' : '') + '</span></em>'
+        + '</button>';
+    }).join('');
+
+    // Серия повторов рисуется периодом — видно, сколько она длится.
+    const series = stages.filter((stage) => stage.repeat_rule !== 'once')[0];
+    const band = series && releaseTime > dayStart(series.stage_date).getTime()
+      ? '<span class="rollout-band" style="left:' + pct(dayStart(series.stage_date).getTime()) + '%; width:'
+        + (pct(releaseTime) - pct(dayStart(series.stage_date).getTime())) + '%"><span>'
+        + escapeHTML(series.title) + ' · ' + REPEAT_LABEL[series.repeat_rule] + '</span></span>'
+      : '';
+
+    const doneCount = stages.filter((stage) => stage.is_done).length;
+    const missedList = stages.filter((stage) => !stage.is_done && stage.day_offset !== 0 && dayStart(stage.stage_date).getTime() < today);
+
+    host.innerHTML = '<header class="panel-header">'
+      + '<div><span class="eyebrow">Путь релиза</span><h3>' + escapeHTML(project.title || 'Без названия') + '</h3></div>'
+      + '<div class="rollout-head-actions"><span class="rollout-progress">' + doneCount + ' из ' + stages.length + '</span>'
+      + '<button class="text-button" type="button" data-rollout-add>+ Этап</button>'
+      + '<button class="text-button" type="button" data-rollout-rebuild>пересобрать</button></div></header>'
+      + '<div class="rollout-stage-wrap"><div class="rollout-path">'
+      + '<span class="rollout-rail"><i style="width:' + pct(Math.min(today, to)) + '%"></i></span>'
+      + band + nodes
+      + '<span class="rollout-today" style="left:' + pct(today) + '%"><b>сегодня · ' + shortDate(new Date()) + '</b></span>'
+      + '</div></div>'
+      + '<div class="rollout-foot"><div class="rollout-count"><b>' + Math.abs(left) + '</b><span>'
+      + (left >= 0 ? plural(Math.abs(left), 'день', 'дня', 'дней') + ' до выхода' : plural(Math.abs(left), 'день', 'дня', 'дней') + ' назад вышел')
+      + '</span></div><div class="rollout-foot-main"><strong>' + escapeHTML(project.title || 'Без названия') + '</strong>'
+      + '<small>' + shortDate(project.release_at) + ' · этап «' + (PROJECT_STATUS[project.status] || project.status) + '»</small></div>'
+      + '<button class="button button-primary" type="button" data-rollout-open>Открыть трек</button></div>'
+      + (missedList.length ? '<div class="rollout-chips">' + missedList.map((stage) => '<span class="rollout-chip is-missed">✕ ' + escapeHTML(stage.title) + '</span>').join('') + '</div>' : '')
+      + depot;
+    bindRollout(host, project);
+  }
+
+  function bindRollout(host, project) {
+    const newProject = $('#dashboard-new-project', host);
+    if (newProject) newProject.addEventListener('click', () => openProjectEditor());
+    const open = $('[data-rollout-open]', host);
+    if (open) open.addEventListener('click', () => openProjectEditor(project.id, 'idea', 'dashboard'));
+    const build = $('[data-rollout-build]', host);
+    if (build) build.addEventListener('click', () => {
+      const select = $('.rollout-template', host);
+      generateRollout(project, select ? select.value : 'single');
+    });
+    const rebuild = $('[data-rollout-rebuild]', host);
+    if (rebuild) rebuild.addEventListener('click', () => {
+      if (confirm('Пересобрать план заново? Ручные правки этапов будут потеряны.')) generateRollout(project, 'single');
+    });
+    const add = $('[data-rollout-add]', host);
+    if (add) add.addEventListener('click', () => openStageEditor(null, project));
+    $$('[data-rollout-setdate]', host).forEach((button) => button.addEventListener('click', () => {
+      const target = projectById(button.dataset.rolloutSetdate);
+      if (target) offerReleaseDate(target);
+    }));
+    $$('[data-stage]', host).forEach((button) => button.addEventListener('click', () => {
+      const stage = (state.stages || []).filter((row) => row.id === button.dataset.stage)[0];
+      if (stage) openStageEditor(stage, project);
+    }));
+  }
+
+  // Правка этапа: название, дата, повтор, отметки.
+  function openStageEditor(stage, project) {
+    const isNew = !stage;
+    openDrawer('РЕЛИЗ / ЭТАП', isNew ? 'Новый этап' : 'Этап пути', '<form id="stage-form">'
+      + '<label class="field"><span>Название</span><input name="title" value="' + escapeHTML(stage ? stage.title : '') + '" placeholder="Что нужно сделать" required></label>'
+      + '<label class="field"><span>Дата</span><input name="stage_date" type="date" value="' + ((stage && stage.stage_date) || isoDate(new Date())) + '" required></label>'
+      + '<label class="field"><span>Повтор</span><select name="repeat_rule">'
+      + Object.keys(REPEAT_LABEL).map((key) => '<option value="' + key + '"' + (stage && stage.repeat_rule === key ? ' selected' : '') + '>' + REPEAT_LABEL[key] + '</option>').join('')
+      + '</select></label>'
+      + '<label class="field"><span>Отметки</span><span class="stage-flags">'
+      + '<label><input type="checkbox" name="is_done"' + (stage && stage.is_done ? ' checked' : '') + '> сделано</label>'
+      + '<label><input type="checkbox" name="is_pinned"' + (stage && stage.is_pinned ? ' checked' : '') + '> не сдвигать при переносе дня Х</label>'
+      + '</span></label>'
+      + '<div class="drawer-actions">' + (isNew ? '<span></span>' : '<button class="button button-danger" type="button" id="stage-delete">Удалить</button>')
+      + '<button class="button button-primary" type="submit">Сохранить</button></div></form>');
+
+    const del = $('#stage-delete');
+    if (del) del.addEventListener('click', async () => {
+      const { error } = await db.from('release_stages').delete().eq('id', stage.id).eq('artist_id', state.artist.id);
+      if (error) return toast(error.message || 'Не удалось удалить этап.', 'error');
+      state.stages = (state.stages || []).filter((row) => row.id !== stage.id);
+      closeDrawer(true);
+      toast('Этап удалён.');
+      renderRollout();
+    });
+
+    $('#stage-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = $('button[type="submit"]', event.currentTarget);
+      const data = new FormData(event.currentTarget);
+      const stageDate = String(data.get('stage_date'));
+      const payload = {
+        artist_id: state.artist.id,
+        project_id: project.id,
+        title: String(data.get('title') || '').trim(),
+        stage_date: stageDate,
+        day_offset: Math.round((dayStart(stageDate) - dayStart(project.release_at)) / 86400000),
+        repeat_rule: String(data.get('repeat_rule') || 'once'),
+        is_done: data.get('is_done') === 'on',
+        is_pinned: data.get('is_pinned') === 'on',
+        sort_order: stage ? stage.sort_order : (state.stages || []).length,
+      };
+      setBusy(button, true, 'Сохраняем…');
+      try {
+        const query = stage
+          ? db.from('release_stages').update(payload).eq('id', stage.id).eq('artist_id', state.artist.id)
+          : db.from('release_stages').insert(payload);
+        const { error } = await query;
+        if (error) throw error;
+        state.stages = await safeQuery(db.from('release_stages').select('*').eq('artist_id', state.artist.id).order('sort_order'));
+        closeDrawer(true);
+        toast(stage ? 'Этап обновлён.' : 'Этап добавлен.');
+        renderRollout();
+      } catch (error) { toast(error.message || 'Не удалось сохранить этап.', 'error'); }
+      finally { setBusy(button, false); }
+    });
   }
 
   function projectById(id) {
@@ -915,38 +1142,6 @@
     $$('[data-dashboard-task-check]', container).forEach((input) => input.addEventListener('change', () => toggleTask(input.dataset.dashboardTaskCheck, input.checked)));
     bindTaskButtons(container);
     bindTaskDragSources(container);
-  }
-
-  function renderDashboardPipeline() {
-    const statuses = ['idea', 'demo', 'mix', 'scheduled', 'released'];
-    const query = state.dashboardSearch.toLowerCase();
-    const selectedProject = selectedDashboardProject();
-    const container = $('#dashboard-pipeline');
-    container.innerHTML = statuses.map((status) => {
-      const projects = state.projects.filter((project) => project.status === status && (!selectedProject || project.id === selectedProject.id) && (!query || project.title.toLowerCase().includes(query)));
-      return `<section class="pipeline-column" data-project-dropzone="${status}"><header><span>${PROJECT_STATUS[status]}</span><b>${projects.length}</b></header><div>${projects.map((project) => `<button class="pipeline-card" data-open-project="${project.id}" data-project-drag="${project.id}" draggable="true" type="button"><strong>${escapeHTML(project.title)}</strong><small>${project.beat_id ? 'Бит подключён' : 'Без бита'} · ${project.release_at ? formatDate(project.release_at) : 'дата не назначена'}</small></button>`).join('') || '<p>Перетащите проект сюда</p>'}</div><button class="pipeline-add" data-pipeline-status="${status}" type="button">+ Добавить</button></section>`;
-    }).join('');
-    bindProjectButtons(container);
-    bindProjectPipelineDnD(container);
-    $$('[data-pipeline-status]', container).forEach((button) => button.addEventListener('click', () => openProjectEditor(null, button.dataset.pipelineStatus)));
-  }
-
-  function renderDashboardProjectFocus(project) {
-    const container = $('#dashboard-project-focus');
-    if (!container) return;
-    const pipelineEyebrow = $('#dashboard-pipeline-eyebrow');
-    const pipelineTitle = $('#dashboard-pipeline-title');
-    if (pipelineEyebrow) pipelineEyebrow.textContent = '';
-    if (pipelineTitle) pipelineTitle.textContent = project ? `Прогресс: ${project.title}` : 'Прогресс релиза';
-    if (!project) {
-      container.innerHTML = '<div class="dashboard-focus-empty"><strong>Выберите релиз выше — календарь, задачи и прогресс отфильтруются по нему.</strong></div>';
-      return;
-    }
-    const nextTask = state.tasks
-      .filter((task) => task.project_id === project.id && task.due_at && !task.is_done)
-      .sort((a, b) => new Date(a.due_at) - new Date(b.due_at))[0];
-    container.innerHTML = `<div class="dashboard-focus-summary"><div><span class="eyebrow">Работаем над</span><h3>${escapeHTML(project.title)}</h3><p>${PROJECT_STATUS[project.status] || project.status} · ${PROJECT_STATUS_HINT[project.status] || 'Следующий шаг можно добавить задачей.'}</p></div><button class="text-button" data-open-project="${project.id}" type="button">Открыть карточку →</button></div><div class="dashboard-focus-meta"><span>Дата: ${project.release_at ? formatDate(project.release_at) : 'не назначена'}</span><span>Бит: ${project.beat_id ? escapeHTML(state.beats.find((beat) => beat.id === project.beat_id)?.title || 'подключён') : 'не выбран'}</span><span>Ближайшее: ${nextTask ? escapeHTML(nextTask.title) : 'нет задач'}</span></div>`;
-    bindProjectButtons(container);
   }
 
   function bindProjectPipelineDnD(container) {
@@ -1143,15 +1338,6 @@
     if (!bytes) return '—';
     if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} КБ`;
     return `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
-  }
-
-  function renderDashboardFiles() {
-    const query = state.dashboardSearch.toLowerCase();
-    const selectedProject = selectedDashboardProject();
-    const files = state.files.filter((file) => (!selectedProject || file.project_id === selectedProject.id) && (!query || file.original_name.toLowerCase().includes(query) || projectById(file.project_id)?.title?.toLowerCase().includes(query)));
-    const container = $('#dashboard-files');
-    container.innerHTML = files.length ? `<div class="dashboard-file-head"><span>Имя</span><span>Проект</span><span>Тип</span><span>Размер</span></div>${files.slice(0, 3).map((file) => `<button class="dashboard-file-row" data-download-file="${file.id}" type="button"><span>${escapeHTML(file.original_name)}</span><span>${escapeHTML(projectById(file.project_id)?.title || '—')}</span><span>${escapeHTML(file.file_kind)}</span><span>${formatFileSize(file.size_bytes)}</span></button>`).join('')}` : '<div class="empty-list">Рабочих файлов пока нет.</div>';
-    $$('[data-download-file]', container).forEach((button) => button.addEventListener('click', () => downloadProjectFile(button.dataset.downloadFile)));
   }
 
   function renderDashboardSearchResults() {
@@ -3566,9 +3752,7 @@
     $('#beat-tabs').addEventListener('click', (event) => { const button = event.target.closest('[data-beat-tab]'); if (!button) return; state.beatTab = button.dataset.beatTab; renderBeats(); });
     $('#open-beat-form').addEventListener('click', () => openBeatEditor());
     $('#new-project').addEventListener('click', () => openProjectEditor());
-    $('#dashboard-new-project').addEventListener('click', () => openProjectEditor());
     $('#new-task').addEventListener('click', () => openTaskEditor());
-    $('#dashboard-new-file').addEventListener('click', openFileUploader);
     const dashboardStart = $('#dashboard-start');
     const dashboardStartMenu = $('#dashboard-start-menu');
     const closeDashboardStart = () => {
@@ -3596,7 +3780,7 @@
     $('#dashboard-calendar-next').addEventListener('click', () => { state.dashboardDate.setMonth(state.dashboardDate.getMonth() + 1); renderDashboardCalendar(); });
     $('#dashboard-project-select').addEventListener('change', (event) => { state.dashboardProjectId = event.currentTarget.value; renderDashboard(); });
     $('#dashboard-new-task').addEventListener('click', () => openTaskEditor('idea', state.dashboardProjectId || ''));
-    $('#dashboard-search').addEventListener('input', (event) => { state.dashboardSearch = event.currentTarget.value; renderDashboardProjectFocus(selectedDashboardProject()); renderDashboardPipeline(); renderDashboardFiles(); renderDashboardSearchResults(); });
+    $('#dashboard-search').addEventListener('input', (event) => { state.dashboardSearch = event.currentTarget.value; renderDashboardSearchResults(); });
     $('#dashboard-search').addEventListener('keydown', (event) => { if (event.key === 'Escape') { event.currentTarget.value = ''; state.dashboardSearch = ''; renderDashboard(); } });
     $('#new-lyrics').addEventListener('click', () => openLyrics());
     $('#new-link').addEventListener('click', () => openLinkEditor());
