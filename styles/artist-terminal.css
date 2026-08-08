@@ -1600,7 +1600,12 @@ html[data-theme="light"] .notes-toolbar-btn:hover {
 .secretary-tab-count { display: inline-grid; place-items: center; min-width: 23px; border-radius: 11px; background: var(--line); color: var(--text); font-size: 13px; }
 .secretary-tab-count.is-alert { background: var(--red); color: #fff; }
 .secretary-count-note { color: var(--muted); font-size: 15px; }
-.secretary-item { display: grid; grid-template-columns: 4px minmax(0,1fr) auto auto; gap: 16px; align-items: center; border-top: 1px solid var(--line); padding: 15px 18px; }
+.secretary-item { display: grid; grid-template-columns: 4px minmax(0,1fr) auto auto auto; gap: 16px; align-items: center; border-top: 1px solid var(--line); padding: 15px 18px; max-height: 260px; overflow: hidden; transition: transform .24s ease, opacity .24s ease, max-height .22s ease .2s, padding .22s ease .2s, border-width .22s ease .2s; }
+/* Прочитанное уезжает вправо, затем схлопывается — стопка подтягивается сама. */
+.secretary-item.is-dismissing { transform: translateX(112%); opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; border-top-width: 0; }
+.secretary-item-done { align-self: start; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--muted); font-size: 14px; line-height: 1; cursor: pointer; }
+.secretary-item-done:hover, .secretary-item-done:focus-visible { border-color: var(--green); color: var(--green); background: rgba(112,238,121,.08); outline: none; }
+html[data-theme="light"] .secretary-item-done:hover, html[data-theme="light"] .secretary-item-done:focus-visible { background: rgba(35,139,53,.1); }
 .secretary-item-bar { align-self: stretch; background: var(--green-dim); }
 .secretary-item.is-crit .secretary-item-bar { background: var(--red); }
 .secretary-item.is-soon .secretary-item-bar { background: var(--amber); }
@@ -1624,8 +1629,9 @@ html[data-theme="light"] .notes-toolbar-btn:hover {
 .secretary-log-obj strong { display: block; font-weight: 400; font-size: 16px; }
 .secretary-log-obj small { display: block; color: var(--muted); font-size: 14px; }
 @media (max-width: 700px) {
-  .secretary-item { grid-template-columns: 4px minmax(0,1fr); }
+  .secretary-item { grid-template-columns: 4px minmax(0,1fr) auto; }
   .secretary-item-when, .secretary-item-go { grid-column: 2; justify-self: start; }
+  .secretary-item-done { grid-column: 3; grid-row: 1; }
 }
 .nav-item > b.is-alert { border-color: #6d3b34; color: var(--red); }
 .secretary-chan-actions .text-button { font-size: 15px; }

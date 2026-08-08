@@ -322,7 +322,8 @@
     (state.secretaryFailures || []).forEach((row) => {
       items.push({ key: `fail:${row.platform}:${row.created_at}`, level: 'crit', title: `${SOCIAL_PLATFORM_LABEL[row.platform] || row.platform}: публикация не прошла`, detail: socialErrorHint(row.platform, row.error_message || 'без деталей'), when: formatDate(row.created_at), action: 'К автопостингу', view: 'autopost', sort: -100 });
     });
-    return items.sort((a, b) => a.sort - b.sort);
+    const hidden = dismissedKeys();
+    return items.filter((item) => !hidden.has(item.key)).sort((a, b) => a.sort - b.sort);
   }
 
   // Цифра на вкладке — индикатор непросмотренного, а не просто счётчик:
@@ -337,6 +338,16 @@
     // Держим список коротким: старые ключи исчезают вместе с поводом.
     try { localStorage.setItem(SEEN_KEY, JSON.stringify(Array.from(seen).slice(-200))); } catch { /* приватный режим */ }
   };
+  const DISMISSED_KEY = 'inmise-secretary-dismissed';
+  const dismissedKeys = () => {
+    try { return new Set(JSON.parse(localStorage.getItem(DISMISSED_KEY) || '[]')); } catch { return new Set(); }
+  };
+  const dismissKey = (key) => {
+    const set = dismissedKeys();
+    set.add(key);
+    try { localStorage.setItem(DISMISSED_KEY, JSON.stringify(Array.from(set).slice(-300))); } catch { /* приватный режим */ }
+  };
+
   const unseenCount = (items) => {
     const seen = seenKeys();
     return items.filter((item) => !seen.has(item.key)).length;
@@ -349,11 +360,12 @@
     }
     return `<section class="panel">
       <header class="panel-header"><div><span class="eyebrow">Сегодня</span><h3>Что нужно сделать</h3></div><span class="secretary-count-note">${items.length} ${plural(items.length, 'пункт', 'пункта', 'пунктов')}</span></header>
-      ${items.map((item) => `<div class="secretary-item is-${item.level}">
+      ${items.map((item) => `<div class="secretary-item is-${item.level}" data-item-key="${escapeHTML(item.key)}">
         <span class="secretary-item-bar" aria-hidden="true"></span>
         <div><strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(item.detail || '')}</small></div>
         <span class="secretary-item-when">${escapeHTML(item.when)}</span>
         <button class="secretary-item-go" type="button" data-secretary-go="${item.view}" ${item.id ? `data-secretary-id="${item.id}"` : ''}>${item.action}</button>
+        <button class="secretary-item-done" type="button" data-item-dismiss="${escapeHTML(item.key)}" title="Убрать из списка" aria-label="Убрать «${escapeHTML(item.title)}» из списка">✓</button>
       </div>`).join('')}
     </section>`;
   }
@@ -568,6 +580,21 @@
       setBusy(button, false);
       if (error || data?.error) return toast(`Не отправилось: ${await edgeErrorDetail(error, data)}`, 'error');
       toast('Проверочное сообщение отправлено.');
+    }));
+    $$('[data-item-dismiss]', panel).forEach((button) => button.addEventListener('click', () => {
+      const row = button.closest('.secretary-item');
+      dismissKey(button.dataset.itemDismiss);
+      updateSecretaryBadge();
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const finish = () => {
+        const list = row.parentElement;
+        row.remove();
+        // Список опустел — показываем «всё под контролем» вместо пустой панели.
+        if (!$$('.secretary-item', list).length) renderSecretary();
+      };
+      if (reduced) return finish();
+      row.classList.add('is-dismissing');
+      window.setTimeout(finish, 460);
     }));
     $$('[data-secretary-go]', panel).forEach((button) => button.addEventListener('click', async () => {
       const view = button.dataset.secretaryGo;
