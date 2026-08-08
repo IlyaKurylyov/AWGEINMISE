@@ -21,6 +21,23 @@ const EVENT_TITLES: Record<string, string> = {
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+// Местное время артиста: рассылка не должна приходить ночью только потому,
+// что почасовой cron первым делом проходит сразу после полуночи UTC.
+function localParts(timezone: string) {
+  const format = (options: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat("en-GB", { timeZone: timezone, ...options }).format(new Date());
+  try {
+    return {
+      hour: Number(format({ hour: "2-digit", hour12: false })),
+      weekday: format({ weekday: "short" }),
+      date: format({ year: "numeric", month: "2-digit", day: "2-digit" }).split("/").reverse().join("-"),
+    };
+  } catch {
+    const now = new Date();
+    return { hour: now.getUTCHours(), weekday: "Mon", date: today() };
+  }
+}
 const dayDiff = (value: string) => {
   const a = new Date(value); a.setUTCHours(0, 0, 0, 0);
   const b = new Date(); b.setUTCHours(0, 0, 0, 0);
@@ -93,9 +110,16 @@ async function collectDue(admin: any, artistId: string, rules: any[]) {
       .select("id").eq("artist_id", artistId).eq("is_done", false).is("due_at", null);
     const count = (unplanned || []).length;
     if (count) {
+      // При «каждый день» ключ дневной, при «раз в неделю» — недельный:
+      // так одна и та же запись в журнале отправок ограничивает частоту.
+      const daily = enabled("tasks_unplanned").some((rule) => rule.timing === "daily");
       const now = new Date();
       const week = `${now.getUTCFullYear()}-w${Math.ceil(((now.getTime() - Date.UTC(now.getUTCFullYear(), 0, 1)) / 86400000 + 1) / 7)}`;
-      due.push({ type: "tasks_unplanned", key: week, line: `Без даты висит задач: ${count}. Поставьте сроки, иначе они утонут.` });
+      due.push({
+        type: "tasks_unplanned",
+        key: daily ? today() : week,
+        line: `Без даты висит задач: ${count}. Поставьте сроки, иначе они утонут.`,
+      });
     }
   }
 
@@ -142,6 +166,7 @@ Deno.serve(async (request) => {
 
       const { data: channels } = await admin.from("notification_channels").select("*").eq("verified", true);
       const { data: rules } = await admin.from("notification_rules").select("*").eq("enabled", true);
+      const { data: prefs } = await admin.from("notification_prefs").select("*");
       const artistIds = Array.from(new Set((rules || []).map((rule) => rule.artist_id)));
       const report: Array<{ artist: string; sent: number; skipped: number; failed: string[] }> = [];
 
@@ -149,6 +174,12 @@ Deno.serve(async (request) => {
         const artistRules = (rules || []).filter((rule) => rule.artist_id === artistId);
         const artistChannels = (channels || []).filter((channel) => channel.artist_id === artistId);
         if (!artistChannels.length) continue;
+
+        const pref = (prefs || []).find((row) => row.artist_id === artistId);
+        const sendHour = pref?.send_hour ?? 10;
+        const zone = pref?.timezone || "Europe/Moscow";
+        const local = localParts(zone);
+        const inSendWindow = local.hour === sendHour;
 
         const due = await collectDue(admin, artistId, artistRules);
         let sent = 0, skipped = 0;
@@ -159,11 +190,21 @@ Deno.serve(async (request) => {
             const channel = artistChannels.find((c) => c.kind === rule.channel_kind);
             if (!channel) continue;
 
+            // Сбой публикации сообщаем сразу, остальное — в выбранный час,
+            // а «раз в неделю» вдобавок только по понедельникам.
+            const instant = item.type === "publish_failed" && rule.timing !== "digest";
+            if (!instant) {
+              if (!inSendWindow) { skipped += 1; continue; }
+              if (rule.timing === "weekly" && local.weekday !== "Mon") { skipped += 1; continue; }
+            }
+
             // «once» — напомнить один раз за всё время, иначе раз в сутки.
             const query = admin.from("notification_log").select("id")
               .eq("artist_id", artistId).eq("event_type", item.type)
               .eq("subject_key", item.key).eq("channel_kind", rule.channel_kind);
-            const { data: already } = rule.timing === "once"
+            // «Один раз» и «раз в неделю» смотрят на весь журнал: ключ у них
+            // уже содержит нужный период. Остальные — только на сегодня.
+            const { data: already } = (rule.timing === "once" || rule.timing === "weekly")
               ? await query.limit(1)
               : await query.eq("sent_date", today()).limit(1);
             if (already && already.length) { skipped += 1; continue; }

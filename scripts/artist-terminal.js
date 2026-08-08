@@ -142,6 +142,7 @@
     secretaryTab: 'now',
     secretaryFilter: 'all',
     secretaryProjectFilter: 'all',
+    secretaryPrefs: null,
     secretaryEvents: [],
     secretaryFailures: [],
     secretaryLoaded: false,
@@ -291,7 +292,7 @@
     { type: 'task_due', title: 'Пора браться за задачу', hint: 'наступил запланированный день', timing: [['default', 'в день задачи']] },
     { type: 'task_overdue', title: 'Задача просрочена', hint: 'срок прошёл, задача открыта', timing: [['daily', 'каждый день'], ['once', 'один раз']] },
     { type: 'publish_failed', title: 'Публикация не прошла', hint: 'площадка вернула ошибку', timing: [['default', 'сразу']] },
-    { type: 'tasks_unplanned', title: 'Задачи без сроков', hint: 'висят без даты и тонут', timing: [['weekly', 'раз в неделю']] },
+    { type: 'tasks_unplanned', title: 'Задачи без сроков', hint: 'висят без даты и тонут', timing: [['weekly', 'раз в неделю'], ['daily', 'каждый день']] },
   ];
   const EVENT_KIND_LABEL = {
     release: 'релиз', task: 'задача', publication: 'публикация',
@@ -421,6 +422,7 @@
     const mail = channels.find((row) => row.kind === 'email');
     const tg = channels.find((row) => row.kind === 'telegram');
     const rule = (type, kind) => rules.find((row) => row.event_type === type && row.channel_kind === kind) || { enabled: false, timing: 'default' };
+    const sendHour = state.secretaryPrefs?.send_hour ?? 10;
 
     const channelCard = (kind, icon, name, row, hint) => `<div class="secretary-chan secretary-chan-${kind} ${row?.verified ? 'is-on' : ''}">
       <span class="secretary-chan-ic" aria-hidden="true">${icon}</span>
@@ -460,6 +462,13 @@
             }).join('')}
           </tbody>
         </table>
+      </div>
+      <div class="secretary-hour">
+        <span>Ежедневные напоминания приходят в</span>
+        <select data-notify-hour aria-label="Час ежедневных напоминаний">
+          ${Array.from({ length: 24 }, (_, hour) => `<option value="${hour}" ${hour === sendHour ? 'selected' : ''}>${String(hour).padStart(2, '0')}:00</option>`).join('')}
+        </select>
+        <span>по Москве. О сбоях публикации сообщаем сразу, не дожидаясь этого часа.</span>
       </div>
       ${mail?.verified || tg?.verified ? '' : '<p class="secretary-note">Сначала подключите канал — до этого галочки недоступны.</p>'}
       </div>
@@ -548,16 +557,18 @@
 
     if (!state.secretaryLoaded) {
       panel.innerHTML = '<p class="track-workspace-empty">Загружаем…</p>';
-      const [events, failures, channels, rules] = await Promise.all([
+      const [events, failures, channels, rules, prefs] = await Promise.all([
         safeQuery(db.from('artist_events').select('*').eq('artist_id', state.artist.id).order('created_at', { ascending: false }).limit(200)),
         safeQuery(db.from('social_post_targets').select('platform, status, error_message, created_at').eq('artist_id', state.artist.id).eq('status', 'failed').order('created_at', { ascending: false }).limit(10)),
         safeQuery(db.from('notification_channels').select('*').eq('artist_id', state.artist.id)),
         safeQuery(db.from('notification_rules').select('*').eq('artist_id', state.artist.id)),
+        safeQuery(db.from('notification_prefs').select('*').eq('artist_id', state.artist.id)),
       ]);
       state.secretaryEvents = events;
       state.secretaryFailures = failures;
       state.secretaryChannels = channels;
       state.secretaryRules = rules;
+      state.secretaryPrefs = prefs[0] || null;
       state.secretaryLoaded = true;
     }
 
@@ -600,6 +611,15 @@
         if (existing) saveNotifyRule(type, kind, existing.enabled, select.value);
       });
     }));
+    $('[data-notify-hour]', panel)?.addEventListener('change', async (event) => {
+      const hour = Number(event.target.value);
+      const { error } = await db.from('notification_prefs').upsert({
+        artist_id: state.artist.id, send_hour: hour, timezone: 'Europe/Moscow', updated_at: new Date().toISOString(),
+      }, { onConflict: 'artist_id' });
+      if (error) return toast(error.message || 'Не удалось сохранить время.', 'error');
+      state.secretaryPrefs = { ...(state.secretaryPrefs || {}), send_hour: hour };
+      toast(`Напоминания будут приходить в ${String(hour).padStart(2, '0')}:00.`);
+    });
     $$('[data-notify-setup]', panel).forEach((button) => button.addEventListener('click', () => {
       if (button.dataset.notifySetup === 'email') openNotifyEmailDrawer();
       else linkNotifyTelegram();

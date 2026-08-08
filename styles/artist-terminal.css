@@ -1752,3 +1752,6 @@ html[data-theme="light"] .text-button { color: #2f6b39; }
 .secretary-log-release { display: block; margin-top: 3px; color: #7fa5c8; font-size: 14px; font-style: normal; }
 .secretary-log-release.is-none { color: var(--muted); opacity: .75; }
 html[data-theme="light"] .secretary-log-release { color: #3f6d94; }
+.secretary-hour { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; padding: 13px 16px; background: rgba(255,255,255,.028); color: var(--muted); font-size: 15px; }
+.secretary-hour select { border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; font-size: 15px; padding: 5px 9px; }
+html[data-theme="light"] .secretary-hour { background: rgba(73,82,71,.045); }
