@@ -392,10 +392,15 @@
 
     const body = rows.length
       ? `<div class="secretary-log-wrap"><table class="secretary-log"><tbody>${rows.map((row) => {
+          // Строку про релиз показываем только там, где она добавляет смысл.
+          // У события про сам релиз он и есть подлежащее, у бита или площадки
+          // релиза не бывает вовсе — писать «не связано» было бы абсурдом.
+          const scoped = ['task', 'publication', 'file', 'lyrics'].includes(row.kind);
           const project = row.project_id ? projectById(row.project_id) : null;
-          const release = row.project_id
-            ? `<em class="secretary-log-release">${escapeHTML(project?.title || 'Удалённый релиз')}</em>`
-            : '<em class="secretary-log-release is-none">не связано с релизом</em>';
+          const release = !scoped ? ''
+            : row.project_id
+              ? `<em class="secretary-log-release">${escapeHTML(project?.title || 'Удалённый релиз')}</em>`
+              : '<em class="secretary-log-release is-none">не связано с релизом</em>';
           return `<tr>
             <td class="secretary-log-ts">${formatDate(row.created_at)}</td>
             <td><span class="secretary-log-kind">${EVENT_KIND_LABEL[row.kind] || row.kind}</span></td>
@@ -1669,7 +1674,8 @@
     state.projects = [saved, ...state.projects];
     state.tasks = await safeQuery(db.from('project_tasks').select('*').eq('artist_id', state.artist.id).order('is_done').order('sort_order').order('due_at'));
     state.freshDraftProjectId = saved.id;
-    logEvent('release', 'Создан релиз', saved.title || 'Без названия', { view: 'track', id: saved.id, project: saved.id });
+    // Черновик в журнал не пишем: он ещё не релиз и может исчезнуть,
+    // не оставив следа. Запись появится, когда трек действительно сохранят.
     return saved.id;
   }
 
@@ -1989,6 +1995,7 @@
         const keep = window.confirm(`Сохранить новый трек${named}?\n\nОК — сохранить, Отмена — удалить черновик.`);
         if (keep) {
           state.freshDraftProjectId = null;
+          logEvent('release', 'Создан релиз', latestProject.title || 'Без названия', { view: 'track', id: latestProject.id, project: latestProject.id });
         } else {
           await deleteDraftSilently(latestProject);
         }
@@ -2083,7 +2090,10 @@
         saved = coverRow;
       }
       state.projects = await safeQuery(db.from('artist_projects').select('*').eq('artist_id', state.artist.id).order('updated_at', { ascending: false }));
-      if (state.freshDraftProjectId === saved.id) state.freshDraftProjectId = null;
+      if (state.freshDraftProjectId === saved.id) {
+        state.freshDraftProjectId = null;
+        logEvent('release', 'Создан релиз', saved.title || 'Без названия', { view: 'track', id: saved.id, project: saved.id });
+      }
       await renderProjects(); renderDashboard(); renderCalendar();
       activeWorkspaceFlush = null;
       state.activeProjectId = saved.id;
