@@ -216,6 +216,12 @@
     node.style.color = isError ? '#d68074' : '#79bd7d';
   }
 
+  function setPending(element, pending) {
+    if (!element) return;
+    element.classList.toggle('is-pending', !!pending);
+    if ('disabled' in element) element.disabled = !!pending;
+  }
+
   function setBusy(button, busy, label) {
     if (!button) return;
     if (busy) {
@@ -605,9 +611,11 @@
       state.secretaryProjectFilter = event.target.value;
       renderSecretary();
     });
-    $$('[data-notify-rule]', panel).forEach((box) => box.addEventListener('change', () => {
+    $$('[data-notify-rule]', panel).forEach((box) => box.addEventListener('change', async () => {
       const [type, kind] = box.dataset.notifyRule.split(':');
-      saveNotifyRule(type, kind, box.checked);
+      setPending(box, true);
+      await saveNotifyRule(type, kind, box.checked);
+      setPending(box, false);
     }));
     $$('[data-notify-timing]', panel).forEach((select) => select.addEventListener('change', () => {
       const type = select.dataset.notifyTiming;
@@ -880,8 +888,9 @@
   const isoDate = (value) => new Date(value).toISOString().slice(0, 10);
   const addDays = (value, days) => { const d = new Date(value); d.setDate(d.getDate() + days); return d; };
 
-  async function generateRollout(project, templateKey = 'single') {
+  async function generateRollout(project, templateKey = 'single', button) {
     if (!project || !project.release_at) return toast('Сначала задайте дату релиза.', 'error');
+    setBusy(button, true, 'Собираем…');
     const template = ROLLOUT_TEMPLATES[templateKey] || ROLLOUT_TEMPLATES.single;
     await db.from('release_stages').delete().eq('project_id', project.id).eq('artist_id', state.artist.id);
     const rows = template.stages.map((stage, index) => ({
@@ -894,6 +903,7 @@
       sort_order: index,
     }));
     const { error } = await db.from('release_stages').insert(rows);
+    setBusy(button, false);
     if (error) return toast(error.message || 'Не удалось собрать план.', 'error');
     state.stages = await safeQuery(db.from('release_stages').select('*').eq('artist_id', state.artist.id).order('sort_order'));
     toast('План собран: ' + rows.length + ' этапов.');
@@ -1003,11 +1013,11 @@
     const build = $('[data-rollout-build]', host);
     if (build) build.addEventListener('click', () => {
       const select = $('.rollout-template', host);
-      generateRollout(project, select ? select.value : 'single');
+      generateRollout(project, select ? select.value : 'single', build);
     });
     const rebuild = $('[data-rollout-rebuild]', host);
     if (rebuild) rebuild.addEventListener('click', () => {
-      if (confirm('Пересобрать план заново? Ручные правки этапов будут потеряны.')) generateRollout(project, 'single');
+      if (confirm('Пересобрать план заново? Ручные правки этапов будут потеряны.')) generateRollout(project, 'single', rebuild);
     });
     const add = $('[data-rollout-add]', host);
     if (add) add.addEventListener('click', () => openStageEditor(null, project));
@@ -1556,11 +1566,13 @@
     $('[data-hint-links]', host).addEventListener('click', () => { close(); openMaterialLinkDrawer(initialProjectId); });
   }
 
-  async function deleteMaterialLink(fileId) {
+  async function deleteMaterialLink(fileId, button) {
     const file = (state.files || []).find((item) => item.id === fileId);
     if (!file) return;
     if (!confirm(`Удалить ссылку «${file.original_name}»? Файл в вашем облаке останется.`)) return;
+    setPending(button, true);
     const { error } = await db.from('project_files').delete().eq('id', fileId).eq('artist_id', state.artist.id);
+    setPending(button, false);
     if (error) return toast(error.message || 'Не удалось удалить ссылку.', 'error');
     state.files = state.files.filter((item) => item.id !== fileId);
     toast('Ссылка удалена.');
@@ -1644,7 +1656,14 @@
     finally { setBusy(button, false); }
   }
 
-  async function downloadProjectFile(id) {
+  async function downloadProjectFile(id, button) {
+    setPending(button, true);
+    try {
+      await downloadProjectFileInner(id);
+    } finally { setPending(button, false); }
+  }
+
+  async function downloadProjectFileInner(id) {
     const file = state.files.find((item) => item.id === id);
     if (!file) return;
     const url = await signedUrl(file.bucket_id || 'artist-private', file.storage_path, 120);
@@ -2087,7 +2106,7 @@
         if (linkedFiles.some((file) => file.link_url)) openMaterialLinkDrawer(project.id);
         else showMaterialsHint(project.id);
       });
-      $$('[data-delete-file]', container).forEach((button) => button.addEventListener('click', () => deleteMaterialLink(button.dataset.deleteFile)));
+      $$('[data-delete-file]', container).forEach((button) => button.addEventListener('click', () => deleteMaterialLink(button.dataset.deleteFile, button)));
       // Если текст у трека уже есть, кнопка открывает его, а не пустую форму.
       $('#track-add-lyrics').addEventListener('click', () => openLyricsDrawer(linkedLyrics[0]?.id || null, project.id));
       $('#track-lyrics-draft')?.addEventListener('input', (event) => setLyricsDraft(project.id, event.target.value));
@@ -2187,7 +2206,7 @@
         }
       };
     }
-    $$('[data-download-file]', form).forEach((button) => button.addEventListener('click', () => downloadProjectFile(button.dataset.downloadFile)));
+    $$('[data-download-file]', form).forEach((button) => button.addEventListener('click', () => downloadProjectFile(button.dataset.downloadFile, button)));
     $$('[data-save-inline-lyrics]', form).forEach((button) => button.addEventListener('click', () => saveInlineLyrics(button.dataset.saveInlineLyrics, form)));
     $$('[data-project-lyrics]', form).forEach((button) => button.addEventListener('click', () => openLyricsDrawer(button.dataset.projectLyrics, project ? project.id : '')));
     $('#track-workspace-back').addEventListener('click', () => { state.activeProjectId = null; goView(state.projectReturnView); });
@@ -2629,10 +2648,12 @@
     logEvent('platform', `Подключён ${label}`, data.account_name || '', { view: 'autopost' });
   }
 
-  async function disconnectSocial(platform) {
+  async function disconnectSocial(platform, button) {
     const label = SOCIAL_PLATFORM_LABEL[platform] || platform;
     if (!confirm(`Отключить ${label}?`)) return;
+    setBusy(button, true, 'Отключаем…');
     const { data, error } = await db.functions.invoke('social-connect', { body: { action: 'disconnect', platform } });
+    setBusy(button, false);
     if (error || data?.error) return toast(`Не удалось отключить ${label}.`, 'error');
     toast(`${label} отключён.`);
     logEvent('platform', `Отключён ${label}`, '', { view: 'autopost' });
@@ -2955,9 +2976,11 @@
 
     // Настройки открываются у своей строки — какую площадку нажал, ту и настраиваешь.
     const closeDestPopovers = closeAllDestPopovers;
-    const connectPlatform = (platform) => {
-      if (SOCIAL_TOKEN_PLATFORMS.includes(platform)) openTokenConnectDrawer(platform);
-      else startSocialConnect(platform);
+    const connectPlatform = (platform, button) => {
+      if (SOCIAL_TOKEN_PLATFORMS.includes(platform)) return openTokenConnectDrawer(platform);
+      // Дальше уход на страницу площадки: кнопку не разблокируем, ждать нечего.
+      setBusy(button, true, 'Открываем…');
+      startSocialConnect(platform);
     };
     $$('[data-dest-settings]', container).forEach((button) => button.addEventListener('click', () => {
       const platform = button.dataset.destSettings;
@@ -2967,7 +2990,7 @@
       if (existing) return;
 
       const info = connections[platform] || { connected: false };
-      if (!info.connected && platform !== 'instagram') return connectPlatform(platform);
+      if (!info.connected && platform !== 'instagram') return connectPlatform(platform, button);
 
       const pop = document.createElement('div');
       pop.className = 'autopost-dest-pop';
@@ -3004,8 +3027,8 @@
         if (!action) return;
         closeDestPopovers();
         if (action === 'vk-token') openVkCommunityTokenDrawer();
-        else if (action === 'reconnect') connectPlatform(platform);
-        else if (action === 'disconnect') disconnectSocial(platform);
+        else if (action === 'reconnect') connectPlatform(platform, event.target);
+        else if (action === 'disconnect') disconnectSocial(platform, event.target);
         else if (action === 'ig-help') {
           const help = $('#ig-help', container);
           help.hidden = false;
@@ -3033,7 +3056,7 @@
 
     const igHelpClose = $('[data-ig-help-close]', container);
     if (igHelpClose) igHelpClose.addEventListener('click', () => { $('#ig-help', container).hidden = true; });
-    $$('[data-retry-post]', container).forEach((button) => button.addEventListener('click', () => retrySocialPost(button.dataset.retryPost)));
+    $$('[data-retry-post]', container).forEach((button) => button.addEventListener('click', () => retrySocialPost(button.dataset.retryPost, button)));
     form.addEventListener('submit', uploadSocialPost);
     } catch (error) {
       console.error('renderAutopost failed', error);
@@ -3089,13 +3112,15 @@
     }
   }
 
-  async function retrySocialPost(postId) {
+  async function retrySocialPost(postId, button) {
+    setBusy(button, true, 'Повторяем…');
     const posts = await safeQuery(db.from('social_posts').select('*').eq('id', postId).limit(1));
     if (!posts[0]) return;
     const targets = await safeQuery(db.from('social_post_targets').select('*').eq('post_id', postId));
     const failedPlatforms = targets.filter((target) => target.status === 'failed').map((target) => target.platform);
-    if (!failedPlatforms.length) return;
+    if (!failedPlatforms.length) return setBusy(button, false);
     await publishSocialPost(postId, failedPlatforms);
+    setBusy(button, false);
   }
 
   async function publishSocialPost(postId, platforms, options = {}) {

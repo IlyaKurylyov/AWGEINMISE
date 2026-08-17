@@ -1812,3 +1812,9 @@ html[data-theme="light"] .rollout-today b { color: #0a270e; }
 /* Строка с открытым поповером должна быть выше соседних, иначе их кнопки
    проступают сквозь него. */
 .autopost-dest.has-pop { z-index: 20; }
+
+/* Ожидание для кнопок со вложенной разметкой: подменять текст нельзя,
+   поэтому блокируем и пульсируем. */
+.is-pending { cursor: progress; pointer-events: none; animation: pending-pulse 1s ease-in-out infinite; }
+@keyframes pending-pulse { 0%, 100% { opacity: .4; } 50% { opacity: .8; } }
+@media (prefers-reduced-motion: reduce) { .is-pending { animation: none; opacity: .55; } }
