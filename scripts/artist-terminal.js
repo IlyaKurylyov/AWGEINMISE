@@ -2639,6 +2639,19 @@
     renderAutopost();
   }
 
+  // Поповеры настроек площадок закрываются глобально: раньше обработчик
+  // вешался при каждом рендере и держал ссылку на устаревший контейнер.
+  function closeAllDestPopovers(except) {
+    $$('.autopost-dest-pop').forEach((pop) => {
+      if (pop === except) return;
+      pop.closest('.autopost-dest')?.classList.remove('has-pop');
+      pop.remove();
+    });
+    $$('[data-dest-settings]').forEach((button) => {
+      if (!button.parentElement.querySelector('.autopost-dest-pop')) button.setAttribute('aria-expanded', 'false');
+    });
+  }
+
   async function renderAutopost() {
     const container = $('#autopost-panel');
     container.innerHTML = '<p class="track-workspace-empty">Загружаем…</p>';
@@ -2941,12 +2954,7 @@
     }
 
     // Настройки открываются у своей строки — какую площадку нажал, ту и настраиваешь.
-    const closeDestPopovers = (except) => {
-      $$('.autopost-dest-pop', container).forEach((pop) => { if (pop !== except) pop.remove(); });
-      $$('[data-dest-settings]', container).forEach((btn) => {
-        if (!btn.parentElement.querySelector('.autopost-dest-pop')) btn.setAttribute('aria-expanded', 'false');
-      });
-    };
+    const closeDestPopovers = closeAllDestPopovers;
     const connectPlatform = (platform) => {
       if (SOCIAL_TOKEN_PLATFORMS.includes(platform)) openTokenConnectDrawer(platform);
       else startSocialConnect(platform);
@@ -2959,6 +2967,8 @@
       if (existing) return;
 
       const info = connections[platform] || { connected: false };
+      if (!info.connected && platform !== 'instagram') return connectPlatform(platform);
+
       const pop = document.createElement('div');
       pop.className = 'autopost-dest-pop';
       const igHelpLink = platform === 'instagram'
@@ -2987,6 +2997,7 @@
           </div>`;
       }
       row.appendChild(pop);
+      row.classList.add('has-pop');
       button.setAttribute('aria-expanded', 'true');
       pop.addEventListener('click', (event) => {
         const action = event.target.dataset?.popAction;
@@ -3002,9 +3013,6 @@
         }
       });
     }));
-    document.addEventListener('click', (event) => {
-      if (!event.target.closest('.autopost-dest')) closeDestPopovers();
-    });
 
     // Счётчик и подпись кнопки: видно, куда именно уйдёт публикация.
     const destsCount = $('#autopost-dests-count', container);
@@ -3716,6 +3724,9 @@
     $$('.nav-item').forEach((button) => button.addEventListener('click', () => goView(button.dataset.view)));
     $$('[data-go-view]').forEach((button) => button.addEventListener('click', () => goView(button.dataset.goView)));
     $('#mobile-menu').addEventListener('click', () => $('#sidebar').classList.toggle('is-open'));
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.autopost-dest')) closeAllDestPopovers();
+    });
     $('#drawer-body').addEventListener('input', markDrawerDirty);
     // Отправка формы — намерение сохранить, значит предупреждать больше не о чем.
     $('#drawer-body').addEventListener('submit', () => { drawerDirty = false; });

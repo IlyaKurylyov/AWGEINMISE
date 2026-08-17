@@ -1809,3 +1809,6 @@ html[data-theme="light"] .rollout-today b { color: #0a270e; }
 .stage-flags { display: grid; gap: 8px; text-transform: none; letter-spacing: 0; }
 .stage-flags label { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 15px; font-weight: 400; }
 .stage-flags input { accent-color: var(--green); }
+/* Строка с открытым поповером должна быть выше соседних, иначе их кнопки
+   проступают сквозь него. */
+.autopost-dest.has-pop { z-index: 20; }
