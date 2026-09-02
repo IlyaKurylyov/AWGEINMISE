@@ -15,10 +15,14 @@
 // косметики. Там достаточно того, что новые загрузки уже идут в папку артиста.
 
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+// Ключи ищем рядом со скриптом, а не в текущей папке: разовый скрипт запускают
+// откуда придётся, и падать на этом он не должен.
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+dotenv.config({ path: path.join(repoRoot, '.env.local') });
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE;
