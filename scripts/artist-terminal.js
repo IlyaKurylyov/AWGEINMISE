@@ -676,6 +676,8 @@
     return Promise.race([Promise.resolve(promise), timeout]).finally(() => window.clearTimeout(timer));
   }
 
+  const wait = (ms) => new Promise((resolve) => { window.setTimeout(resolve, ms); });
+
   async function safeQuery(promise, fallback = [], timeoutMs = 12000) {
     const { data, error } = await withTimeout(
       promise,
@@ -705,10 +707,36 @@
     $$('.owner-only').forEach((node) => { node.hidden = !isOwner(); });
   }
 
+  const ARTIST_COLUMNS = 'id,name,description,image_url,matrix_text,tg_url,vk_url,inst_url,owner_user_id';
+  const ARTIST_NOT_READY = 'Кабинет не догрузился. Обновите страницу.';
+
+  function bootError(code, message, cause = null) {
+    const error = new Error(message);
+    error.bootCode = code;
+    if (cause) error.cause = cause;
+    return error;
+  }
+
+  // Этот запрос держит всю загрузку: остальные идут через allSettled и падают
+  // поодиночке, а здесь одна сетевая икота хоронила весь кабинет. Поэтому связь
+  // пробуем трижды, а вот пустой ответ повторять бессмысленно — карточки просто
+  // нет, и это другой разговор с пользователем.
   async function loadArtist() {
-    const rows = await safeQuery(db.from('artists').select('id,name,description,image_url,matrix_text,tg_url,vk_url,inst_url,owner_user_id').eq('owner_user_id', state.user.id).limit(1));
-    state.artist = rows[0] || null;
-    if (!state.artist) throw new Error('К этому аккаунту пока не привязана карточка артиста.');
+    let lastError = null;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const rows = await safeQuery(db.from('artists').select(ARTIST_COLUMNS).eq('owner_user_id', state.user.id).limit(1));
+        state.artist = rows[0] || null;
+        if (!state.artist) throw bootError('artist-missing', 'К этому аккаунту пока не привязана карточка артиста.');
+        return;
+      } catch (error) {
+        if (error.bootCode === 'artist-missing') throw error;
+        lastError = error;
+        console.warn(`[artist-terminal] artist load attempt ${attempt}:`, error);
+        if (attempt < 3) await wait(700 * attempt);
+      }
+    }
+    throw bootError('artist-unreachable', 'Не удалось получить данные кабинета — похоже, оборвалась связь с базой.', lastError);
   }
 
   async function loadAllData() {
@@ -1642,6 +1670,7 @@
   }
 
   function openTaskEditor(initialStatus = 'idea', initialProjectId = '', taskId = null) {
+    if (!state.artist) return toast(ARTIST_NOT_READY, 'error');
     const task = state.tasks.find((item) => item.id === taskId) || null;
     const selectedProjectId = task?.project_id || initialProjectId;
     const selectedStatus = task ? taskWorkflow(task) : initialStatus;
@@ -2140,6 +2169,7 @@
   }
 
   async function createDraftProject(initialStatus) {
+    if (!state.artist) throw new Error(ARTIST_NOT_READY);
     const payload = { artist_id: state.artist.id, title: 'Без названия', status: initialStatus, beat_id: null, description: '', release_at: null, timezone: 'Europe/Moscow' };
     const { data: saved, error } = await db.from('artist_projects').insert(payload).select().single();
     if (error) throw error;
@@ -2947,6 +2977,7 @@
 
   async function renderAutopost() {
     const container = $('#autopost-panel');
+    if (!state.artist) { container.innerHTML = `<p class="track-workspace-empty">${ARTIST_NOT_READY}</p>`; return; }
     container.innerHTML = '<p class="track-workspace-empty">Загружаем…</p>';
     try {
     // The connection-status call must never break the whole page: if the edge
@@ -3920,6 +3951,7 @@
     $('#sidebar-email').textContent = user.email || '';
     $('#auth-screen').hidden = true;
     $('#auth-loading-screen').hidden = true;
+    $('#boot-error-screen').hidden = true;
     $('#terminal-shell').hidden = false;
     state.booted = true;
     setSystemStatus('Загружаем кабинет…');
@@ -3956,17 +3988,40 @@
         window.location.replace(inviteUrl.toString());
         return;
       }
-      setSystemStatus('Ошибка привязки');
-      $('#auth-loading-screen').hidden = true;
-      $('#terminal-shell').hidden = false;
-      toast(error.message || 'Не удалось открыть кабинет.', 'error');
+      showBootFailure(error);
     } finally {
       state.booting = false;
     }
   }
 
+  // Раньше на сорвавшейся загрузке показывали пустую оболочку кабинета: выглядит
+  // как отвалившаяся база, кнопки жмутся и падают на state.artist, а единственный
+  // выход — вслепую нажать F5. Теперь говорим, что случилось, и даём повторить.
+  function showBootFailure(error) {
+    const missing = error?.bootCode === 'artist-missing';
+    setSystemStatus(missing ? 'Ошибка привязки' : 'Нет связи');
+    $('#auth-loading-screen').hidden = true;
+    $('#terminal-shell').hidden = true;
+    $('#boot-error-screen').hidden = false;
+    $('#boot-error-title').textContent = missing ? 'Карточка не привязана' : 'Кабинет не открылся';
+    $('#boot-error-copy').textContent = error?.message || 'Не удалось открыть кабинет.';
+    // Отсутствующую карточку повтор не принесёт — тут нужен владелец с инвайтом.
+    $('#boot-error-retry').hidden = missing;
+    console.error('[artist-terminal] boot failed', error);
+  }
+
+  async function retryBoot(button) {
+    const user = state.user;
+    if (!user) return showLogin();
+    setBusy(button, true, 'Пробуем…');
+    state.booted = false;
+    try { await bootApp(user); }
+    finally { setBusy(button, false); }
+  }
+
   function showLogin(message = '') {
     $('#auth-loading-screen').hidden = true;
+    $('#boot-error-screen').hidden = true;
     $('#auth-screen').hidden = false; $('#terminal-shell').hidden = true;
     $('#login-form').hidden = false; $('#recovery-form').hidden = true;
     $('#auth-title').textContent = 'Вход в кабинет'; $('#auth-copy').textContent = 'Доступ только для артистов INMISE.';
@@ -3975,6 +4030,7 @@
 
   function showRecovery(message = 'Придумайте новый пароль для кабинета.') {
     $('#auth-loading-screen').hidden = true;
+    $('#boot-error-screen').hidden = true;
     $('#auth-screen').hidden = false; $('#terminal-shell').hidden = true;
     $('#login-form').hidden = true; $('#recovery-form').hidden = false;
     $('#auth-title').textContent = 'Смена пароля'; $('#auth-copy').textContent = message; setAuthMessage('');
@@ -4035,6 +4091,8 @@
     $('#wheel-spin').addEventListener('click', spinWheel);
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeWheel(); });
     $('#logout-button').addEventListener('click', () => db.auth.signOut());
+    $('#boot-error-retry').addEventListener('click', (event) => retryBoot(event.currentTarget));
+    $('#boot-error-logout').addEventListener('click', () => db.auth.signOut());
     $('#auth-submit').addEventListener('click', async () => {
       const button = $('#auth-submit'); const email = $('#auth-email').value.trim(); const password = $('#auth-password').value;
       if (!email || !password) return setAuthMessage('Укажите e-mail и пароль.', true);
