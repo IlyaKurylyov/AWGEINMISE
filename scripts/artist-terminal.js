@@ -965,7 +965,7 @@
 
     if (!project || !project.release_at) {
       host.innerHTML = '<header class="panel-header"><div><span class="eyebrow">План выпуска</span><h3>Путь релиза</h3></div>'
-        + '<button class="text-button" id="dashboard-new-project" type="button">+ Проект</button></header>'
+        + '</header>'
         + '<p class="track-workspace-empty">Ни у одного релиза нет даты выхода. Поставьте дату — путь построится сам.</p>' + depot;
       bindRollout(host, project);
       return;
@@ -974,7 +974,7 @@
     const stages = (state.stages || []).filter((stage) => stage.project_id === project.id).sort((a, b) => a.sort_order - b.sort_order);
     if (!stages.length) {
       host.innerHTML = '<header class="panel-header"><div><span class="eyebrow">План выпуска</span><h3>' + escapeHTML(project.title || 'Без названия') + '</h3></div>'
-        + '<button class="text-button" id="dashboard-new-project" type="button">+ Проект</button></header>'
+        + '</header>'
         // Шаблон считается назад от дня Х. Если до выхода меньше четырёх недель,
         // он не помещается и раскидал бы половину этапов в прошлое — тогда
         // вместо шаблона предлагаем расставить даты руками.
@@ -1063,7 +1063,8 @@
 
     host.innerHTML = '<header class="panel-header">'
       + '<div><span class="eyebrow">Путь релиза</span><h3>' + escapeHTML(project.title || 'Без названия') + '</h3></div>'
-      + '<div class="rollout-head-actions"><span class="rollout-progress">' + doneCount + ' из ' + stages.length + '</span>'
+      + '<div class="rollout-head-actions">'
+      + (doneCount ? '<span class="rollout-progress">' + doneCount + ' из ' + stages.length + '</span>' : '')
       + '<button class="text-button" type="button" data-rollout-setup>настроить план</button>'
       + '<button class="text-button" type="button" data-rollout-rebuild>пересобрать</button></div></header>'
       + '<div class="rollout-stage-wrap"><div class="rollout-axis" style="--rollout-count:' + count + '">'
@@ -1078,17 +1079,12 @@
       + '<div class="rollout-foot"><div class="rollout-count"><b>' + Math.abs(left) + '</b><span>'
       + (left >= 0 ? plural(Math.abs(left), 'день', 'дня', 'дней') + ' до выхода' : plural(Math.abs(left), 'день', 'дня', 'дней') + ' назад вышел')
       + '</span></div><div class="rollout-foot-main"><strong>' + escapeHTML(project.title || 'Без названия') + '</strong>'
-      + '<small>' + shortDate(project.release_at) + ' · этап «' + (PROJECT_STATUS[project.status] || project.status) + '»</small></div>'
-      + '<button class="button button-primary" type="button" data-rollout-open>Открыть трек</button></div>'
+      + '<small>' + shortDate(project.release_at) + ' · этап «' + (PROJECT_STATUS[project.status] || project.status) + '»</small></div></div>'
       + askBlock + depot;
     bindRollout(host, project);
   }
 
   function bindRollout(host, project) {
-    const newProject = $('#dashboard-new-project', host);
-    if (newProject) newProject.addEventListener('click', () => openProjectEditor());
-    const open = $('[data-rollout-open]', host);
-    if (open) open.addEventListener('click', () => openProjectEditor(project.id, 'idea', 'dashboard'));
     const build = $('[data-rollout-build]', host);
     if (build) build.addEventListener('click', () => {
       const select = $('.rollout-template', host);
@@ -1127,6 +1123,20 @@
     return offset < 0 ? 'за ' + days + ' ' + word : 'через ' + days + ' ' + word;
   };
 
+  // Шаблон считает назад от дня Х на пять недель. Если до выхода осталось
+  // меньше, офсеты сжимаются пропорционально: форма плана сохраняется, а даты
+  // укладываются в реальный остаток. Раньше настройщик брал офсеты шаблона как
+  // есть, и половина этапов оказывалась в прошлом, за пределами линейки.
+  function fitOffsets(rows, runway) {
+    const before = rows.filter((row) => row.offset < 0);
+    if (!before.length || runway < 1) return false;
+    const span = Math.max.apply(null, before.map((row) => Math.abs(row.offset)));
+    if (!span || runway >= span) return false;
+    const scale = runway / span;
+    before.forEach((row) => { row.offset = -Math.max(0, Math.round(Math.abs(row.offset) * scale)); });
+    return true;
+  }
+
   // Расстановка дат вручную. Линейка сверху и строки снизу — одно и то же
   // показанное дважды: сверху результат, снизу управление. Столкновение двух
   // этапов на одном дне видно на линейке раньше, чем прочитаешь предупреждение.
@@ -1146,6 +1156,12 @@
         id: null, title: stage.title, offset: stage.day, repeat: stage.repeat, done: false,
       }));
     const removed = [];
+    // Если план целиком отстал от сегодняшнего дня — он не «настроен вручную»,
+    // а просто устарел. Ужимаем его под остаток и говорим об этом вслух.
+    const runway = daysUntil(project.release_at);
+    const stale = rows.some((row) => row.offset < 0
+      && dayStart(addDays(project.release_at, row.offset)).getTime() < dayStart(new Date()).getTime());
+    const wasFitted = stale ? fitOffsets(rows, runway) : false;
 
     openDrawer('РЕЛИЗ / ПЛАН', 'Настроить план', '<div id="plan-setup"></div>');
     const host = $('#plan-setup');
@@ -1180,12 +1196,26 @@
           + '</div>';
       }
 
-      host.innerHTML = '<p class="drawer-note">До выхода '
-        + Math.max(0, daysUntil(project.release_at)) + ' '
-        + plural(Math.max(0, daysUntil(project.release_at)), 'день', 'дня', 'дней')
-        + '. Двигайте этапы кнопками — линейка сверху сразу покажет, куда они попадут.</p>'
-        + '<div class="plan-ruler"><div class="plan-ruler-head"><span>сегодня</span><span>день выхода</span></div>'
-        + '<div class="plan-days" style="--plan-span:' + span + '">' + ruler + '</div></div>'
+      const days = daysUntil(project.release_at);
+      // День Х уже прошёл — сжимать план не во что, линейка выродилась бы
+      // в одну клетку. Сначала новая дата выхода, потом расстановка.
+      const intro = days < 1
+        ? '<p class="drawer-note">День выхода ' + (days === 0 ? 'сегодня' : 'уже прошёл')
+          + '. Расставлять этапы не по чему — сначала поставьте новую дату релиза.</p>'
+          + '<div class="drawer-actions"><span></span>'
+          + '<button class="button button-primary" type="button" id="plan-newdate">Поставить дату выхода</button></div>'
+        : '<p class="drawer-note">До выхода ' + days + ' ' + plural(days, 'день', 'дня', 'дней') + '. '
+          + (wasFitted ? 'План не помещался в этот срок, поэтому этапы ужаты пропорционально — подвиньте, если надо. '
+            : 'Двигайте этапы кнопками — ')
+          + 'линейка сверху сразу покажет, куда они попадут.</p>'
+          + '<div class="plan-ruler"><div class="plan-ruler-head"><span>сегодня</span><span>день выхода</span></div>'
+          + '<div class="plan-days" style="--plan-span:' + span + '">' + ruler + '</div></div>';
+      if (days < 1) {
+        host.innerHTML = intro;
+        $('#plan-newdate', host).addEventListener('click', () => { closeDrawer(true); offerReleaseDate(project); });
+        return;
+      }
+      host.innerHTML = intro
         + '<div class="plan-rows">' + rows.map((row, index) => '<div class="plan-row">'
           + '<span class="plan-name">' + escapeHTML(row.title) + (row.done ? ' <i>сделан</i>' : '') + '</span>'
           + '<span class="plan-step"><button type="button" data-plan-dec="' + index + '" aria-label="Раньше">−</button>'
@@ -1211,11 +1241,12 @@
         rows.splice(index, 1); draw();
       }));
       $('#plan-even', host).addEventListener('click', () => {
-        // Ровно раскидываем только то, что до дня Х: хвост после выхода не трогаем.
+        // Равные промежутки по реальному остатку. Раньше здесь стоял зажим
+        // минимумом в 1, и при дне Х в прошлом всё схлопывалось в «за 1 день».
         const before = rows.filter((row) => row.offset < 0);
-        const room = Math.max(1, Math.min(daysUntil(project.release_at), ROLLOUT_MIN_DAYS));
+        const room = Math.max(1, daysUntil(project.release_at));
         before.forEach((row, index) => {
-          row.offset = -Math.round(room - (index * room) / Math.max(1, before.length));
+          row.offset = -Math.round((room * (before.length - index)) / before.length);
         });
         draw();
       });
@@ -1728,7 +1759,7 @@
   // «Запланирован» без даты не попадёт в календарь, поэтому спрашиваем сразу.
   function offerReleaseDate(project) {
     openDrawer('TRACK / РЕЛИЗ', 'Дата релиза', `<form id="release-date-form">
-      <p class="drawer-note">Трек перешёл на этап «Запланирован». Поставьте дату — тогда он появится в календаре, а секретарь напомнит о нём заранее.</p>
+      <p class="drawer-note">Запланируйте дату релиза — и мы рассчитаем все необходимые цели на прогресс-баре.</p>
       <label class="field"><span>Когда выходит</span><input name="release_at" type="datetime-local" required></label>
       <div class="drawer-actions">
         <button class="text-button" id="release-date-skip" type="button">Позже</button>
