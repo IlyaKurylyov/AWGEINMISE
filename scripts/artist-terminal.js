@@ -710,12 +710,6 @@
   const ARTIST_COLUMNS = 'id,name,description,image_url,matrix_text,tg_url,vk_url,inst_url,owner_user_id';
   const ARTIST_NOT_READY = 'Кабинет не догрузился. Обновите страницу.';
 
-  // Биты переехали с владельца на карточку артиста, чтобы ездить вместе с ней при
-  // передаче. Хвост с artist_id is null — те, которым при миграции не нашлось
-  // карточки: пока такие есть, показываем их прежнему владельцу, чтобы ничего не
-  // пропало из кабинета. Когда хвост опустеет, останется один eq по artist_id.
-  const beatScope = () => `artist_id.eq.${state.artist.id},and(artist_id.is.null,owner_user_id.eq.${state.user.id})`;
-
   function bootError(code, message, cause = null) {
     const error = new Error(message);
     error.bootCode = code;
@@ -750,7 +744,7 @@
     await loadArtist();
     const artistId = state.artist.id;
     const results = await Promise.allSettled([
-      safeQuery(db.from('beats').select('id,title,seller,seller_link,price,audio_url,storage_path,publication_status,public_preview_path,private_master_path,cover_url,currency,published_at,created_at,updated_at').or(beatScope()).order('created_at', { ascending: false })),
+      safeQuery(db.from('beats').select('id,title,seller,seller_link,price,audio_url,storage_path,publication_status,public_preview_path,private_master_path,cover_url,currency,published_at,created_at,updated_at').eq('artist_id', state.artist.id).order('created_at', { ascending: false })),
       safeQuery(db.from('artist_projects').select('*').eq('artist_id', artistId).order('updated_at', { ascending: false })),
       safeQuery(db.from('lyrics_documents').select('*').eq('artist_id', artistId).order('updated_at', { ascending: false })),
       safeQuery(db.from('artist_private_links').select('*').eq('artist_id', artistId).order('sort_order').order('created_at')),
@@ -2100,7 +2094,7 @@
           if (error) throw error;
           payload.private_master_path = path;
         } else {
-          const publicPath = `${state.user.id}/${Date.now()}-${safeFileName(file.name)}`;
+          const publicPath = `${state.artist.id}/${Date.now()}-${safeFileName(file.name)}`;
           const { error } = await db.storage.from('beats').upload(publicPath, file, { contentType: file.type, upsert: false });
           if (error) throw error;
           payload.storage_path = publicPath;
@@ -2138,7 +2132,7 @@
   }
 
   async function refreshBeats() {
-    state.beats = await safeQuery(db.from('beats').select('id,title,seller,seller_link,price,audio_url,storage_path,publication_status,public_preview_path,private_master_path,cover_url,currency,published_at,created_at,updated_at').or(beatScope()).order('created_at', { ascending: false }));
+    state.beats = await safeQuery(db.from('beats').select('id,title,seller,seller_link,price,audio_url,storage_path,publication_status,public_preview_path,private_master_path,cover_url,currency,published_at,created_at,updated_at').eq('artist_id', state.artist.id).order('created_at', { ascending: false }));
     renderBeats(); renderDashboard(); $('#nav-beats-count').textContent = state.beats.length;
     if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
   }
@@ -3905,7 +3899,7 @@
       const file = $('#profile-image').files?.[0];
       if (file) {
         await validateProfileImage(file);
-        const path = `${state.user.id}/avatar-${Date.now()}-${safeFileName(file.name)}`;
+        const path = `${state.artist.id}/avatar-${Date.now()}-${safeFileName(file.name)}`;
         const { error } = await db.storage.from('artists').upload(path, file, { contentType: file.type }); if (error) throw error;
         imageUrl = db.storage.from('artists').getPublicUrl(path).data.publicUrl;
       }
