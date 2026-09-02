@@ -1767,28 +1767,40 @@ html[data-theme="light"] .secretary-hour { background: rgba(73,82,71,.045); }
 
 .rollout-stage-wrap { padding: 8px 30px 0; background: rgba(255,255,255,.022); border-top: 1px solid var(--line); overflow-x: auto; }
 html[data-theme="light"] .rollout-stage-wrap { background: rgba(73,82,71,.035); }
-/* Подписи только над рельсом: снизу они перегружали картинку. */
-.rollout-path { position: relative; height: 128px; min-width: 640px; }
-.rollout-rail { position: absolute; left: 0; right: 0; top: 92px; height: 4px; background: var(--line); }
-.rollout-rail i { display: block; height: 100%; background: var(--green-dim); }
-.rollout-band { position: absolute; top: 80px; height: 28px; border: 1px dashed var(--line-hi); background: rgba(128,140,120,.09); }
-.rollout-band > span { position: absolute; left: 50%; top: -22px; transform: translateX(-50%); white-space: nowrap; color: var(--muted); font-size: 13px; }
+/* Ось разложена на три независимых ряда — подписи, узлы, интервалы.
+   Раньше всё лежало в одном слое и позиционировалось календарной пропорцией,
+   поэтому при близких датах подписи наезжали друг на друга. Ряды не могут
+   пересечься по построению, при любых датах и любом числе этапов. */
+.rollout-axis { min-width: 640px; padding: 4px 0 2px; }
+.rollout-row { display: grid; grid-template-columns: repeat(var(--rollout-count, 7), minmax(0, 1fr)); }
+.rollout-cap { align-self: end; padding: 0 6px; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.3; overflow-wrap: anywhere; }
+.rollout-cap b { display: block; font-weight: 400; color: var(--text); }
+.rollout-cap-date { display: block; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.rollout-cap.is-late b, .rollout-cap.is-late .rollout-cap-date { color: var(--red); }
+.rollout-cap.is-done b { color: var(--green); }
+.rollout-cap.is-release b { color: var(--amber); font-weight: 500; }
 
-.rollout-node { position: absolute; top: 84px; transform: translateX(-50%); z-index: 2; border: 0; padding: 0; background: transparent; cursor: pointer; }
-.rollout-node > i { display: block; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line-hi); background: var(--panel-2); }
-.rollout-node > em { position: absolute; left: 50%; bottom: 30px; transform: translateX(-50%); width: 112px; font-style: normal; text-align: center; }
-.rollout-node > em b { display: block; font: 400 13px 'IBM Plex Mono', monospace; font-weight: 400; color: var(--text); line-height: 1.3; }
-.rollout-node > em span { display: block; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-.rollout-node:hover > i, .rollout-node:focus-visible > i { border-color: var(--green); outline: none; }
-.rollout-node.is-done > i { border-color: var(--green); background: var(--green); }
-.rollout-node.is-done > em b { color: var(--green); }
-.rollout-node.is-missed > i { border-color: var(--red); }
-.rollout-node.is-missed > em b, .rollout-node.is-missed > em span { color: var(--red); }
-.rollout-node.is-release > i { width: 26px; height: 26px; margin: -3px 0 0 -3px; border-color: var(--amber); box-shadow: 0 0 0 4px rgba(213,154,77,.16); }
-.rollout-node.is-release > em b { color: var(--amber); font-weight: 500; }
+/* нижний отступ — место под метку «сегодня», иначе она лезет к подписям */
+.rollout-noderow { position: relative; height: 28px; margin: 12px 0 30px; }
+.rollout-bar { position: absolute; left: 0; right: 0; top: 12px; height: 4px; background: var(--line); }
+.rollout-bar i { display: block; height: 100%; background: var(--green-dim); }
+.rollout-nodes { position: relative; z-index: 2; height: 100%; }
+.rollout-nodes > span { display: grid; place-items: center; }
+.rollout-node { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line-hi); background: var(--panel-2); padding: 0; cursor: pointer; }
+.rollout-node:hover, .rollout-node:focus-visible { border-color: var(--green); outline: none; }
+.rollout-node.is-done { border-color: var(--green); background: var(--green); }
+.rollout-node.is-late { border-color: var(--red); }
+.rollout-node.is-release { width: 22px; height: 22px; border-color: var(--amber); box-shadow: 0 0 0 4px rgba(213,154,77,.16); }
 
-.rollout-today { position: absolute; top: 56px; bottom: 8px; width: 2px; background: var(--green); z-index: 3; }
-.rollout-today b { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); padding: 2px 8px; background: var(--green); color: #06210a; font: 700 11px 'IBM Plex Mono', monospace; letter-spacing: .06em; white-space: nowrap; }
+/* интервал стоит в стыке колонок — ровно посередине между соседними узлами */
+.rollout-gaps > span { position: relative; }
+.rollout-gaps i { position: absolute; left: 0; top: 0; transform: translateX(-50%); font-style: normal; white-space: nowrap; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.rollout-gaps > span:first-child i { display: none; }
+
+.rollout-today { position: absolute; top: -6px; bottom: -6px; width: 2px; background: var(--green); z-index: 3; }
+.rollout-today b { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 6px; padding: 2px 8px; background: var(--green); color: #06210a; font: 700 11px 'IBM Plex Mono', monospace; letter-spacing: .06em; white-space: nowrap; }
+.rollout-today.is-end b { left: auto; right: 2px; transform: none; }
+.rollout-today.is-start b { left: 0; transform: none; }
 html[data-theme="light"] .rollout-today b { color: #0a270e; }
 
 .rollout-foot { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; border-top: 1px solid var(--line); padding: 16px 18px; }
@@ -1797,9 +1809,48 @@ html[data-theme="light"] .rollout-today b { color: #0a270e; }
 .rollout-foot-main { flex: 1; min-width: 200px; }
 .rollout-foot-main strong { display: block; font: 500 20px 'Oswald', sans-serif; letter-spacing: .02em; }
 .rollout-foot-main small { display: block; color: var(--muted); font-size: 15px; }
-.rollout-chips { display: flex; gap: 9px; flex-wrap: wrap; border-top: 1px solid var(--line); padding: 13px 18px; }
-.rollout-chip { padding: 5px 11px; border: 1px solid var(--line); color: var(--muted); font-size: 14px; }
-.rollout-chip.is-missed { border-color: var(--red); color: var(--red); }
+/* Просроченное спрашивает, а не выносит приговор: этап мог быть сделан
+   и просто не отмечен, а раньше это стоило четырёх действий через шторку. */
+.rollout-ask { border-top: 1px solid var(--line); }
+.rollout-ask-head { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 11px 18px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.rollout-ask-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--line); }
+.rollout-ask-row:last-child { border-bottom: 0; }
+.rollout-ask-row strong { display: block; font: 500 17px 'Oswald', sans-serif; letter-spacing: .02em; }
+.rollout-ask-row small { display: block; color: var(--red); font-size: 13px; }
+.rollout-ask-pair { display: flex; gap: 8px; }
+.rollout-mini { border: 1px solid var(--line-hi); background: transparent; color: var(--muted); padding: 6px 12px; font: inherit; font-size: 13px; white-space: nowrap; cursor: pointer; }
+.rollout-mini:hover { color: var(--text); border-color: var(--text); }
+.rollout-mini.is-go { border-color: var(--green); color: var(--green); }
+.rollout-mini.is-go:hover { background: var(--green); color: #06210a; }
+html[data-theme="light"] .rollout-mini.is-go:hover { color: #f2efe6; }
+
+/* Настройщик плана: линейка сверху и строки снизу — одно и то же дважды. */
+.plan-ruler { margin: 14px 0 16px; }
+.plan-ruler-head { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-bottom: 7px; }
+.plan-days { display: grid; grid-template-columns: repeat(var(--plan-span, 9), minmax(0, 1fr)); border: 1px solid var(--line); background: var(--panel-2); overflow: hidden; }
+.plan-day { min-height: 58px; padding: 5px 2px; border-right: 1px solid var(--line); text-align: center; }
+.plan-day:last-child { border-right: 0; }
+.plan-day em { display: block; font-style: normal; color: var(--muted); font-size: 10px; }
+.plan-day b { display: block; font: 500 15px 'Oswald', sans-serif; color: var(--text); font-variant-numeric: tabular-nums; }
+.plan-day.is-today { background: rgba(112,238,121,.13); box-shadow: inset 0 0 0 1px var(--green); }
+.plan-day.is-today b, .plan-day.is-today em { color: var(--green); }
+.plan-day.is-release { background: rgba(213,154,77,.15); box-shadow: inset 0 0 0 1px var(--amber); }
+.plan-day.is-release b, .plan-day.is-release em { color: var(--amber); }
+.plan-pin { display: block; width: 9px; height: 9px; margin: 5px auto 0; border-radius: 50%; background: var(--muted); }
+.plan-pin.is-many { width: auto; height: auto; border-radius: 0; padding: 1px 4px; background: var(--red); color: #fff; font: 700 10px 'IBM Plex Mono', monospace; }
+.plan-rows { border-top: 1px solid var(--line); }
+.plan-row { display: grid; grid-template-columns: minmax(0, 1fr) 132px 76px 30px; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.plan-row:last-child { border-bottom: 0; }
+.plan-name { min-width: 0; font: 500 16px 'Oswald', sans-serif; letter-spacing: .02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-name i { color: var(--green); font-style: normal; font-size: 12px; }
+.plan-step { display: grid; grid-template-columns: 28px minmax(0, 1fr) 28px; align-items: center; border: 1px solid var(--line); background: var(--panel-2); }
+.plan-step button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 15px; height: 30px; cursor: pointer; }
+.plan-step button:hover { color: var(--green); }
+.plan-step > span { text-align: center; color: var(--text); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.plan-res { text-align: right; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.plan-del { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 16px; cursor: pointer; }
+.plan-del:hover { color: var(--red); }
+.plan-warn { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; padding: 11px 13px; border: 1px solid var(--red); color: var(--red); font-size: 13px; }
 .rollout-depot { border-top: 1px solid var(--line); }
 .rollout-depot-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 18px; border-top: 1px solid var(--line); }
 .rollout-depot-row:first-child { border-top: 0; }
