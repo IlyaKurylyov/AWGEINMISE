@@ -710,6 +710,12 @@
   const ARTIST_COLUMNS = 'id,name,description,image_url,matrix_text,tg_url,vk_url,inst_url,owner_user_id';
   const ARTIST_NOT_READY = 'Кабинет не догрузился. Обновите страницу.';
 
+  // Биты переехали с владельца на карточку артиста, чтобы ездить вместе с ней при
+  // передаче. Хвост с artist_id is null — те, которым при миграции не нашлось
+  // карточки: пока такие есть, показываем их прежнему владельцу, чтобы ничего не
+  // пропало из кабинета. Когда хвост опустеет, останется один eq по artist_id.
+  const beatScope = () => `artist_id.eq.${state.artist.id},and(artist_id.is.null,owner_user_id.eq.${state.user.id})`;
+
   function bootError(code, message, cause = null) {
     const error = new Error(message);
     error.bootCode = code;
@@ -744,7 +750,7 @@
     await loadArtist();
     const artistId = state.artist.id;
     const results = await Promise.allSettled([
-      safeQuery(db.from('beats').select('id,title,seller,seller_link,price,audio_url,storage_path,publication_status,public_preview_path,private_master_path,cover_url,currency,published_at,created_at,updated_at').eq('owner_user_id', state.user.id).order('created_at', { ascending: false })),
+      safeQuery(db.from('beats').select('id,title,seller,seller_link,price,audio_url,storage_path,publication_status,public_preview_path,private_master_path,cover_url,currency,published_at,created_at,updated_at').or(beatScope()).order('created_at', { ascending: false })),
       safeQuery(db.from('artist_projects').select('*').eq('artist_id', artistId).order('updated_at', { ascending: false })),
       safeQuery(db.from('lyrics_documents').select('*').eq('artist_id', artistId).order('updated_at', { ascending: false })),
       safeQuery(db.from('artist_private_links').select('*').eq('artist_id', artistId).order('sort_order').order('created_at')),
@@ -1941,7 +1947,7 @@
       for (let index = 0; index < files.length; index += 1) {
         const file = files[index];
         button.textContent = `Загрузка ${index + 1}/${files.length}`;
-        const path = `${state.user.id}/projects/${projectId}/files/${Date.now()}-${index}-${safeFileName(file.name)}`;
+        const path = `${state.artist.id}/projects/${projectId}/files/${Date.now()}-${index}-${safeFileName(file.name)}`;
         const { error: uploadError } = await db.storage.from('artist-private').upload(path, file, { contentType: file.type || 'application/octet-stream' });
         if (uploadError) throw uploadError;
         const { error: rowError } = await db.from('project_files').insert({ artist_id: state.artist.id, project_id: projectId, file_kind: kind, bucket_id: 'artist-private', storage_path: path, original_name: file.name, mime_type: file.type || null, size_bytes: file.size });
@@ -2071,6 +2077,7 @@
       seller_link: String(data.get('seller_link') || '').trim() || null,
       seller: state.artist.name,
       currency: 'RUB',
+      artist_id: state.artist.id,
       owner_user_id: state.user.id,
     };
     if (!payload.title) return toast('Укажите название бита.', 'error');
@@ -2087,7 +2094,7 @@
         throw new Error('Для продажи загрузите публичное превью бита.');
       }
       if (hasNewAudio) {
-        const path = `${state.user.id}/beats/${Date.now()}-${safeFileName(file.name)}`;
+        const path = `${state.artist.id}/beats/${Date.now()}-${safeFileName(file.name)}`;
         if (isPrivate) {
           const { error } = await db.storage.from('artist-private').upload(path, file, { contentType: file.type, upsert: false });
           if (error) throw error;
@@ -2131,7 +2138,7 @@
   }
 
   async function refreshBeats() {
-    state.beats = await safeQuery(db.from('beats').select('id,title,seller,seller_link,price,audio_url,storage_path,publication_status,public_preview_path,private_master_path,cover_url,currency,published_at,created_at,updated_at').eq('owner_user_id', state.user.id).order('created_at', { ascending: false }));
+    state.beats = await safeQuery(db.from('beats').select('id,title,seller,seller_link,price,audio_url,storage_path,publication_status,public_preview_path,private_master_path,cover_url,currency,published_at,created_at,updated_at').or(beatScope()).order('created_at', { ascending: false }));
     renderBeats(); renderDashboard(); $('#nav-beats-count').textContent = state.beats.length;
     if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
   }
@@ -2588,7 +2595,7 @@
       let saved = row;
       const cover = data.get('cover');
       if (cover instanceof File && cover.size) {
-        const path = `${state.user.id}/projects/${saved.id}/cover-${Date.now()}-${safeFileName(cover.name)}`;
+        const path = `${state.artist.id}/projects/${saved.id}/cover-${Date.now()}-${safeFileName(cover.name)}`;
         const { error: uploadError } = await db.storage.from('artist-private').upload(path, cover, { contentType: cover.type });
         if (uploadError) throw uploadError;
         const { data: coverRow, error: coverError } = await db.from('artist_projects').update({ cover_storage_path: path }).eq('id', saved.id).eq('artist_id', state.artist.id).select().single();
