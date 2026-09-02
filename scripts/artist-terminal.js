@@ -1092,7 +1092,7 @@
     });
     const rebuild = $('[data-rollout-rebuild]', host);
     if (rebuild) rebuild.addEventListener('click', () => {
-      if (confirm('Пересобрать план заново? Ручные правки этапов будут потеряны.')) generateRollout(project, 'single', rebuild);
+      openRebuildPlan(project);
     });
     const setup = $('[data-rollout-setup]', host);
     if (setup) setup.addEventListener('click', () => openPlanSetup(project));
@@ -1122,6 +1122,85 @@
     const word = plural(days, 'день', 'дня', 'дней');
     return offset < 0 ? 'за ' + days + ' ' + word : 'через ' + days + ' ' + word;
   };
+
+  // Сколько дней разбега нужно шаблону до дня Х.
+  const templateNeed = (key) => Math.abs(Math.min.apply(null,
+    ROLLOUT_TEMPLATES[key].stages.map((stage) => stage.day)));
+
+  async function setReleaseDate(project, iso) {
+    const { error } = await db.from('artist_projects').update({ release_at: iso })
+      .eq('id', project.id).eq('artist_id', state.artist.id);
+    if (error) { toast(error.message || 'Не удалось сохранить дату.', 'error'); return false; }
+    project.release_at = iso;
+    state.projects = state.projects.map((row) => (row.id === project.id ? { ...row, release_at: iso } : row));
+    return true;
+  }
+
+  // Пересборка раньше молча брала сингл и считала назад от дня Х — а если день Х
+  // уже прошёл, план заново ложился в прошлое, и кнопка не делала ничего.
+  // Теперь спрашивает шаблон и, когда разбега не хватает, предлагает выбор.
+  function openRebuildPlan(project) {
+    if (!project || !project.release_at) return toast('Сначала задайте дату релиза.', 'error');
+    const host = () => $('#plan-rebuild');
+
+    function pickTemplate() {
+      const runway = daysUntil(project.release_at);
+      const picks = Object.keys(ROLLOUT_TEMPLATES).map((key) => {
+        const need = templateNeed(key);
+        const fits = runway >= need;
+        return '<button class="plan-pick" type="button" data-template="' + key + '">'
+          + '<strong>' + ROLLOUT_TEMPLATES[key].label + '</strong><small>'
+          + (fits ? 'помещается — до выхода ' + runway + ' ' + plural(runway, 'день', 'дня', 'дней')
+            : 'нужно ' + need + ' ' + plural(need, 'день', 'дня', 'дней') + ', а осталось '
+              + Math.max(0, runway)) + '</small></button>';
+      }).join('');
+      host().innerHTML = '<p class="drawer-note">Ручные правки этапов будут потеряны. '
+        + 'Выберите, по какому шаблону собрать план.</p><div class="plan-picks">' + picks
+        + '<button class="plan-pick" type="button" data-template="custom"><strong>Настроить вручную</strong>'
+        + '<small>расставить даты самому по оставшимся дням</small></button></div>';
+      $$('[data-template]', host()).forEach((button) => button.addEventListener('click', () => {
+        const key = button.dataset.template;
+        if (key === 'custom') { closeDrawer(true); return openPlanSetup(project); }
+        if (daysUntil(project.release_at) >= templateNeed(key)) return build(key, button);
+        askDate(key);
+      }));
+    }
+
+    // Разбега не хватает: либо двигаем день Х, либо ужимаем план под остаток.
+    function askDate(key) {
+      const need = templateNeed(key);
+      const suggested = addDays(new Date(), need);
+      const runway = Math.max(0, daysUntil(project.release_at));
+      host().innerHTML = '<p class="drawer-note">«' + ROLLOUT_TEMPLATES[key].label + '» требует '
+        + need + ' ' + plural(need, 'день', 'дня', 'дней') + ' до выхода, а осталось ' + runway
+        + '. Что делаем?</p><div class="plan-picks">'
+        + '<button class="plan-pick" type="button" id="rebuild-move"><strong>Сдвинуть день Х</strong>'
+        + '<small>выход встанет на ' + shortDate(suggested) + ', план соберётся целиком</small></button>'
+        + '<button class="plan-pick" type="button" id="rebuild-keep"><strong>Оставить день Х</strong>'
+        + '<small>этапы ужмутся в оставшиеся ' + runway + ' ' + plural(runway, 'день', 'дня', 'дней')
+        + ', даты можно подвинуть</small></button></div>'
+        + '<div class="drawer-actions"><button class="text-button" type="button" id="rebuild-back">← назад</button><span></span></div>';
+      $('#rebuild-move', host()).addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        setBusy(button, true, 'Сдвигаем…');
+        const ok = await setReleaseDate(project, suggested.toISOString());
+        setBusy(button, false);
+        if (ok) build(key, button);
+      });
+      $('#rebuild-keep', host()).addEventListener('click', () => { closeDrawer(true); openPlanSetup(project); });
+      $('#rebuild-back', host()).addEventListener('click', pickTemplate);
+    }
+
+    async function build(key, button) {
+      await generateRollout(project, key, button);
+      closeDrawer(true);
+      renderCalendar();
+      renderDashboard();
+    }
+
+    openDrawer('РЕЛИЗ / ПЛАН', 'Пересобрать план', '<div id="plan-rebuild"></div>');
+    pickTemplate();
+  }
 
   // Шаблон считает назад от дня Х на пять недель. Если до выхода осталось
   // меньше, офсеты сжимаются пропорционально: форма плана сохраняется, а даты
@@ -1436,10 +1515,39 @@
     ].join('');
   }
 
+  // Календарь — окно: пролистал вперёд, и просроченное просто исчезло с экрана.
+  // Счётчики висят на стрелках и считаются от сегодня, а не от показанного
+  // месяца, поэтому не прыгают при листании и остаются опорой.
+  function updateCalendarBadges(month) {
+    const today = dayStart(new Date()).getTime();
+    const selected = selectedDashboardProject();
+    const mine = (projectId) => !selected || projectId === selected.id;
+    const overdue = state.tasks.filter((task) => !task.is_done && mine(task.project_id)
+        && task.due_at && dayStart(task.due_at).getTime() < today).length
+      + (state.stages || []).filter((stage) => !stage.is_done && stage.day_offset !== 0
+        && mine(stage.project_id) && dayStart(stage.stage_date).getTime() < today).length;
+    const ahead = state.projects.filter((project) => mine(project.id) && project.release_at
+      && project.status === 'scheduled' && dayStart(project.release_at).getTime() >= today).length;
+
+    const back = $('#cal-badge-back');
+    const forward = $('#cal-badge-fwd');
+    if (back) { back.textContent = overdue; back.hidden = !overdue; }
+    if (forward) { forward.textContent = ahead; forward.hidden = !ahead; }
+    const prev = $('#dashboard-calendar-prev');
+    const next = $('#dashboard-calendar-next');
+    if (prev) prev.setAttribute('aria-label', overdue ? 'Предыдущий месяц, позади ' + overdue + ' просроченных' : 'Предыдущий месяц');
+    if (next) next.setAttribute('aria-label', ahead ? 'Следующий месяц, впереди ' + ahead + ' релизов' : 'Следующий месяц');
+
+    const now = new Date();
+    const home = $('#dashboard-calendar-today');
+    if (home) home.hidden = month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth();
+  }
+
   function renderDashboardCalendar() {
     const selectedProject = selectedDashboardProject();
     const month = new Date(state.dashboardDate.getFullYear(), state.dashboardDate.getMonth(), 1);
     $('#dashboard-calendar-month').textContent = month.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+    updateCalendarBadges(month);
     const first = new Date(month);
     first.setDate(1 - ((month.getDay() + 6) % 7));
     const headers = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((day) => `<div class="dashboard-calendar-weekday">${day}</div>`).join('');
@@ -4176,6 +4284,7 @@
     });
     $('#dashboard-calendar-prev').addEventListener('click', () => { state.dashboardDate.setMonth(state.dashboardDate.getMonth() - 1); renderDashboardCalendar(); });
     $('#dashboard-calendar-next').addEventListener('click', () => { state.dashboardDate.setMonth(state.dashboardDate.getMonth() + 1); renderDashboardCalendar(); });
+    $('#dashboard-calendar-today').addEventListener('click', () => { state.dashboardDate = new Date(); renderDashboardCalendar(); });
     $('#dashboard-project-select').addEventListener('change', (event) => { state.dashboardProjectId = event.currentTarget.value; renderDashboard(); });
     $('#dashboard-new-task').addEventListener('click', () => openTaskEditor('idea', state.dashboardProjectId || ''));
     $('#dashboard-search').addEventListener('input', (event) => { state.dashboardSearch = event.currentTarget.value; renderDashboardSearchResults(); });

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles/artist-terminal.css?v=20260902-1">
+  <link rel="stylesheet" href="/styles/artist-terminal.css?v=20260902-2">
   <script>
     (() => {
       try {
@@ -137,7 +137,15 @@
 
           <div class="dashboard-layout">
             <article class="panel dashboard-calendar-panel">
-              <header class="panel-header dashboard-panel-head"><div><span class="eyebrow">План релизов</span><h3>Календарь</h3></div><div class="dashboard-month-controls"><button id="dashboard-calendar-prev" type="button" aria-label="Предыдущий месяц">←</button><strong id="dashboard-calendar-month"></strong><button id="dashboard-calendar-next" type="button" aria-label="Следующий месяц">→</button></div></header>
+              <header class="panel-header dashboard-panel-head dashboard-calendar-head">
+                <span></span>
+                <div class="dashboard-month-controls">
+                  <button id="dashboard-calendar-prev" type="button" aria-label="Предыдущий месяц">←<span class="cal-badge" id="cal-badge-back" hidden></span></button>
+                  <strong id="dashboard-calendar-month"></strong>
+                  <button id="dashboard-calendar-next" type="button" aria-label="Следующий месяц">→<span class="cal-badge is-calm" id="cal-badge-fwd" hidden></span></button>
+                </div>
+                <div class="dashboard-calendar-back"><button class="text-button" id="dashboard-calendar-today" type="button" hidden>к текущему месяцу</button></div>
+              </header>
               <div class="dashboard-calendar" id="dashboard-calendar"></div>
             </article>
 
@@ -279,6 +287,6 @@
     </div>
   </div>
 
-  <script src="/scripts/artist-terminal.js?v=20260902-1"></script>
+  <script src="/scripts/artist-terminal.js?v=20260902-2"></script>
 </body>
 </html>

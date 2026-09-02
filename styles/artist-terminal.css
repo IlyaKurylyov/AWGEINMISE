@@ -481,10 +481,24 @@ html[data-theme="light"] .soon-badge { border-color: #b3afa3; color: #6a6d63; }
 }
 .dashboard-pipeline-panel .panel-header .eyebrow:empty { display: none; }
 .dashboard-panel-head { min-height: 54px; }
-.dashboard-month-controls { display: grid; grid-template-columns: 35px minmax(120px,1fr) 35px; align-items: center; gap: 4px; }
-.dashboard-month-controls strong { font: 500 15px 'Oswald', sans-serif; text-align: center; text-transform: capitalize; }
-.dashboard-month-controls button { width: 35px; height: 31px; border: 1px solid #465044; color: #a3ada0; background: #111511; cursor: pointer; }
-.dashboard-month-controls button:hover { color: var(--green); }
+/* Заголовок «План релизов / Календарь» убран — месяц со стрелками объясняет
+   себя сам. Сетка 1fr auto 1fr держит месяц строго по центру панели. */
+.dashboard-calendar-head { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; }
+.dashboard-calendar-back { display: flex; justify-content: flex-end; }
+.dashboard-month-controls { display: grid; grid-template-columns: 35px minmax(150px,auto) 35px; align-items: center; gap: 8px; }
+/* capitalize поднимал каждое слово и давал «Июль 2026 Г.» */
+.dashboard-month-controls strong { font: 500 16px 'Oswald', sans-serif; text-align: center; }
+.dashboard-month-controls strong::first-letter { text-transform: uppercase; }
+.dashboard-month-controls button { position: relative; width: 35px; height: 31px; border: 1px solid #465044; color: #a3ada0; background: #111511; cursor: pointer; }
+.dashboard-month-controls button:hover { color: var(--green); border-color: var(--green); }
+/* Счётчик висит на той стрелке, в чью сторону лежит потерянное. */
+.cal-badge { position: absolute; top: -7px; right: -7px; min-width: 17px; height: 17px; padding: 0 4px; display: grid; place-items: center; border-radius: 9px; background: var(--red); color: #fff; font: 700 10px 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+.cal-badge.is-calm { background: var(--amber); color: #1c1408; }
+html[data-theme="light"] .cal-badge { color: #f2efe6; }
+@media (max-width: 620px) {
+  .dashboard-calendar-head { grid-template-columns: minmax(0,1fr); }
+  .dashboard-calendar-back { justify-content: flex-start; }
+}
 .dashboard-calendar { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); }
 .dashboard-calendar-weekday { min-height: 27px; display: grid; place-items: center; border-right: 1px solid #343b33; border-bottom: 1px solid #343b33; color: #838f81; font-size: 9px; text-transform: uppercase; }
 .dashboard-calendar-day { min-width: 0; min-height: 82px; display: grid; grid-template-rows: auto minmax(0,1fr); border-right: 1px solid #343b33; border-bottom: 1px solid #343b33; padding: 5px; color: #a6afa3; font-size: 10px; }
@@ -1838,6 +1852,11 @@ html[data-theme="light"] .rollout-mini.is-go:hover { color: #f2efe6; }
 .plan-day.is-release b, .plan-day.is-release em { color: var(--amber); }
 .plan-pin { display: block; width: 9px; height: 9px; margin: 5px auto 0; border-radius: 50%; background: var(--muted); }
 .plan-pin.is-many { width: auto; height: auto; border-radius: 0; padding: 1px 4px; background: var(--red); color: #fff; font: 700 10px 'IBM Plex Mono', monospace; }
+.plan-picks { display: grid; gap: 9px; margin: 14px 0 4px; }
+.plan-pick { display: block; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel-2); padding: 13px 15px; cursor: pointer; font: inherit; }
+.plan-pick:hover { border-color: var(--green); }
+.plan-pick strong { display: block; font: 500 18px 'Oswald', sans-serif; letter-spacing: .02em; color: var(--text); }
+.plan-pick small { display: block; margin-top: 2px; color: var(--muted); font-size: 13px; }
 .plan-rows { border-top: 1px solid var(--line); }
 .plan-row { display: grid; grid-template-columns: minmax(0, 1fr) 132px 76px 30px; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
 .plan-row:last-child { border-bottom: 0; }
