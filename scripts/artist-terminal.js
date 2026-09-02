@@ -923,12 +923,17 @@
     setBusy(button, true, 'Собираем…');
     const template = ROLLOUT_TEMPLATES[templateKey] || ROLLOUT_TEMPLATES.single;
     await db.from('release_stages').delete().eq('project_id', project.id).eq('artist_id', state.artist.id);
+    // Шаблон считает назад от дня Х. Если до выхода осталось меньше, чем он
+    // просит, офсеты ужимаются под остаток — иначе половина этапов легла бы
+    // в прошлое и план был бы просрочен в момент создания.
+    const draft = template.stages.map((stage) => ({ offset: stage.day }));
+    const fitted = fitOffsets(draft, daysUntil(project.release_at));
     const rows = template.stages.map((stage, index) => ({
       artist_id: state.artist.id,
       project_id: project.id,
       title: stage.title,
-      stage_date: isoDate(addDays(project.release_at, stage.day)),
-      day_offset: stage.day,
+      stage_date: isoDate(addDays(project.release_at, draft[index].offset)),
+      day_offset: draft[index].offset,
       repeat_rule: stage.repeat,
       sort_order: index,
     }));
@@ -936,7 +941,10 @@
     setBusy(button, false);
     if (error) return toast(error.message || 'Не удалось собрать план.', 'error');
     state.stages = await safeQuery(db.from('release_stages').select('*').eq('artist_id', state.artist.id).order('sort_order'));
-    toast('План собран: ' + rows.length + ' этапов.');
+    const runway = daysUntil(project.release_at);
+    toast(fitted
+      ? 'План собран и ужат в ' + runway + ' ' + plural(runway, 'день', 'дня', 'дней') + ' до выхода.'
+      : 'План собран: ' + rows.length + ' этапов.');
     logEvent('release', 'Собран план выпуска', project.title || '', { view: 'dashboard', project: project.id });
     renderRollout();
   }
@@ -978,17 +986,18 @@
         // Шаблон считается назад от дня Х. Если до выхода меньше четырёх недель,
         // он не помещается и раскидал бы половину этапов в прошлое — тогда
         // вместо шаблона предлагаем расставить даты руками.
+        + '<div class="rollout-empty"><p>'
         + (daysUntil(project.release_at) < ROLLOUT_MIN_DAYS
-          ? '<div class="rollout-empty"><p>До выхода ' + Math.max(0, daysUntil(project.release_at)) + ' '
+          ? 'До выхода ' + Math.max(0, daysUntil(project.release_at)) + ' '
             + plural(Math.max(0, daysUntil(project.release_at)), 'день', 'дня', 'дней')
-            + ' — шаблон на пять недель не поместится и часть этапов уехала бы в прошлое. '
-            + 'Расставим даты по оставшимся дням.</p><div class="rollout-empty-actions">'
-            + '<button class="button button-primary" type="button" data-rollout-setup>Настроить план</button></div></div>'
-          : '<div class="rollout-empty"><p>Плана выпуска ещё нет. Соберём его назад от ' + shortDate(project.release_at)
-            + ': права, дистрибуция, сведение, тизеры, день Х.</p><div class="rollout-empty-actions">'
-            + '<select class="rollout-template" aria-label="Шаблон плана">'
-            + Object.keys(ROLLOUT_TEMPLATES).map((key) => '<option value="' + key + '">' + ROLLOUT_TEMPLATES[key].label + '</option>').join('')
-            + '</select><button class="button button-primary" type="button" data-rollout-build>Собрать план</button></div></div>')
+            + ' — шаблон не поместится целиком, поэтому этапы ужмутся под этот срок. Потом можно подвинуть.'
+          : 'Плана выпуска ещё нет. Соберём его назад от ' + shortDate(project.release_at)
+            + ': права, дистрибуция, сведение, тизеры, день Х.')
+        + '</p><div class="rollout-empty-actions">'
+        + '<select class="rollout-template" aria-label="Шаблон плана">'
+        + Object.keys(ROLLOUT_TEMPLATES).map((key) => '<option value="' + key + '">' + ROLLOUT_TEMPLATES[key].label + '</option>').join('')
+        + '</select><button class="button button-primary" type="button" data-rollout-build>Собрать план</button>'
+        + '<button class="text-button" type="button" data-rollout-setup>настроить вручную</button></div></div>'
         + depot;
       bindRollout(host, project);
       return;
@@ -1127,15 +1136,6 @@
   const templateNeed = (key) => Math.abs(Math.min.apply(null,
     ROLLOUT_TEMPLATES[key].stages.map((stage) => stage.day)));
 
-  async function setReleaseDate(project, iso) {
-    const { error } = await db.from('artist_projects').update({ release_at: iso })
-      .eq('id', project.id).eq('artist_id', state.artist.id);
-    if (error) { toast(error.message || 'Не удалось сохранить дату.', 'error'); return false; }
-    project.release_at = iso;
-    state.projects = state.projects.map((row) => (row.id === project.id ? { ...row, release_at: iso } : row));
-    return true;
-  }
-
   // Пересборка раньше молча брала сингл и считала назад от дня Х — а если день Х
   // уже прошёл, план заново ложился в прошлое, и кнопка не делала ничего.
   // Теперь спрашивает шаблон и, когда разбега не хватает, предлагает выбор.
@@ -1151,7 +1151,7 @@
         return '<button class="plan-pick" type="button" data-template="' + key + '">'
           + '<strong>' + ROLLOUT_TEMPLATES[key].label + '</strong><small>'
           + (fits ? 'помещается — до выхода ' + runway + ' ' + plural(runway, 'день', 'дня', 'дней')
-            : 'нужно ' + need + ' ' + plural(need, 'день', 'дня', 'дней') + ', а осталось '
+            : 'нужно ' + need + ' ' + plural(need, 'день', 'дня', 'дней') + ' — этапы ужмутся в оставшиеся '
               + Math.max(0, runway)) + '</small></button>';
       }).join('');
       host().innerHTML = '<p class="drawer-note">Ручные правки этапов будут потеряны. '
@@ -1161,34 +1161,8 @@
       $$('[data-template]', host()).forEach((button) => button.addEventListener('click', () => {
         const key = button.dataset.template;
         if (key === 'custom') { closeDrawer(true); return openPlanSetup(project); }
-        if (daysUntil(project.release_at) >= templateNeed(key)) return build(key, button);
-        askDate(key);
+        build(key, button);
       }));
-    }
-
-    // Разбега не хватает: либо двигаем день Х, либо ужимаем план под остаток.
-    function askDate(key) {
-      const need = templateNeed(key);
-      const suggested = addDays(new Date(), need);
-      const runway = Math.max(0, daysUntil(project.release_at));
-      host().innerHTML = '<p class="drawer-note">«' + ROLLOUT_TEMPLATES[key].label + '» требует '
-        + need + ' ' + plural(need, 'день', 'дня', 'дней') + ' до выхода, а осталось ' + runway
-        + '. Что делаем?</p><div class="plan-picks">'
-        + '<button class="plan-pick" type="button" id="rebuild-move"><strong>Сдвинуть день Х</strong>'
-        + '<small>выход встанет на ' + shortDate(suggested) + ', план соберётся целиком</small></button>'
-        + '<button class="plan-pick" type="button" id="rebuild-keep"><strong>Оставить день Х</strong>'
-        + '<small>этапы ужмутся в оставшиеся ' + runway + ' ' + plural(runway, 'день', 'дня', 'дней')
-        + ', даты можно подвинуть</small></button></div>'
-        + '<div class="drawer-actions"><button class="text-button" type="button" id="rebuild-back">← назад</button><span></span></div>';
-      $('#rebuild-move', host()).addEventListener('click', async (event) => {
-        const button = event.currentTarget;
-        setBusy(button, true, 'Сдвигаем…');
-        const ok = await setReleaseDate(project, suggested.toISOString());
-        setBusy(button, false);
-        if (ok) build(key, button);
-      });
-      $('#rebuild-keep', host()).addEventListener('click', () => { closeDrawer(true); openPlanSetup(project); });
-      $('#rebuild-back', host()).addEventListener('click', pickTemplate);
     }
 
     async function build(key, button) {
