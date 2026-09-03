@@ -1783,8 +1783,18 @@ html[data-theme="light"] .secretary-hour { background: rgba(73,82,71,.045); }
    делает и вертикальную ось auto, а нижний отступ оси вылезал за padding. */
 .rollout-stage-wrap { padding: 8px 30px 18px; background: rgba(255,255,255,.022); border-top: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; }
 /* Закрепление видно прямо на оси, а не только внутри шторки этапа. */
-.rollout-lock { display: inline-block; margin-left: 5px; font-style: normal; font-size: 11px; line-height: 1; opacity: .75; }
+/* Замочек висит под кружком на самой линии и нажимается: закрепление
+   должно сниматься там, где оно видно, а не только внутри шторки. */
+.rollout-lock { position: absolute; top: 22px; left: 50%; transform: translateX(-50%); z-index: 3; border: 0; padding: 0 2px; background: transparent; color: var(--amber); font: inherit; font-size: 11px; line-height: 1; cursor: pointer; }
 .rollout-lock::before { content: "\01F512"; }
+.rollout-lock:hover { color: var(--green); }
+.rollout-nodes > span { position: relative; }
+.plan-lock { margin-left: 7px; border: 0; padding: 0 2px; background: transparent; color: var(--line-hi); font: inherit; font-size: 12px; line-height: 1; cursor: pointer; vertical-align: middle; }
+.plan-lock::before { content: "\01F512"; }
+.plan-lock.is-on { color: var(--amber); }
+.plan-lock:hover { color: var(--green); }
+.plan-step.is-locked { opacity: .5; }
+.plan-step.is-locked button { cursor: not-allowed; }
 .rollout-editdate { margin: 0 4px 0 6px; padding: 0 4px; border: 1px solid transparent; background: transparent; color: var(--muted); font: inherit; font-size: 13px; line-height: 1; cursor: pointer; vertical-align: baseline; }
 .rollout-editdate::before { content: "\270E"; }
 .rollout-editdate:hover { color: var(--green); border-color: var(--line-hi); }

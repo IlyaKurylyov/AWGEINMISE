@@ -900,16 +900,6 @@
       { day: 7, title: 'Реакции', repeat: 'once' },
       { day: 31, title: 'Итоги', repeat: 'once' },
     ] },
-    ep: { label: 'EP · 8 недель', stages: [
-      { day: -56, title: 'Права и фиты', repeat: 'once' },
-      { day: -42, title: 'Дистрибуция и питч', repeat: 'once' },
-      { day: -28, title: 'Обложки и сведение', repeat: 'once' },
-      { day: -21, title: 'Лид-сингл', repeat: 'once' },
-      { day: -14, title: 'Пресейв и тизеры', repeat: 'every_2_days' },
-      { day: 0, title: 'День Х — во все площадки', repeat: 'once' },
-      { day: 7, title: 'Реакции', repeat: 'once' },
-      { day: 31, title: 'Итоги', repeat: 'once' },
-    ] },
   };
   const REPEAT_LABEL = { once: 'один раз', every_2_days: 'раз в 2 дня до дня Х', weekly: 'раз в неделю' };
   // Меньше четырёх недель — шаблон не помещается, даты расставляются руками.
@@ -955,6 +945,32 @@
     renderRollout();
   }
 
+  // Пятинедельный план не ужимается в короткий срок, а переносит день Х:
+  // так план остаётся полноценным, а не превращается в четыре дня подряд.
+  async function buildFiveWeeks(target, button) {
+    const project = projectById(target && target.id) || target;
+    if (!project || !project.release_at) return toast('Сначала задайте дату релиза.', 'error');
+    const need = templateNeed('single');
+    const runway = daysUntil(project.release_at);
+    if (runway < need) {
+      const moved = addDays(new Date(), need);
+      const message = 'До выхода ' + Math.max(0, runway) + ' ' + plural(Math.max(0, runway), 'день', 'дня', 'дней')
+        + ', а плану нужно ' + need + '.\n\nДата выхода будет перенесена на ' + shortDate(moved)
+        + '. Перенести и собрать план?';
+      if (!confirm(message)) return;
+      const iso = moved.toISOString();
+      const { error } = await db.from('artist_projects').update({ release_at: iso })
+        .eq('id', project.id).eq('artist_id', state.artist.id);
+      if (error) return toast(error.message || 'Не удалось перенести дату.', 'error');
+      project.release_at = iso;
+      state.projects = state.projects.map((row) => (row.id === project.id ? { ...row, release_at: iso } : row));
+      toast('Дата выхода перенесена на ' + shortDate(moved) + '.');
+    }
+    await generateRollout(project, 'single', button);
+    renderCalendar();
+    renderDashboard();
+  }
+
   // Релиз для пути: выбранный в фокусе, иначе ближайший по дате выхода.
   function rolloutProject() {
     const selected = selectedDashboardProject();
@@ -993,17 +1009,9 @@
         // Шаблон считается назад от дня Х. Если до выхода меньше четырёх недель,
         // он не помещается и раскидал бы половину этапов в прошлое — тогда
         // вместо шаблона предлагаем расставить даты руками.
-        + '<div class="rollout-empty"><p>'
-        + (daysUntil(project.release_at) < ROLLOUT_MIN_DAYS
-          ? 'До выхода ' + Math.max(0, daysUntil(project.release_at)) + ' '
-            + plural(Math.max(0, daysUntil(project.release_at)), 'день', 'дня', 'дней')
-            + ' — шаблон не поместится целиком, поэтому этапы ужмутся под этот срок. Потом можно подвинуть.'
-          : 'Плана выпуска ещё нет. Соберём его назад от ' + shortDate(project.release_at)
-            + ': права, дистрибуция, сведение, тизеры, день Х.')
-        + '</p><div class="rollout-empty-actions">'
-        + '<select class="rollout-template" aria-label="Шаблон плана">'
-        + Object.keys(ROLLOUT_TEMPLATES).map((key) => '<option value="' + key + '">' + ROLLOUT_TEMPLATES[key].label + '</option>').join('')
-        + '</select><button class="button button-primary" type="button" data-rollout-build>Собрать план</button>'
+        + '<div class="rollout-empty"><p>Плана выпуска ещё нет. Соберём его на пять недель: '
+        + 'права, дистрибуция, сведение, тизеры, день Х.</p><div class="rollout-empty-actions">'
+        + '<button class="button button-primary" type="button" data-rollout-build>Собрать план</button>'
         + '<button class="text-button" type="button" data-rollout-setup>настроить вручную</button></div></div>'
         + depot;
       bindRollout(host, project);
@@ -1044,10 +1052,12 @@
     const caps = stages.map((stage) => '<span class="rollout-cap ' + stageClass(stage) + '">'
       + '<b>' + escapeHTML(stage.title) + '</b>'
       + '<span class="rollout-cap-date">' + shortDate(stage.stage_date)
-      + (stage.is_pinned ? '<i class="rollout-lock" title="Не сдвигается при переносе дня Х"></i>' : '')
       + '</span></span>').join('');
 
-    const nodeCells = stages.map((stage) => '<span><button class="rollout-node ' + stageClass(stage) + '" type="button"'
+    const nodeCells = stages.map((stage) => '<span>'
+      + (stage.is_pinned ? '<button class="rollout-lock" type="button" data-stage-pin="' + stage.id
+        + '" title="Закреплён: не сдвигается при переносе дня Х. Нажмите, чтобы снять"></button>' : '')
+      + '<button class="rollout-node ' + stageClass(stage) + '" type="button"'
       + ' data-stage="' + stage.id + '" title="' + escapeHTML(stage.title) + ' · ' + shortDate(stage.stage_date)
       + (stage.repeat_rule !== 'once' ? ' · ' + REPEAT_LABEL[stage.repeat_rule] : '') + '"></button></span>').join('');
 
@@ -1106,10 +1116,7 @@
 
   function bindRollout(host, project) {
     const build = $('[data-rollout-build]', host);
-    if (build) build.addEventListener('click', () => {
-      const select = $('.rollout-template', host);
-      generateRollout(project, select ? select.value : 'single', build);
-    });
+    if (build) build.addEventListener('click', () => buildFiveWeeks(project, build));
     const rebuild = $('[data-rollout-rebuild]', host);
     if (rebuild) rebuild.addEventListener('click', () => {
       openRebuildPlan(project);
@@ -1118,6 +1125,10 @@
     if (editDate) editDate.addEventListener('click', () => offerReleaseDate(project));
     const setup = $('[data-rollout-setup]', host);
     if (setup) setup.addEventListener('click', () => openPlanSetup(project));
+    $$('[data-stage-pin]', host).forEach((button) => button.addEventListener('click', () => {
+      const stage = stageById(button.dataset.stagePin);
+      if (stage) openStageEditor(stage, project);
+    }));
     $$('[data-stage-done]', host).forEach((button) => button.addEventListener('click', () => {
       setStageDone(button.dataset.stageDone, button);
     }));
@@ -1174,7 +1185,8 @@
       $$('[data-template]', host()).forEach((button) => button.addEventListener('click', () => {
         const key = button.dataset.template;
         if (key === 'custom') { closeDrawer(true); return openPlanSetup(project); }
-        build(key, button);
+        closeDrawer(true);
+        buildFiveWeeks(project, button);
       }));
     }
 
@@ -1217,9 +1229,10 @@
         offset: Math.round((dayStart(stage.stage_date) - dayStart(project.release_at)) / 86400000),
         repeat: stage.repeat_rule || 'once',
         done: !!stage.is_done,
+        pinned: !!stage.is_pinned,
       }))
       : ROLLOUT_TEMPLATES.single.stages.map((stage) => ({
-        id: null, title: stage.title, offset: stage.day, repeat: stage.repeat, done: false,
+        id: null, title: stage.title, offset: stage.day, repeat: stage.repeat, done: false, pinned: false,
       }));
     const removed = [];
     // Если план целиком отстал от сегодняшнего дня — он не «настроен вручную»,
@@ -1283,10 +1296,13 @@
       }
       host.innerHTML = intro
         + '<div class="plan-rows">' + rows.map((row, index) => '<div class="plan-row">'
-          + '<span class="plan-name">' + escapeHTML(row.title) + (row.done ? ' <i>сделан</i>' : '') + '</span>'
-          + '<span class="plan-step"><button type="button" data-plan-dec="' + index + '" aria-label="Раньше">−</button>'
+          + '<span class="plan-name">' + escapeHTML(row.title) + (row.done ? ' <i>сделан</i>' : '')
+          + '<button class="plan-lock' + (row.pinned ? ' is-on' : '') + '" type="button" data-plan-pin="' + index
+          + '" aria-label="' + (row.pinned ? 'Снять закрепление' : 'Закрепить дату') + '"></button></span>'
+          + '<span class="plan-step' + (row.pinned ? ' is-locked' : '') + '">'
+          + '<button type="button" data-plan-dec="' + index + '" aria-label="Раньше"' + (row.pinned ? ' disabled' : '') + '>−</button>'
           + '<span>' + offsetLabel(row.offset) + '</span>'
-          + '<button type="button" data-plan-inc="' + index + '" aria-label="Позже">+</button></span>'
+          + '<button type="button" data-plan-inc="' + index + '" aria-label="Позже"' + (row.pinned ? ' disabled' : '') + '>+</button></span>'
           + '<span class="plan-res">' + shortDate(rowDate(row.offset)) + '</span>'
           + '<button class="plan-del" type="button" data-plan-del="' + index + '" aria-label="Убрать этап">×</button>'
           + '</div>').join('') + '</div>'
@@ -1301,6 +1317,10 @@
       }));
       $$('[data-plan-inc]', host).forEach((button) => button.addEventListener('click', () => {
         rows[Number(button.dataset.planInc)].offset += 1; draw();
+      }));
+      $$('[data-plan-pin]', host).forEach((button) => button.addEventListener('click', () => {
+        const index = Number(button.dataset.planPin);
+        rows[index].pinned = !rows[index].pinned; draw();
       }));
       $$('[data-plan-del]', host).forEach((button) => button.addEventListener('click', () => {
         const index = Number(button.dataset.planDel);
@@ -1342,6 +1362,7 @@
             stage_date: isoDate(rowDate(row.offset)),
             day_offset: row.offset,
             repeat_rule: row.repeat,
+            is_pinned: !!row.pinned,
             sort_order: index,
           };
           const { error } = row.id
