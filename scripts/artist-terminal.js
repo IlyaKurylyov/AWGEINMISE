@@ -1126,8 +1126,7 @@
     const setup = $('[data-rollout-setup]', host);
     if (setup) setup.addEventListener('click', () => openPlanSetup(project));
     $$('[data-stage-pin]', host).forEach((button) => button.addEventListener('click', () => {
-      const stage = stageById(button.dataset.stagePin);
-      if (stage) openStageEditor(stage, project);
+      toggleStagePin(button.dataset.stagePin, button);
     }));
     $$('[data-stage-done]', host).forEach((button) => button.addEventListener('click', () => {
       setStageDone(button.dataset.stageDone, button);
@@ -1382,6 +1381,21 @@
     }
 
     draw();
+  }
+
+  // Замок снимается там же, где виден — на линии, одним нажатием.
+  async function toggleStagePin(stageId, button) {
+    const stage = stageById(stageId);
+    if (!stage) return;
+    const next = !stage.is_pinned;
+    setBusy(button, true, '');
+    const { error } = await db.from('release_stages').update({ is_pinned: next })
+      .eq('id', stageId).eq('artist_id', state.artist.id);
+    setBusy(button, false);
+    if (error) return toast(error.message || 'Не удалось изменить закрепление.', 'error');
+    state.stages = state.stages.map((row) => (row.id === stageId ? { ...row, is_pinned: next } : row));
+    toast(next ? 'Этап закреплён.' : 'Закрепление снято — этап поедет за днём Х.');
+    renderRollout();
   }
 
   async function setStageDone(stageId, button) {

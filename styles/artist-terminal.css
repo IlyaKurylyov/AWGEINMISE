@@ -1785,12 +1785,13 @@ html[data-theme="light"] .secretary-hour { background: rgba(73,82,71,.045); }
 /* Закрепление видно прямо на оси, а не только внутри шторки этапа. */
 /* Замочек висит под кружком на самой линии и нажимается: закрепление
    должно сниматься там, где оно видно, а не только внутри шторки. */
-.rollout-lock { position: absolute; top: 22px; left: 50%; transform: translateX(-50%); z-index: 3; border: 0; padding: 0 2px; background: transparent; color: var(--amber); font: inherit; font-size: 11px; line-height: 1; cursor: pointer; }
+.rollout-lock { position: absolute; top: 100%; margin-top: 3px; left: 50%; transform: translateX(-50%); z-index: 4; border: 0; padding: 0 2px; background: transparent; color: var(--amber); font: inherit; font-size: 12px; line-height: 1; cursor: pointer; }
 .rollout-lock::before { content: "\01F512"; }
 .rollout-lock:hover { color: var(--green); }
 .rollout-nodes > span { position: relative; }
 .plan-lock { margin-left: 7px; border: 0; padding: 0 2px; background: transparent; color: var(--line-hi); font: inherit; font-size: 12px; line-height: 1; cursor: pointer; vertical-align: middle; }
-.plan-lock::before { content: "\01F512"; }
+.plan-lock::before { content: "\01F513"; }
+.plan-lock.is-on::before { content: "\01F512"; }
 .plan-lock.is-on { color: var(--amber); }
 .plan-lock:hover { color: var(--green); }
 .plan-step.is-locked { opacity: .5; }
@@ -1814,7 +1815,7 @@ html[data-theme="light"] .rollout-stage-wrap { background: rgba(73,82,71,.035); 
 .rollout-cap.is-release b { color: var(--amber); font-weight: 500; }
 
 /* нижний отступ — место под метку «сегодня», иначе она лезет к подписям */
-.rollout-noderow { position: relative; height: 28px; margin: 12px 0 30px; }
+.rollout-noderow { position: relative; height: 28px; margin: 12px 0 46px; }
 .rollout-bar { position: absolute; left: 0; right: 0; top: 12px; height: 4px; background: var(--line); }
 .rollout-bar i { display: block; height: 100%; background: var(--green-dim); }
 .rollout-nodes { position: relative; z-index: 2; height: 100%; }
@@ -1831,7 +1832,7 @@ html[data-theme="light"] .rollout-stage-wrap { background: rgba(73,82,71,.035); 
 .rollout-gaps > span:first-child i { display: none; }
 
 .rollout-today { position: absolute; top: -6px; bottom: -6px; width: 2px; background: var(--green); z-index: 3; }
-.rollout-today b { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 6px; padding: 2px 8px; background: var(--green); color: #06210a; font: 700 11px 'IBM Plex Mono', monospace; letter-spacing: .06em; white-space: nowrap; }
+.rollout-today b { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 20px; padding: 2px 8px; background: var(--green); color: #06210a; font: 700 11px 'IBM Plex Mono', monospace; letter-spacing: .06em; white-space: nowrap; }
 .rollout-today.is-end b { left: auto; right: 2px; transform: none; }
 .rollout-today.is-start b { left: 0; transform: none; }
 html[data-theme="light"] .rollout-today b { color: #0a270e; }
