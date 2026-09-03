@@ -1296,8 +1296,8 @@
       host.innerHTML = intro
         + '<div class="plan-rows">' + rows.map((row, index) => '<div class="plan-row">'
           + '<span class="plan-name">' + escapeHTML(row.title) + (row.done ? ' <i>сделан</i>' : '')
-          + '<button class="plan-lock' + (row.pinned ? ' is-on' : '') + '" type="button" data-plan-pin="' + index
-          + '" aria-label="' + (row.pinned ? 'Снять закрепление' : 'Закрепить дату') + '"></button></span>'
+          + (row.pinned ? '<button class="plan-lock" type="button" data-plan-pin="' + index
+            + '" aria-label="Разблокировать этап"></button>' : '') + '</span>'
           + '<span class="plan-step' + (row.pinned ? ' is-locked' : '') + '">'
           + '<button type="button" data-plan-dec="' + index + '" aria-label="Раньше"' + (row.pinned ? ' disabled' : '') + '>−</button>'
           + '<span>' + offsetLabel(row.offset) + '</span>'
@@ -1318,8 +1318,9 @@
         rows[Number(button.dataset.planInc)].offset += 1; draw();
       }));
       $$('[data-plan-pin]', host).forEach((button) => button.addEventListener('click', () => {
-        const index = Number(button.dataset.planPin);
-        rows[index].pinned = !rows[index].pinned; draw();
+        if (!confirm('Разблокировать этап?')) return;
+        rows[Number(button.dataset.planPin)].pinned = false;
+        draw();
       }));
       $$('[data-plan-del]', host).forEach((button) => button.addEventListener('click', () => {
         const index = Number(button.dataset.planDel);
@@ -1383,18 +1384,18 @@
     draw();
   }
 
-  // Замок снимается там же, где виден — на линии, одним нажатием.
+  // Замок снимается там же, где виден. Ставится он только в шторке этапа,
+  // поэтому здесь одно действие — разблокировать, и один вопрос.
   async function toggleStagePin(stageId, button) {
     const stage = stageById(stageId);
-    if (!stage) return;
-    const next = !stage.is_pinned;
+    if (!stage || !confirm('Разблокировать этап?')) return;
     setBusy(button, true, '');
-    const { error } = await db.from('release_stages').update({ is_pinned: next })
+    const { error } = await db.from('release_stages').update({ is_pinned: false })
       .eq('id', stageId).eq('artist_id', state.artist.id);
     setBusy(button, false);
-    if (error) return toast(error.message || 'Не удалось изменить закрепление.', 'error');
-    state.stages = state.stages.map((row) => (row.id === stageId ? { ...row, is_pinned: next } : row));
-    toast(next ? 'Этап закреплён.' : 'Закрепление снято — этап поедет за днём Х.');
+    if (error) return toast(error.message || 'Не удалось снять закрепление.', 'error');
+    state.stages = state.stages.map((row) => (row.id === stageId ? { ...row, is_pinned: false } : row));
+    toast('Закрепление снято — этап поедет за днём Х.');
     renderRollout();
   }
 

@@ -1789,10 +1789,8 @@ html[data-theme="light"] .secretary-hour { background: rgba(73,82,71,.045); }
 .rollout-lock::before { content: "\01F512"; }
 .rollout-lock:hover { color: var(--green); }
 .rollout-nodes > span { position: relative; }
-.plan-lock { margin-left: 7px; border: 0; padding: 0 2px; background: transparent; color: var(--line-hi); font: inherit; font-size: 12px; line-height: 1; cursor: pointer; vertical-align: middle; }
-.plan-lock::before { content: "\01F513"; }
-.plan-lock.is-on::before { content: "\01F512"; }
-.plan-lock.is-on { color: var(--amber); }
+.plan-lock { margin-left: 7px; border: 0; padding: 0 2px; background: transparent; color: var(--amber); font: inherit; font-size: 12px; line-height: 1; cursor: pointer; vertical-align: middle; }
+.plan-lock::before { content: "\01F512"; }
 .plan-lock:hover { color: var(--green); }
 .plan-step.is-locked { opacity: .5; }
 .plan-step.is-locked button { cursor: not-allowed; }
