@@ -1813,6 +1813,10 @@ html[data-theme="light"] .rollout-stage-wrap { background: rgba(73,82,71,.035); 
 .rollout-cap { align-self: end; padding: 0 6px; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.3; overflow-wrap: anywhere; }
 .rollout-cap b { display: block; font-weight: 400; color: var(--text); }
 .rollout-cap-date { display: block; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+/* Подпись подсвечивается только под курсором: в покое ничего не выделено. */
+.rollout-cap { transition: background-color .15s ease; border-radius: 2px; }
+.rollout-cap.is-hover { background: rgba(255,255,255,.05); }
+html[data-theme="light"] .rollout-cap.is-hover { background: rgba(73,82,71,.07); }
 .rollout-cap.is-late b, .rollout-cap.is-late .rollout-cap-date { color: var(--red); }
 .rollout-cap.is-done b { color: var(--green); }
 .rollout-cap.is-release b { color: var(--amber); font-weight: 500; }
@@ -1824,7 +1828,15 @@ html[data-theme="light"] .rollout-stage-wrap { background: rgba(73,82,71,.035); 
 .rollout-nodes { position: relative; z-index: 2; height: 100%; }
 .rollout-nodes > span { display: grid; place-items: center; }
 .rollout-node { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line-hi); background: var(--panel-2); padding: 0; cursor: pointer; }
-.rollout-node:hover, .rollout-node:focus-visible { border-color: var(--green); outline: none; }
+.rollout-node { transition: transform .15s ease, border-color .15s ease; }
+.rollout-node:hover, .rollout-node:focus-visible { border-color: var(--green); outline: none; transform: scale(1.25); }
+/* Пояснение к этапу: всплывает над узлом, у краёв прижимается внутрь оси. */
+.rollout-hint { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); z-index: 12; width: 262px; max-width: 78vw; border: 1px solid var(--line-hi); background: var(--panel-2); box-shadow: var(--shadow, 0 14px 34px rgba(0,0,0,.4)); padding: 12px 14px; text-align: left; cursor: default; }
+.rollout-hint.is-start { left: 0; transform: none; }
+.rollout-hint.is-end { left: auto; right: 0; transform: none; }
+.rollout-hint strong { display: block; font: 500 16px 'Oswald', sans-serif; letter-spacing: .02em; color: var(--text); }
+.rollout-hint p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.rollout-hint-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 .rollout-node.is-done { border-color: var(--green); background: var(--green); }
 .rollout-node.is-late { border-color: var(--red); }
 .rollout-node.is-release { width: 22px; height: 22px; border-color: var(--amber); box-shadow: 0 0 0 4px rgba(213,154,77,.16); }

@@ -893,15 +893,25 @@
   const ROLLOUT_TEMPLATES = {
     single: { label: 'Сингл · 5 недель', stages: [
       { day: -35, title: 'Права и фиты', repeat: 'once' },
-      { day: -28, title: 'Дистрибуция и питч', repeat: 'once' },
-      { day: -21, title: 'Обложка и сведение', repeat: 'once' },
+      { day: -30, title: 'Запись', repeat: 'once' },
+      { day: -25, title: 'Сведение и обложка', repeat: 'once' },
+      { day: -21, title: 'Дистрибуция и питч', repeat: 'once' },
       { day: -14, title: 'Пресейв и тизеры', repeat: 'every_2_days' },
       { day: 0, title: 'День Х — во все площадки', repeat: 'once' },
-      { day: 7, title: 'Реакции', repeat: 'once' },
-      { day: 31, title: 'Итоги', repeat: 'once' },
+      { day: 30, title: 'Итоги', repeat: 'once' },
     ] },
   };
   const REPEAT_LABEL = { once: 'один раз', every_2_days: 'раз в 2 дня до дня Х', weekly: 'раз в неделю' };
+  const STAGE_HINTS = {
+    'права и фиты': 'Договориться с фитующими и владельцем бита. До этого выпускать нечего — всё остальное упрётся в права.',
+    'запись': 'Записать вокал целиком. Дальше идёт сведение, поэтому дозаписывать после этого этапа дорого.',
+    'сведение и обложка': 'Мастер и обложка делаются параллельно разными людьми. Оба нужны для загрузки к дистрибьютору.',
+    'дистрибуция и питч': 'Загрузка релиза дистрибьютору и питч в редакции площадок. Единственный жёсткий срок в плане: опоздаешь — дата выхода поедет физически, площадки не успеют рассмотреть.',
+    'пресейв и тизеры': 'Ссылка на пресейв появляется только после дистрибуции. Тизеры выходят раз в два дня до дня Х.',
+    'день х — во все площадки': 'День выхода. Он не делается, он наступает — публикации во все площадки в этот день.',
+    'итоги': 'Посмотреть, что получилось: прослушивания, попадания в плейлисты, что сработало из тизеров.',
+  };
+
   // Меньше четырёх недель — шаблон не помещается, даты расставляются руками.
   const ROLLOUT_MIN_DAYS = 28;
   const shortDate = (value) => new Date(value).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
@@ -1049,12 +1059,12 @@
       return dayStart(stage.stage_date).getTime() < today ? 'is-late' : '';
     };
 
-    const caps = stages.map((stage) => '<span class="rollout-cap ' + stageClass(stage) + '">'
+    const caps = stages.map((stage, index) => '<span class="rollout-cap ' + stageClass(stage) + '" data-col="' + index + '">'
       + '<b>' + escapeHTML(stage.title) + '</b>'
       + '<span class="rollout-cap-date">' + shortDate(stage.stage_date)
       + '</span></span>').join('');
 
-    const nodeCells = stages.map((stage) => '<span>'
+    const nodeCells = stages.map((stage, index) => '<span data-col="' + index + '">'
       + (stage.is_pinned ? '<button class="rollout-lock" type="button" data-stage-pin="' + stage.id
         + '" title="Закреплён: не сдвигается при переносе дня Х. Нажмите, чтобы снять"></button>' : '')
       + '<button class="rollout-node ' + stageClass(stage) + '" type="button"'
@@ -1138,9 +1148,23 @@
       const target = projectById(button.dataset.rolloutSetdate);
       if (target) offerReleaseDate(target);
     }));
-    $$('[data-stage]', host).forEach((button) => button.addEventListener('click', () => {
-      const stage = (state.stages || []).filter((row) => row.id === button.dataset.stage)[0];
-      if (stage) openStageEditor(stage, project);
+    const axis = $('.rollout-axis', host);
+    if (axis) {
+      const capAt = (index) => $('.rollout-cap[data-col="' + index + '"]', axis);
+      $$('.rollout-nodes > span', axis).forEach((cell) => {
+        const cap = capAt(cell.dataset.col);
+        cell.addEventListener('mouseenter', () => { if (cap) cap.classList.add('is-hover'); });
+        cell.addEventListener('mouseleave', () => { if (cap) cap.classList.remove('is-hover'); });
+      });
+      $$('.rollout-cap', axis).forEach((cap) => {
+        cap.addEventListener('mouseenter', () => cap.classList.add('is-hover'));
+        cap.addEventListener('mouseleave', () => cap.classList.remove('is-hover'));
+      });
+    }
+    $$('[data-stage]', host).forEach((button) => button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const stage = stageById(button.dataset.stage);
+      if (stage) openStageHint(button, stage, project);
     }));
   }
 
@@ -1382,6 +1406,43 @@
     }
 
     draw();
+  }
+
+  // Клик по узлу объясняет этап, а не сразу открывает правку: порядок этапов
+  // задан зависимостями, и это единственное место, где можно это рассказать.
+  function openStageHint(node, stage, project) {
+    closeStageHint();
+    const cell = node.parentElement;
+    const total = cell.parentElement.children.length;
+    const index = Number(cell.dataset.col);
+    const side = index === 0 ? ' is-start' : (index === total - 1 ? ' is-end' : '');
+    const key = String(stage.title || '').trim().toLowerCase();
+    const hint = STAGE_HINTS[key] || 'Свой этап плана. Дата и повтор настраиваются в правке.';
+    const box = document.createElement('div');
+    box.className = 'rollout-hint' + side;
+    box.innerHTML = '<strong>' + escapeHTML(stage.title) + '</strong>'
+      + '<p>' + escapeHTML(hint) + '</p>'
+      + '<div class="rollout-hint-foot"><span>' + shortDate(stage.stage_date)
+      + (stage.repeat_rule !== 'once' ? ' · ' + REPEAT_LABEL[stage.repeat_rule] : '') + '</span>'
+      + '<button class="text-button" type="button" data-hint-edit>изменить</button></div>';
+    cell.appendChild(box);
+    $('[data-hint-edit]', box).addEventListener('click', (event) => {
+      event.stopPropagation();
+      closeStageHint();
+      openStageEditor(stage, project);
+    });
+    box.addEventListener('click', (event) => event.stopPropagation());
+    setTimeout(() => {
+      document.addEventListener('click', closeStageHint, { once: true });
+      document.addEventListener('keydown', hintEscape);
+    }, 0);
+  }
+
+  function hintEscape(event) { if (event.key === 'Escape') closeStageHint(); }
+
+  function closeStageHint() {
+    $$('.rollout-hint').forEach((box) => box.remove());
+    document.removeEventListener('keydown', hintEscape);
   }
 
   // Замок снимается там же, где виден. Ставится он только в шторке этапа,
