@@ -515,7 +515,10 @@ html[data-theme="light"] .cal-badge { color: #f2efe6; }
 .calendar-entry-stack::-webkit-scrollbar { width: 4px; }
 .calendar-entry-stack::-webkit-scrollbar-thumb { background: rgba(112,238,121,.25); }
 .dashboard-calendar-more { float: right; margin-top: -9px; color: #8a9488; font-size: 7px; }
-.calendar-entry-scheduled { border-color: #d59a4d !important; color: #d7b077 !important; background: #211a10 !important; }
+.calendar-entry-scheduled { border-color: #70ee79 !important; color: #a2e8a7 !important; background: #102013 !important; }
+/* Этапы плана — свой синий, чтобы не путались с жёлтыми задачами. */
+.calendar-entry-stage { border-color: #6f86b8 !important; color: #a8bce0 !important; background: #141821 !important; }
+.calendar-entry-stage-done { border-color: #56785a !important; color: #7f9d82 !important; background: #111811 !important; opacity: .72; text-decoration: line-through; }
 .calendar-entry-released { border-color: #70ee79 !important; color: #a2e8a7 !important; background: #102013 !important; }
 .calendar-entry-archived { border-color: #747a75 !important; color: #8d948d !important; background: #171917 !important; }
 .calendar-entry-event { border-color: #59896e !important; }
@@ -1248,7 +1251,9 @@ html[data-theme="light"] .button-danger {
   background: linear-gradient(#a24138, #6f241f);
   box-shadow: inset 0 1px rgba(255,255,255,.28), inset 0 -2px #4e1715, 0 8px 18px rgba(92,27,24,.18);
 }
-html[data-theme="light"] .calendar-entry-scheduled { color: #7f571c !important; background: #efe2c8 !important; }
+html[data-theme="light"] .calendar-entry-scheduled { color: #276732 !important; background: #d9ead7 !important; }
+html[data-theme="light"] .calendar-entry-stage { color: #35507f !important; background: #dde3ef !important; }
+html[data-theme="light"] .calendar-entry-stage-done { color: #5e7a61 !important; background: #e2e8e0 !important; }
 html[data-theme="light"] .calendar-entry-released { color: #276732 !important; background: #d9ead7 !important; }
 html[data-theme="light"] .calendar-entry-archived { color: #646963 !important; background: #dddcd6 !important; }
 html[data-theme="light"] .calendar-entry-task { color: #82611e !important; background: #efe7cf !important; }

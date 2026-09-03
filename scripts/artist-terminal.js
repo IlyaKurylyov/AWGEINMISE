@@ -1573,6 +1573,13 @@
     if (home) home.hidden = month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth();
   }
 
+  function bindStageButtons(host) {
+    $$('[data-open-stage]', host).forEach((button) => button.addEventListener('click', () => {
+      const stage = stageById(button.dataset.openStage);
+      if (stage) openStageEditor(stage, projectById(stage.project_id));
+    }));
+  }
+
   function renderDashboardCalendar() {
     const selectedProject = selectedDashboardProject();
     const month = new Date(state.dashboardDate.getFullYear(), state.dashboardDate.getMonth(), 1);
@@ -1589,14 +1596,23 @@
       const key = localDateKey(current);
       const projects = state.projects.filter((project) => (!selectedProject || project.id === selectedProject.id) && ['scheduled', 'released', 'archived'].includes(project.status) && project.release_at && localDateKey(project.release_at) === key);
       const tasks = state.tasks.filter((task) => (!selectedProject || task.project_id === selectedProject.id) && task.due_at && localDateKey(task.due_at) === key);
+      // Этапы плана жили только на оси, поэтому календарь выглядел пустым
+      // при полностью расписанном выпуске.
+      const stages = (state.stages || []).filter((stage) => (!selectedProject || stage.project_id === selectedProject.id)
+        && stage.day_offset !== 0 && stage.stage_date && localDateKey(stage.stage_date) === key);
       const entries = [
         ...projects.map((project) => ({ title: project.title, projectId: project.id, status: project.status })),
+        ...stages.map((stage) => ({ title: stage.title, stageId: stage.id, status: stage.is_done ? 'stage-done' : 'stage' })),
         ...tasks.map((task) => ({ title: task.title, taskId: task.id, projectId: task.project_id, status: task.is_done ? 'task-done' : 'task' })),
       ];
-      cells.push(`<div class="dashboard-calendar-day ${current.getMonth() !== month.getMonth() ? 'is-muted' : ''} ${current.toDateString() === today.toDateString() ? 'is-today' : ''}" data-calendar-drop-date="${key}"><span>${current.getDate()}</span><div class="calendar-entry-stack">${entries.map((entry) => `<button class="calendar-entry-${entry.status}" ${entry.taskId ? `data-open-task="${entry.taskId}" data-task-drag="${entry.taskId}" draggable="true"` : `data-open-project="${entry.projectId || ''}" ${entry.projectId ? `data-project-drag="${entry.projectId}" draggable="true"` : ''}`} type="button">${escapeHTML(entry.title)}</button>`).join('')}</div></div>`);
+      cells.push(`<div class="dashboard-calendar-day ${current.getMonth() !== month.getMonth() ? 'is-muted' : ''} ${current.toDateString() === today.toDateString() ? 'is-today' : ''}" data-calendar-drop-date="${key}"><span>${current.getDate()}</span><div class="calendar-entry-stack">${entries.map((entry) => {
+        if (entry.stageId) return `<button class="calendar-entry-${entry.status}" data-open-stage="${entry.stageId}" type="button">${escapeHTML(entry.title)}</button>`;
+        return `<button class="calendar-entry-${entry.status}" ${entry.taskId ? `data-open-task="${entry.taskId}" data-task-drag="${entry.taskId}" draggable="true"` : `data-open-project="${entry.projectId || ''}" ${entry.projectId ? `data-project-drag="${entry.projectId}" draggable="true"` : ''}`} type="button">${escapeHTML(entry.title)}</button>`;
+      }).join('')}</div></div>`);
     }
     const container = $('#dashboard-calendar');
     container.innerHTML = headers + cells.join('');
+    bindStageButtons(container);
     bindProjectButtons(container);
     bindTaskButtons(container);
     bindCalendarDnD(container);
@@ -4008,15 +4024,18 @@
       const key = localDateKey(current);
       const dayProjects = state.projects.filter((project) => ['scheduled', 'released', 'archived'].includes(project.status) && project.release_at && localDateKey(project.release_at) === key);
       const dayTasks = state.tasks.filter((task) => task.due_at && localDateKey(task.due_at) === key);
+      const dayStages = (state.stages || []).filter((stage) => stage.day_offset !== 0 && stage.stage_date && localDateKey(stage.stage_date) === key);
       const today = new Date();
       const entries = [
         ...dayProjects.map((project) => `<button class="calendar-entry-${project.status}" data-open-project="${project.id}" data-project-drag="${project.id}" draggable="true" type="button">${escapeHTML(project.title)}</button>`),
+        ...dayStages.map((stage) => `<button class="calendar-entry-${stage.is_done ? 'stage-done' : 'stage'}" data-open-stage="${stage.id}" type="button">${escapeHTML(stage.title)}</button>`),
         ...dayTasks.map((task) => `<button class="calendar-entry-${task.is_done ? 'task-done' : 'task'}" data-open-task="${task.id}" data-task-drag="${task.id}" draggable="true" type="button">${escapeHTML(task.title)}</button>`),
       ];
       days.push(`<div class="calendar-day ${current.getMonth() !== date.getMonth() ? 'is-muted' : ''} ${current.toDateString() === today.toDateString() ? 'is-today' : ''}" data-calendar-drop-date="${key}"><span>${current.getDate()}</span><div class="calendar-entry-stack">${entries.join('')}</div></div>`);
     }
     const grid = $('#calendar-grid');
     grid.innerHTML = weekdays + days.join('');
+    bindStageButtons(grid);
     bindProjectButtons(grid);
     bindTaskButtons(grid);
     bindCalendarDnD(grid);
