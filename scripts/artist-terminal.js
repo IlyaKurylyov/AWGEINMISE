@@ -918,22 +918,28 @@
   const isoDate = (value) => new Date(value).toISOString().slice(0, 10);
   const addDays = (value, days) => { const d = new Date(value); d.setDate(d.getDate() + days); return d; };
 
-  async function generateRollout(project, templateKey = 'single', button) {
+  async function generateRollout(target, templateKey = 'single', button) {
+    // Дата релиза могла смениться после отрисовки — замыкание держит старый
+    // объект, поэтому проект всегда перечитываем из state.
+    const project = projectById(target && target.id) || target;
     if (!project || !project.release_at) return toast('Сначала задайте дату релиза.', 'error');
     setBusy(button, true, 'Собираем…');
     const template = ROLLOUT_TEMPLATES[templateKey] || ROLLOUT_TEMPLATES.single;
-    await db.from('release_stages').delete().eq('project_id', project.id).eq('artist_id', state.artist.id);
+    const pinned = (state.stages || []).filter((stage) => stage.project_id === project.id && stage.is_pinned);
+    await db.from('release_stages').delete().eq('project_id', project.id)
+      .eq('artist_id', state.artist.id).eq('is_pinned', false);
     // Шаблон считает назад от дня Х. Если до выхода осталось меньше, чем он
     // просит, офсеты ужимаются под остаток — иначе половина этапов легла бы
     // в прошлое и план был бы просрочен в момент создания.
     const draft = template.stages.map((stage) => ({ offset: stage.day }));
     const fitted = fitOffsets(draft, daysUntil(project.release_at));
-    const rows = template.stages.map((stage, index) => ({
+    const pinnedTitles = pinned.map((stage) => stage.title);
+    const rows = template.stages.filter((stage) => !pinnedTitles.includes(stage.title)).map((stage, index) => ({
       artist_id: state.artist.id,
       project_id: project.id,
       title: stage.title,
-      stage_date: isoDate(addDays(project.release_at, draft[index].offset)),
-      day_offset: draft[index].offset,
+      stage_date: isoDate(addDays(project.release_at, draft[template.stages.indexOf(stage)].offset)),
+      day_offset: draft[template.stages.indexOf(stage)].offset,
       repeat_rule: stage.repeat,
       sort_order: index,
     }));
@@ -979,7 +985,8 @@
       return;
     }
 
-    const stages = (state.stages || []).filter((stage) => stage.project_id === project.id).sort((a, b) => a.sort_order - b.sort_order);
+    const stages = (state.stages || []).filter((stage) => stage.project_id === project.id)
+      .sort((a, b) => dayStart(a.stage_date) - dayStart(b.stage_date) || a.sort_order - b.sort_order);
     if (!stages.length) {
       host.innerHTML = '<header class="panel-header"><div><span class="eyebrow">План выпуска</span><h3>' + escapeHTML(project.title || 'Без названия') + '</h3></div>'
         + '</header>'
@@ -1036,7 +1043,9 @@
 
     const caps = stages.map((stage) => '<span class="rollout-cap ' + stageClass(stage) + '">'
       + '<b>' + escapeHTML(stage.title) + '</b>'
-      + '<span class="rollout-cap-date">' + shortDate(stage.stage_date) + '</span></span>').join('');
+      + '<span class="rollout-cap-date">' + shortDate(stage.stage_date)
+      + (stage.is_pinned ? '<i class="rollout-lock" title="Не сдвигается при переносе дня Х"></i>' : '')
+      + '</span></span>').join('');
 
     const nodeCells = stages.map((stage) => '<span><button class="rollout-node ' + stageClass(stage) + '" type="button"'
       + ' data-stage="' + stage.id + '" title="' + escapeHTML(stage.title) + ' · ' + shortDate(stage.stage_date)
@@ -1088,7 +1097,9 @@
       + '<div class="rollout-foot"><div class="rollout-count"><b>' + Math.abs(left) + '</b><span>'
       + (left >= 0 ? plural(Math.abs(left), 'день', 'дня', 'дней') + ' до выхода' : plural(Math.abs(left), 'день', 'дня', 'дней') + ' назад вышел')
       + '</span></div><div class="rollout-foot-main"><strong>' + escapeHTML(project.title || 'Без названия') + '</strong>'
-      + '<small>' + shortDate(project.release_at) + ' · этап «' + (PROJECT_STATUS[project.status] || project.status) + '»</small></div></div>'
+      + '<small>' + shortDate(project.release_at)
+      + '<button class="rollout-editdate" type="button" data-rollout-date aria-label="Изменить дату выхода"></button>'
+      + ' · этап «' + (PROJECT_STATUS[project.status] || project.status) + '»</small></div></div>'
       + askBlock + depot;
     bindRollout(host, project);
   }
@@ -1103,6 +1114,8 @@
     if (rebuild) rebuild.addEventListener('click', () => {
       openRebuildPlan(project);
     });
+    const editDate = $('[data-rollout-date]', host);
+    if (editDate) editDate.addEventListener('click', () => offerReleaseDate(project));
     const setup = $('[data-rollout-setup]', host);
     if (setup) setup.addEventListener('click', () => openPlanSetup(project));
     $$('[data-stage-done]', host).forEach((button) => button.addEventListener('click', () => {
@@ -1279,6 +1292,7 @@
           + '</div>').join('') + '</div>'
         + (clashes.length ? '<div class="plan-warn"><span>▲</span><span>На один день назначено несколько этапов. '
           + 'Так можно — если это не случайность, оставьте как есть.</span></div>' : '')
+        + '<div class="plan-add"><button class="text-button" type="button" id="plan-add">+ Добавить этап</button></div>'
         + '<div class="drawer-actions"><button class="text-button" type="button" id="plan-even">распределить ровно</button>'
         + '<button class="button button-primary" type="button" id="plan-save">Сохранить план</button></div>';
 
@@ -1293,6 +1307,12 @@
         if (rows[index].id) removed.push(rows[index].id);
         rows.splice(index, 1); draw();
       }));
+      $('#plan-add', host).addEventListener('click', () => {
+        const title = prompt('Название этапа');
+        if (!title || !title.trim()) return;
+        rows.push({ id: null, title: title.trim(), offset: 0, repeat: 'once', done: false });
+        draw();
+      });
       $('#plan-even', host).addEventListener('click', () => {
         // Равные промежутки по реальному остатку. Раньше здесь стоял зажим
         // минимумом в 1, и при дне Х в прошлом всё схлопывалось в «за 1 день».

@@ -1779,7 +1779,16 @@ html[data-theme="light"] .secretary-hour { background: rgba(73,82,71,.045); }
 .rollout-empty-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .rollout-template { border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; font-size: 15px; padding: 8px 10px; }
 
-.rollout-stage-wrap { padding: 8px 30px 0; background: rgba(255,255,255,.022); border-top: 1px solid var(--line); overflow-x: auto; }
+/* Нижний отступ убирает лишнюю вертикальную полосу прокрутки: overflow-x
+   делает и вертикальную ось auto, а нижний отступ оси вылезал за padding. */
+.rollout-stage-wrap { padding: 8px 30px 18px; background: rgba(255,255,255,.022); border-top: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; }
+/* Закрепление видно прямо на оси, а не только внутри шторки этапа. */
+.rollout-lock { display: inline-block; margin-left: 5px; font-style: normal; font-size: 11px; line-height: 1; opacity: .75; }
+.rollout-lock::before { content: "\01F512"; }
+.rollout-editdate { margin: 0 4px 0 6px; padding: 0 4px; border: 1px solid transparent; background: transparent; color: var(--muted); font: inherit; font-size: 13px; line-height: 1; cursor: pointer; vertical-align: baseline; }
+.rollout-editdate::before { content: "\270E"; }
+.rollout-editdate:hover { color: var(--green); border-color: var(--line-hi); }
+.plan-add { margin-top: 12px; }
 html[data-theme="light"] .rollout-stage-wrap { background: rgba(73,82,71,.035); }
 /* Ось разложена на три независимых ряда — подписи, узлы, интервалы.
    Раньше всё лежало в одном слое и позиционировалось календарной пропорцией,
