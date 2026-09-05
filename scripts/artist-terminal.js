@@ -1016,6 +1016,28 @@
     renderDashboard();
   }
 
+  // Урезанная копия пути в карточке трека: посмотреть, где релиз, не
+  // переключая фокус-проект на дашборде. Редактировать здесь нельзя —
+  // клик уводит туда, где это делается.
+  function miniRollout(project) {
+    const stages = (state.stages || []).filter((stage) => stage.project_id === project.id)
+      .sort((a, b) => (dayStart(a.stage_date || 0) - dayStart(b.stage_date || 0)) || a.sort_order - b.sort_order);
+    if (!stages.length) return '';
+    const today = dayStart(new Date()).getTime();
+    const done = stages.filter((stage) => stage.is_done).length;
+    const dots = stages.map((stage) => {
+      const late = !stage.is_done && stage.day_offset !== 0 && stage.stage_date
+        && dayStart(stage.stage_date).getTime() < today;
+      const cls = stage.is_done ? 'is-done' : (late ? 'is-late' : (stage.day_offset === 0 ? 'is-release' : ''));
+      return '<i class="' + cls + '" title="' + escapeHTML(stage.title)
+        + (stage.stage_date ? ' · ' + shortDate(stage.stage_date) : ' · даты нет') + '"></i>';
+    }).join('');
+    return '<button class="project-mini" type="button" data-mini-rollout="' + project.id + '"'
+      + ' title="Открыть путь этого релиза на дашборде">'
+      + '<span class="project-mini-dots">' + dots + '</span>'
+      + '<span class="project-mini-count">' + done + ' из ' + stages.length + '</span></button>';
+  }
+
   // Релиз для пути: выбранный в фокусе, иначе ближайший по дате выхода.
   function rolloutProject() {
     const selected = selectedDashboardProject();
@@ -2526,13 +2548,23 @@
       const coverMarkup = cover
         ? `<img class="project-cover-bg" src="${escapeHTML(cover)}" alt="" aria-hidden="true"><img class="project-cover-fg" src="${escapeHTML(cover)}" alt="">`
         : '<span>NO COVER</span>';
-      return `<article class="project-card" data-open-project="${project.id}"><div class="project-cover">${coverMarkup}</div><div class="project-body"><span class="eyebrow">${formatDate(project.release_at)}</span><h3>${escapeHTML(project.title)}</h3><p class="project-stage-copy">${PROJECT_STATUS_HINT[project.status] || ''}</p><div class="project-meta"><span>${project.beat_id ? 'Бит выбран' : 'Без бита'}</span><span class="status-chip ${project.status}">${PROJECT_STATUS[project.status] || project.status}</span></div></div></article>`;
+      return `<article class="project-card" data-open-project="${project.id}"><div class="project-cover">${coverMarkup}</div><div class="project-body"><span class="eyebrow">${formatDate(project.release_at)}</span><h3>${escapeHTML(project.title)}</h3><p class="project-stage-copy">${PROJECT_STATUS_HINT[project.status] || ''}</p><div class="project-meta"><span>${project.beat_id ? 'Бит выбран' : 'Без бита'}</span><span class="status-chip ${project.status}">${PROJECT_STATUS[project.status] || project.status}</span></div>${miniRollout(project)}</div></article>`;
     }));
     container.innerHTML = cards.join('');
     bindProjectButtons(container);
   }
 
   function bindProjectButtons(root) {
+    // Клик по мини-бару не должен открывать трек: он ведёт на дашборд,
+    // ставит этот релиз в фокус и прокручивает к полному пути.
+    $$('[data-mini-rollout]', root).forEach((node) => node.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      state.dashboardProjectId = node.dataset.miniRollout;
+      await goView('dashboard');
+      renderDashboard();
+      const panel = $('#dashboard-rollout');
+      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }));
     $$('[data-open-project]', root).forEach((node) => node.addEventListener('click', () => {
       const source = $('.view.is-active')?.dataset.viewPanel;
       if (node.dataset.openProject) openProjectEditor(node.dataset.openProject, 'idea', source === 'dashboard' ? 'dashboard' : 'projects');

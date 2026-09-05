@@ -1895,6 +1895,20 @@ html[data-theme="light"] .rollout-mini.is-go:hover { color: #f2efe6; }
 .plan-day.is-release b, .plan-day.is-release em { color: var(--amber); }
 .plan-pin { display: block; width: 9px; height: 9px; margin: 5px auto 0; border-radius: 50%; background: var(--muted); }
 .plan-pin.is-many { width: auto; height: auto; border-radius: 0; padding: 1px 4px; background: var(--red); color: #fff; font: 700 10px 'IBM Plex Mono', monospace; }
+.project-mini { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-top: 10px; border: 1px solid var(--line); background: transparent; padding: 8px 10px; cursor: pointer; font: inherit; }
+.project-mini:hover { border-color: var(--green); }
+.project-mini-dots { display: flex; align-items: center; gap: 0; flex: 1; min-width: 0; }
+/* Точки соединены линией: это путь, а не набор значков. */
+.project-mini-dots i { position: relative; width: 9px; height: 9px; flex: none; border-radius: 50%; border: 1.5px solid var(--line-hi); background: var(--panel); }
+.project-mini-dots i + i { margin-left: 0; }
+.project-mini-dots i:not(:last-child)::after { content: ""; position: absolute; left: 100%; top: 50%; width: 100%; height: 1.5px; background: var(--line); transform: translateY(-50%); }
+.project-mini-dots i { margin-right: 9px; }
+.project-mini-dots i:last-child { margin-right: 0; }
+.project-mini-dots i.is-done { border-color: var(--green); background: var(--green); }
+.project-mini-dots i.is-late { border-color: var(--red); }
+.project-mini-dots i.is-release { width: 12px; height: 12px; border-color: var(--amber); }
+.project-mini-count { flex: none; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
 .plan-picks { display: grid; gap: 9px; margin: 14px 0 4px; }
 .plan-pick { display: block; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel-2); padding: 13px 15px; cursor: pointer; font: inherit; }
 .plan-pick:hover { border-color: var(--green); }
