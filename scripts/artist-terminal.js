@@ -1731,6 +1731,13 @@
       && dayStart(last).getTime() >= dayStart(now).getTime();
   }
 
+  function bindStageButtons(host) {
+    $$('[data-open-stage]', host).forEach((button) => button.addEventListener('click', () => {
+      const stage = stageById(button.dataset.openStage);
+      if (stage) openStageEditor(stage, projectById(stage.project_id));
+    }));
+  }
+
   function renderDashboardCalendar() {
     const selectedProject = selectedDashboardProject();
     const month = new Date(state.dashboardDate.getFullYear(), state.dashboardDate.getMonth(), 1);
