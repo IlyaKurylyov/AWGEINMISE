@@ -492,7 +492,7 @@ html[data-theme="light"] .soon-badge { border-color: #b3afa3; color: #6a6d63; }
 .dashboard-month-controls button { position: relative; width: 35px; height: 31px; border: 1px solid #465044; color: #a3ada0; background: #111511; cursor: pointer; }
 .dashboard-month-controls button:hover { color: var(--green); border-color: var(--green); }
 /* Счётчик висит на той стрелке, в чью сторону лежит потерянное. */
-.cal-badge { position: absolute; top: -7px; right: -7px; min-width: 17px; height: 17px; padding: 0 4px; display: grid; place-items: center; border-radius: 9px; background: var(--red); color: #fff; font: 700 10px 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+.cal-badge { cursor: pointer; position: absolute; top: -7px; right: -7px; min-width: 17px; height: 17px; padding: 0 4px; display: grid; place-items: center; border-radius: 9px; background: var(--red); color: #fff; font: 700 10px 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
 .cal-badge.is-calm { background: var(--amber); color: #1c1408; }
 html[data-theme="light"] .cal-badge { color: #f2efe6; }
 @media (max-width: 620px) {

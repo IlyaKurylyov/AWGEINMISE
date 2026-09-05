@@ -1685,43 +1685,57 @@
   // Календарь — окно: пролистал вперёд, и просроченное просто исчезло с экрана.
   // Счётчики висят на стрелках и считаются от сегодня, а не от показанного
   // месяца, поэтому не прыгают при листании и остаются опорой.
-  function updateCalendarBadges(month) {
-    const today = dayStart(new Date()).getTime();
+  // Счётчик показывает, что осталось за границами видимого окна, а не «от
+  // сегодня»: иначе листаешь назад, а он упрямо твердит одно и то же число.
+  function calendarOutside(first, last) {
+    const from = dayStart(first).getTime();
+    const to = dayStart(last).getTime();
     const selected = selectedDashboardProject();
     const mine = (projectId) => !selected || projectId === selected.id;
-    const overdue = state.tasks.filter((task) => !task.is_done && mine(task.project_id)
-        && task.due_at && dayStart(task.due_at).getTime() < today).length
-      + (state.stages || []).filter((stage) => !stage.is_done && stage.day_offset !== 0
-        && mine(stage.project_id) && dayStart(stage.stage_date).getTime() < today).length;
-    const ahead = state.projects.filter((project) => mine(project.id) && project.release_at
-      && project.status === 'scheduled' && dayStart(project.release_at).getTime() >= today).length;
-
-    const back = $('#cal-badge-back');
-    const forward = $('#cal-badge-fwd');
-    if (back) { back.textContent = overdue; back.hidden = !overdue; }
-    if (forward) { forward.textContent = ahead; forward.hidden = !ahead; }
-    const prev = $('#dashboard-calendar-prev');
-    const next = $('#dashboard-calendar-next');
-    if (prev) prev.setAttribute('aria-label', overdue ? 'Предыдущий месяц, позади ' + overdue + ' просроченных' : 'Предыдущий месяц');
-    if (next) next.setAttribute('aria-label', ahead ? 'Следующий месяц, впереди ' + ahead + ' релизов' : 'Следующий месяц');
-
-    const now = new Date();
-    const home = $('#dashboard-calendar-today');
-    if (home) home.hidden = month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth();
+    const items = [];
+    state.tasks.forEach((task) => {
+      if (task.is_done || !task.due_at || !mine(task.project_id)) return;
+      items.push({ time: dayStart(task.due_at).getTime(), title: task.title });
+    });
+    (state.stages || []).forEach((stage) => {
+      if (stage.is_done || stage.day_offset === 0 || !stage.stage_date || !mine(stage.project_id)) return;
+      items.push({ time: dayStart(stage.stage_date).getTime(), title: stage.title });
+    });
+    state.projects.forEach((project) => {
+      if (project.status !== 'scheduled' || !project.release_at || !mine(project.id)) return;
+      items.push({ time: dayStart(project.release_at).getTime(), title: project.title });
+    });
+    const before = items.filter((item) => item.time < from).sort((a, b) => b.time - a.time);
+    const after = items.filter((item) => item.time > to).sort((a, b) => a.time - b.time);
+    return { before, after };
   }
 
-  function bindStageButtons(host) {
-    $$('[data-open-stage]', host).forEach((button) => button.addEventListener('click', () => {
-      const stage = stageById(button.dataset.openStage);
-      if (stage) openStageEditor(stage, projectById(stage.project_id));
-    }));
+  function updateCalendarBadges(first, last) {
+    const { before, after } = calendarOutside(first, last);
+    const paint = (badge, list) => {
+      if (!badge) return;
+      badge.textContent = list.length;
+      badge.hidden = !list.length;
+      badge.dataset.jump = list.length ? String(list[0].time) : '';
+      badge.title = list.length ? 'Ближайшее: ' + list[0].title + ' · ' + shortDate(list[0].time) : '';
+    };
+    paint($('#cal-badge-back'), before);
+    paint($('#cal-badge-fwd'), after);
+    const prev = $('#dashboard-calendar-prev');
+    const next = $('#dashboard-calendar-next');
+    if (prev) prev.setAttribute('aria-label', before.length ? 'Предыдущий месяц, позади ' + before.length : 'Предыдущий месяц');
+    if (next) next.setAttribute('aria-label', after.length ? 'Следующий месяц, впереди ' + after.length : 'Следующий месяц');
+    const now = new Date();
+    const home = $('#dashboard-calendar-today');
+    if (home) home.hidden = dayStart(first).getTime() <= dayStart(now).getTime()
+      && dayStart(last).getTime() >= dayStart(now).getTime();
   }
 
   function renderDashboardCalendar() {
     const selectedProject = selectedDashboardProject();
     const month = new Date(state.dashboardDate.getFullYear(), state.dashboardDate.getMonth(), 1);
     $('#dashboard-calendar-month').textContent = month.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
-    updateCalendarBadges(month);
+
     const first = new Date(month);
     first.setDate(1 - ((month.getDay() + 6) % 7));
     const headers = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((day) => `<div class="dashboard-calendar-weekday">${day}</div>`).join('');
@@ -1747,6 +1761,7 @@
         return `<button class="calendar-entry-${entry.status}" ${entry.taskId ? `data-open-task="${entry.taskId}" data-task-drag="${entry.taskId}" draggable="true"` : `data-open-project="${entry.projectId || ''}" ${entry.projectId ? `data-project-drag="${entry.projectId}" draggable="true"` : ''}`} type="button">${escapeHTML(entry.title)}</button>`;
       }).join('')}</div></div>`);
     }
+    updateCalendarBadges(first, addDays(first, 41));
     const container = $('#dashboard-calendar');
     container.innerHTML = headers + cells.join('');
     bindStageButtons(container);
@@ -2566,6 +2581,7 @@
       if (error) throw error;
       state.projects = state.projects.filter((item) => item.id !== project.id);
       state.tasks = state.tasks.filter((task) => task.project_id !== project.id);
+      state.stages = (state.stages || []).filter((stage) => stage.project_id !== project.id);
       state.files = state.files.filter((file) => file.project_id !== project.id);
       state.lyrics = state.lyrics.map((doc) => doc.project_id === project.id ? { ...doc, project_id: null } : doc);
       if (state.freshDraftProjectId === project.id) state.freshDraftProjectId = null;
@@ -2985,6 +3001,7 @@
       if (error) throw error;
       state.projects = state.projects.filter((item) => item.id !== project.id);
       state.tasks = state.tasks.filter((task) => task.project_id !== project.id);
+      state.stages = (state.stages || []).filter((stage) => stage.project_id !== project.id);
       state.events = state.events.filter((event) => event.project_id !== project.id);
       state.files = state.files.filter((file) => file.project_id !== project.id);
       state.lyrics = state.lyrics.map((doc) => doc.project_id === project.id ? { ...doc, project_id: null } : doc);
@@ -4508,6 +4525,13 @@
     $('#dashboard-calendar-prev').addEventListener('click', () => { state.dashboardDate.setMonth(state.dashboardDate.getMonth() - 1); renderDashboardCalendar(); });
     $('#dashboard-calendar-next').addEventListener('click', () => { state.dashboardDate.setMonth(state.dashboardDate.getMonth() + 1); renderDashboardCalendar(); });
     $('#dashboard-calendar-today').addEventListener('click', () => { state.dashboardDate = new Date(); renderDashboardCalendar(); });
+    $$('.cal-badge').forEach((badge) => badge.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const time = Number(badge.dataset.jump);
+      if (!time) return;
+      state.dashboardDate = new Date(time);
+      renderDashboardCalendar();
+    }));
     $('#dashboard-project-select').addEventListener('change', (event) => { state.dashboardProjectId = event.currentTarget.value; renderDashboard(); });
     $('#dashboard-new-task').addEventListener('click', () => openTaskEditor('idea', state.dashboardProjectId || ''));
     $('#dashboard-search').addEventListener('input', (event) => { state.dashboardSearch = event.currentTarget.value; renderDashboardSearchResults(); });
