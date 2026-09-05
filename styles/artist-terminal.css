@@ -1814,6 +1814,11 @@ html[data-theme="light"] .rollout-stage-wrap { background: rgba(73,82,71,.035); 
 .rollout-cap b { display: block; font-weight: 400; color: var(--text); }
 .rollout-cap-date { display: block; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 /* Подпись подсвечивается только под курсором: в покое ничего не выделено. */
+/* Заблокированная задача видна, но приглушена: понятно, что делать нельзя
+   и почему, а не просто исчезла из списка. */
+.dashboard-task-row.is-blocked { opacity: .55; }
+.dashboard-task-row.is-blocked input[type="checkbox"] { pointer-events: none; }
+.dashboard-task-row.is-blocked small { color: var(--amber); }
 .rollout-cap { transition: background-color .15s ease; border-radius: 2px; }
 .rollout-cap.is-hover { background: rgba(255,255,255,.05); }
 html[data-theme="light"] .rollout-cap.is-hover { background: rgba(73,82,71,.07); }

@@ -115,7 +115,30 @@
   const PROJECT_STATUS = { idea: 'Идея', demo: 'Демо', mix: 'Сведение', scheduled: 'Запланирован', released: 'Выпущен', archived: 'Архив' };
   const PROJECT_STATUS_HINT = { idea: 'Мечтаем', demo: 'Записываем', mix: 'Работаем', scheduled: 'Добавлен в календарь!', released: 'Ожидаем успеха', archived: 'Архив' };
   const TASK_WORKFLOW = { idea: 'Придумал', doing: 'Делаю', uploaded: 'Загружено' };
-  const DEFAULT_PROJECT_TASKS = ['Сделать обложку', 'Записать вокал', 'Свести'];
+  // Задачи создаются вместе с релизом и привязаны к этапам по названию.
+  // Переименовать и удалить их нельзя — иначе связь рассыплется.
+  const STAGE_TASKS = [
+    { title: 'Подтвердить права на бит', stage: 'Получение прав', needs: [] },
+    { title: 'Записать вокал', stage: 'Запись', needs: [] },
+    { title: 'Сделать обложку', stage: 'Сведение и обложка', needs: [] },
+    { title: 'Свести', stage: 'Сведение и обложка', needs: ['Записать вокал'] },
+    { title: 'Загрузить дистрибьютору', stage: 'Дистрибуция и питч', needs: ['Свести', 'Сделать обложку', 'Подтвердить права на бит'] },
+    { title: 'Отправить питч на площадки', stage: 'Дистрибуция и питч', needs: ['Загрузить дистрибьютору'] },
+    { title: 'Тизер 1', stage: 'Пресейв и тизеры', needs: ['Загрузить дистрибьютору'] },
+    { title: 'Тизер 2', stage: 'Пресейв и тизеры', needs: ['Тизер 1'] },
+    { title: 'Выложить во все площадки', stage: 'День Х — во все площадки', needs: ['Загрузить дистрибьютору'] },
+  ];
+  const DEFAULT_PROJECT_TASKS = STAGE_TASKS.map((task) => task.title);
+  const stageTaskByTitle = (title) => STAGE_TASKS.filter((task) => task.title === title)[0] || null;
+  const isAutoTask = (task) => !!(task && stageTaskByTitle(task.title));
+
+  // Задача заблокирована, пока не закрыты её предшественники в том же релизе.
+  function taskBlockers(task) {
+    const spec = stageTaskByTitle(task && task.title);
+    if (!spec || !spec.needs.length) return [];
+    return spec.needs.filter((needTitle) => state.tasks.some((row) => row.project_id === task.project_id
+      && row.title === needTitle && !row.is_done));
+  }
   // Закрытая дефолтная задача продвигает трек по этапам. Назад не откатываем:
   // если этап уже дальше, закрытие более раннней задачи ничего не меняет.
   const TASK_STAGE_ADVANCE = { 'записать вокал': 'demo', 'свести': 'scheduled' };
@@ -826,8 +849,15 @@
   }
 
   function openWheel() {
-    const pendingTasks = state.tasks.filter((task) => !task.is_done);
-    if (!pendingTasks.length) return toast('Нет незавершённых задач для колеса.', 'error');
+    // Колесо не должно предлагать то, за что сейчас физически не взяться:
+    // питч без загрузки к дистрибьютору сделать нельзя.
+    const pendingTasks = state.tasks.filter((task) => !task.is_done && !taskBlockers(task).length);
+    if (!pendingTasks.length) {
+      const blocked = state.tasks.filter((task) => !task.is_done).length;
+      return toast(blocked
+        ? 'Все открытые задачи ждут предыдущих. Закройте их — и колесо оживёт.'
+        : 'Нет незавершённых задач для колеса.', 'error');
+    }
     state.wheelTasks = pendingTasks;
     const canvas = $('#wheel-canvas');
     canvas.style.transition = 'none';
@@ -892,13 +922,12 @@
   // считается назад от даты релиза, поэтому здесь отрицательные числа.
   const ROLLOUT_TEMPLATES = {
     single: { label: 'Сингл · 5 недель', stages: [
-      { day: -35, title: 'Права и фиты', repeat: 'once' },
+      { day: -35, title: 'Получение прав', repeat: 'once' },
       { day: -30, title: 'Запись', repeat: 'once' },
       { day: -25, title: 'Сведение и обложка', repeat: 'once' },
       { day: -21, title: 'Дистрибуция и питч', repeat: 'once' },
       { day: -14, title: 'Пресейв и тизеры', repeat: 'every_2_days' },
       { day: 0, title: 'День Х — во все площадки', repeat: 'once' },
-      { day: 30, title: 'Итоги', repeat: 'once' },
     ] },
   };
   const REPEAT_LABEL = { once: 'один раз', every_2_days: 'раз в 2 дня до дня Х', weekly: 'раз в неделю' };
@@ -1463,7 +1492,26 @@
   async function setStageDone(stageId, button) {
     const stage = stageById(stageId);
     if (!stage) return;
+    // У этапа есть свои задачи — закрываем их заодно, иначе этап окажется
+    // закрытым, а его задачи так и останутся висеть в списке.
+    const owned = STAGE_TASKS.filter((row) => row.stage === stage.title).map((row) => row.title);
+    const openTasks = state.tasks.filter((row) => row.project_id === stage.project_id
+      && owned.includes(row.title) && !row.is_done);
+    if (openTasks.length) {
+      const names = openTasks.map((row) => '· ' + row.title).join('\n');
+      if (!confirm('Вместе с этапом будут закрыты задачи:\n\n' + names + '\n\nЗакрыть?')) return;
+    }
     setBusy(button, true, '…');
+    if (openTasks.length) {
+      const ids = openTasks.map((row) => row.id);
+      const { error: taskError } = await db.from('project_tasks')
+        .update({ is_done: true, workflow_status: 'uploaded' })
+        .in('id', ids).eq('artist_id', state.artist.id);
+      if (taskError) { setBusy(button, false); return toast(taskError.message || 'Не удалось закрыть задачи.', 'error'); }
+      state.tasks = state.tasks.map((row) => (ids.includes(row.id)
+        ? { ...row, is_done: true, workflow_status: 'uploaded' } : row));
+      renderTasksView();
+    }
     const { error } = await db.from('release_stages').update({ is_done: true })
       .eq('id', stageId).eq('artist_id', state.artist.id);
     setBusy(button, false);
@@ -1499,6 +1547,34 @@
   // День Х переехал — план едет следом. Но только незакрытыми этапами:
   // отмеченное «сделал» остаётся на своей дате, это история, а не план.
   // Закреплённые (is_pinned) тоже стоят на месте — галочка наконец работает.
+  // День Х назначен впервые — раскладываем этапы по их смещениям.
+  async function fillStageDates(project) {
+    if (!project || !project.release_at) return false;
+    const blank = (state.stages || []).filter((stage) => stage.project_id === project.id && !stage.stage_date);
+    if (!blank.length) return false;
+    const draft = blank.map((stage) => ({ offset: stage.day_offset }));
+    fitOffsets(draft, daysUntil(project.release_at));
+    const updates = blank.map((stage, index) => ({
+      id: stage.id,
+      stage_date: isoDate(addDays(project.release_at, draft[index].offset)),
+      day_offset: draft[index].offset,
+    }));
+    const results = await Promise.all(updates.map((row) => db.from('release_stages')
+      .update({ stage_date: row.stage_date, day_offset: row.day_offset })
+      .eq('id', row.id).eq('artist_id', state.artist.id)));
+    if (results.some((result) => result.error)) {
+      toast('Не удалось разложить этапы по датам.', 'error');
+      return false;
+    }
+    const byId = {};
+    updates.forEach((row) => { byId[row.id] = row; });
+    state.stages = state.stages.map((stage) => (byId[stage.id]
+      ? { ...stage, stage_date: byId[stage.id].stage_date, day_offset: byId[stage.id].day_offset }
+      : stage));
+    toast('План разложен от дня Х: ' + updates.length + ' ' + plural(updates.length, 'этап', 'этапа', 'этапов') + '.');
+    return true;
+  }
+
   async function shiftStagesForRelease(project, previousReleaseAt) {
     if (!project || !project.release_at || !previousReleaseAt) return;
     const delta = Math.round((dayStart(project.release_at) - dayStart(previousReleaseAt)) / 86400000);
@@ -1685,9 +1761,13 @@
     const sorted = [...tasks].sort((a, b) => Number(a.is_done) - Number(b.is_done) || new Date(a.due_at || '2999-12-31') - new Date(b.due_at || '2999-12-31'));
     container.innerHTML = sorted.length ? sorted.slice(0, 8).map((task) => {
       const project = projectById(task.project_id);
-      return `<article class="dashboard-task-row ${task.is_done ? 'is-done' : ''}" data-task-drag="${task.id}" draggable="true">
+      const blockers = task.is_done ? [] : taskBlockers(task);
+      const note = blockers.length
+        ? 'ждёт: ' + blockers.join(', ')
+        : `${escapeHTML(project?.title || 'Без релиза')} · ${task.due_at ? formatDate(task.due_at, { year: undefined }) : 'без даты'}`;
+      return `<article class="dashboard-task-row ${task.is_done ? 'is-done' : ''} ${blockers.length ? 'is-blocked' : ''}" data-task-drag="${task.id}" draggable="true">
         <label><input type="checkbox" data-dashboard-task-check="${task.id}" ${task.is_done ? 'checked' : ''}><span></span></label>
-        <button data-open-task="${task.id}" type="button"><strong>${escapeHTML(task.title)}</strong><small>${escapeHTML(project?.title || 'Без релиза')} · ${task.due_at ? formatDate(task.due_at, { year: undefined }) : 'без даты'}</small></button>
+        <button data-open-task="${task.id}" type="button"><strong>${escapeHTML(task.title)}</strong><small>${escapeHTML(note)}</small></button>
       </article>`;
     }).join('') : `<div class="empty-list">${selectedProject ? 'У этого релиза задач пока нет.' : 'Задач пока нет.'}</div>`;
     $$('[data-dashboard-task-check]', container).forEach((input) => input.addEventListener('change', () => toggleTask(input.dataset.dashboardTaskCheck, input.checked)));
@@ -1805,7 +1885,7 @@
       if (error) throw error;
       Object.assign(project, data);
       toast('Релиз добавлен в календарь.');
-      await shiftStagesForRelease(project, previousReleaseAt);
+      if (!(await fillStageDates(project))) await shiftStagesForRelease(project, previousReleaseAt);
       renderDashboard();
       renderCalendar();
     } catch (error) {
@@ -1922,7 +2002,10 @@
     const selectedStatus = task ? taskWorkflow(task) : initialStatus;
     const projectOptions = ['<option value="">Без привязки к релизу</option>', ...state.projects.map((project) => `<option value="${project.id}" ${project.id === selectedProjectId ? 'selected' : ''}>${escapeHTML(project.title)}</option>`)].join('');
     const workflowOptions = Object.entries(TASK_WORKFLOW).map(([value, label]) => `<option value="${value}" ${value === selectedStatus ? 'selected' : ''}>${label}</option>`).join('');
-    openDrawer('TASK / PROJECT', task ? 'Редактирование задачи' : 'Новая задача', `<form id="task-form"><label class="field"><span>Задача</span><input name="title" value="${escapeHTML(task?.title || '')}" required placeholder="Например: подготовить обложку"></label><label class="field"><span>Связанный релиз</span><select name="project_id">${projectOptions}</select></label><div class="form-grid two"><label class="field"><span>Этап</span><select name="workflow_status">${workflowOptions}</select></label><label class="field"><span>Срок</span><input name="due_at" type="datetime-local" value="${toLocalInput(task?.due_at)}"></label></div><div class="drawer-actions">${task ? '<button class="button button-danger" id="delete-task" type="button">Удалить</button>' : '<span></span>'}<button class="button button-primary" type="submit">${task ? 'Сохранить' : 'Добавить задачу'}</button></div></form>`);
+    // Автоматическую задачу нельзя переименовать и удалить: по названию
+    // держится вся связь с этапом плана. Не делаешь — просто отметь сделанной.
+    const auto = isAutoTask(task);
+    openDrawer('TASK / PROJECT', task ? 'Редактирование задачи' : 'Новая задача', `<form id="task-form"><label class="field"><span>Задача</span><input name="title" value="${escapeHTML(task?.title || '')}" required placeholder="Например: подготовить обложку" ${auto ? 'readonly' : ''}></label>${auto ? '<p class="drawer-note">Это шаг плана выпуска — название и удаление закрыты. Если шаг не нужен, просто отметьте его сделанным.</p>' : ''}<label class="field"><span>Связанный релиз</span><select name="project_id">${projectOptions}</select></label><div class="form-grid two"><label class="field"><span>Этап</span><select name="workflow_status">${workflowOptions}</select></label><label class="field"><span>Срок</span><input name="due_at" type="datetime-local" value="${toLocalInput(task?.due_at)}"></label></div><div class="drawer-actions">${task && !auto ? '<button class="button button-danger" id="delete-task" type="button">Удалить</button>' : '<span></span>'}<button class="button button-primary" type="submit">${task ? 'Сохранить' : 'Добавить задачу'}</button></div></form>`);
     $('#task-form').addEventListener('submit', (event) => saveTask(event, task));
     $('#delete-task')?.addEventListener('click', () => deleteTask(task));
   }
@@ -1999,12 +2082,31 @@
         project.release_at = releaseAt;
         closeDrawer(true);
         toast('Дата релиза сохранена.');
-        await shiftStagesForRelease(project, previousReleaseAt);
+        if (!(await fillStageDates(project))) await shiftStagesForRelease(project, previousReleaseAt);
         renderCalendar(); renderDashboard();
         if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
       } catch (error) { toast(error.message || 'Не удалось сохранить дату.', 'error'); }
       finally { setBusy(button, false); }
     });
+  }
+
+  // Этап закрыт, когда закрыты все его задачи. Открыл задачу обратно —
+  // этап тоже открывается: иначе бар врал бы о готовности.
+  async function syncStageFromTasks(task) {
+    const spec = stageTaskByTitle(task && task.title);
+    if (!spec) return;
+    const stage = (state.stages || []).filter((row) => row.project_id === task.project_id
+      && row.title === spec.stage)[0];
+    if (!stage) return;
+    const siblings = STAGE_TASKS.filter((row) => row.stage === spec.stage).map((row) => row.title);
+    const allDone = siblings.every((title) => state.tasks.some((row) => row.project_id === task.project_id
+      && row.title === title && row.is_done));
+    if (stage.is_done === allDone) return;
+    const { error } = await db.from('release_stages').update({ is_done: allDone })
+      .eq('id', stage.id).eq('artist_id', state.artist.id);
+    if (error) return console.warn('[artist-terminal] syncStageFromTasks:', error);
+    state.stages = state.stages.map((row) => (row.id === stage.id ? { ...row, is_done: allDone } : row));
+    if (allDone) toast('Этап «' + stage.title + '» закрыт.');
   }
 
   async function toggleTask(id, isDone) {
@@ -2020,6 +2122,7 @@
       if (error) throw error;
       logEvent('task', isDone ? 'Задача закрыта' : 'Задача снова открыта', task?.title || '', { view: 'tasks', id, project: task?.project_id });
       if (isDone && task?.project_id) await advanceProjectStage(task);
+      if (task?.project_id) await syncStageFromTasks(task);
       renderDashboard(); renderTasksView(); renderCalendar();
       if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
     } catch (error) {
@@ -2423,6 +2526,15 @@
     const defaults = DEFAULT_PROJECT_TASKS.map((title, index) => ({ artist_id: state.artist.id, project_id: saved.id, title, workflow_status: 'idea', is_done: false, sort_order: index }));
     const { error: taskError } = await db.from('project_tasks').insert(defaults);
     if (taskError) console.error('Failed to seed default tasks for draft project', taskError);
+    // Этапы появляются сразу вместе с релизом, но без дат: смещения известны,
+    // а даты посчитаются, как только будет назначен день Х.
+    const stageRows = ROLLOUT_TEMPLATES.single.stages.map((stage, index) => ({
+      artist_id: state.artist.id, project_id: saved.id, title: stage.title,
+      stage_date: null, day_offset: stage.day, repeat_rule: stage.repeat, sort_order: index,
+    }));
+    const { error: stageError } = await db.from('release_stages').insert(stageRows);
+    if (stageError) console.error('Failed to seed release stages for draft project', stageError);
+    state.stages = await safeQuery(db.from('release_stages').select('*').eq('artist_id', state.artist.id).order('sort_order'));
     state.projects = [saved, ...state.projects];
     state.tasks = await safeQuery(db.from('project_tasks').select('*').eq('artist_id', state.artist.id).order('is_done').order('sort_order').order('due_at'));
     state.freshDraftProjectId = saved.id;
@@ -2436,6 +2548,7 @@
     const linkedTasks = state.tasks.filter((task) => task.project_id === project.id);
     const tasksArePristine = linkedTasks.length === DEFAULT_PROJECT_TASKS.length
       && linkedTasks.every((task) => DEFAULT_PROJECT_TASKS.includes(task.title) && !task.is_done);
+    // Этапы у чистого черновика тоже нетронуты: без дат и не закрыты.
     const hasLyrics = state.lyrics.some((doc) => doc.project_id === project.id);
     const hasFiles = state.files.some((file) => file.project_id === project.id);
     return tasksArePristine && !hasLyrics && !hasFiles
@@ -2847,7 +2960,7 @@
         state.freshDraftProjectId = null;
         logEvent('release', 'Создан релиз', saved.title || 'Без названия', { view: 'track', id: saved.id, project: saved.id });
       }
-      await shiftStagesForRelease(saved, previousReleaseAt);
+      if (!(await fillStageDates(saved))) await shiftStagesForRelease(saved, previousReleaseAt);
       await renderProjects(); renderDashboard(); renderCalendar();
       activeWorkspaceFlush = null;
       state.activeProjectId = saved.id;
