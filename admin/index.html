@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles/artist-terminal.css?v=20260904-4">
+  <link rel="stylesheet" href="/styles/artist-terminal.css?v=20260904-5">
   <script>
     (() => {
       try {
@@ -154,9 +154,9 @@
               <header class="panel-header"><div><span class="eyebrow">Работа</span><h3 class="dashboard-tasks-heading">Задачи</h3></div><button class="text-button" id="dashboard-new-task" type="button">+ Задача</button></header>
               <div class="dashboard-task-list" id="dashboard-tasks"></div>
               <div class="dashboard-metrics">
-                <div><span>В работе</span><strong id="stat-projects">0</strong></div>
-                <div><span>Релизов</span><strong id="stat-releases">0</strong></div>
-                <div><span>Готовность</span><strong id="stat-completion">0%</strong></div>
+                <div><span>Всего</span><strong id="stat-total">0</strong></div>
+                <div><span>Просрочено</span><strong id="stat-overdue">0</strong></div>
+                <div><span>Ждут других</span><strong id="stat-blocked">0</strong></div>
               </div>
             </article>
 
@@ -287,6 +287,6 @@
     </div>
   </div>
 
-  <script src="/scripts/artist-terminal.js?v=20260904-4"></script>
+  <script src="/scripts/artist-terminal.js?v=20260904-5"></script>
 </body>
 </html>

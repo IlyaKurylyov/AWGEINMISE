@@ -901,15 +901,21 @@
 
   function renderDashboard() {
     const selectedProject = selectedDashboardProject();
-    const activeProjects = state.projects.filter((project) => !['released', 'archived'].includes(project.status));
-    const released = state.projects.filter((project) => project.status === 'released').length;
     const dashboardTasks = selectedProject ? state.tasks.filter((task) => task.project_id === selectedProject.id) : state.tasks;
-    const totalTasks = dashboardTasks.length;
-    const completedTasks = dashboardTasks.filter((task) => task.is_done).length;
 
-    $('#stat-projects').textContent = String(activeProjects.length).padStart(2, '0');
-    $('#stat-releases').textContent = String(released).padStart(2, '0');
-    $('#stat-completion').textContent = totalTasks ? `${Math.round((completedTasks / totalTasks) * 100)}%` : '0%';
+    // Панель стоит под списком задач и подводит итог именно ему, по тому же
+    // фильтру. Раньше «Готовность» считалась по выбранному релизу, а два
+    // соседних числа — по всем сразу, и три числа жили по разным правилам.
+    const today = dayStart(new Date()).getTime();
+    const openTasks = dashboardTasks.filter((task) => !task.is_done);
+    const overdue = openTasks.filter((task) => task.due_at && dayStart(task.due_at).getTime() < today).length;
+    const blocked = openTasks.filter((task) => taskBlockers(task).length).length;
+
+    $('#stat-total').textContent = String(openTasks.length).padStart(2, '0');
+    $('#stat-overdue').textContent = String(overdue).padStart(2, '0');
+    $('#stat-blocked').textContent = String(blocked).padStart(2, '0');
+    $('#stat-overdue').classList.toggle('is-alert', overdue > 0);
+    $('#stat-blocked').classList.toggle('is-waiting', blocked > 0);
 
     renderDashboardProjectSelect();
     renderDashboardCalendar();

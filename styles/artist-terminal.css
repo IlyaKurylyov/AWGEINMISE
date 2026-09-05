@@ -573,6 +573,9 @@ html[data-theme="light"] .cal-badge { color: #f2efe6; }
 .dashboard-metrics span, .dashboard-metrics strong { display: block; }
 .dashboard-metrics span { color: #839081; font-size: 8px; text-transform: uppercase; }
 .dashboard-metrics strong { margin-top: 3px; color: var(--green); font: 500 22px 'Oswald', sans-serif; }
+/* Просрочка и блокировка — не повод для зелёного цвета «всё хорошо». */
+.dashboard-metrics strong.is-alert { color: var(--red); }
+.dashboard-metrics strong.is-waiting { color: var(--amber); }
 
 .dashboard-project-focus { border-top: 0; border-bottom: 1px solid #2e382e; background: transparent; }
 .dashboard-focus-empty { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 10px 14px; color: #8f9b8c; background: transparent; text-align: center; }
