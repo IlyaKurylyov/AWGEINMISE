@@ -3024,12 +3024,17 @@
       if (!(await fillStageDates(saved))) await shiftStagesForRelease(saved, previousReleaseAt);
       await renderProjects(); renderDashboard(); renderCalendar();
       activeWorkspaceFlush = null;
-      state.activeProjectId = saved.id;
-      await renderTrackWorkspace(saved.id, saved.status);
-      goView('track');
-      const url = new URL(location.href); url.searchParams.set('section', 'track'); url.searchParams.set('project', saved.id); history.replaceState({}, '', `${url.pathname}${url.search}`);
+      state.activeProjectId = null;
+      await goView('projects');
+      const url = new URL(location.href);
+      url.searchParams.set('section', 'projects');
+      url.searchParams.delete('project');
+      history.replaceState({}, '', `${url.pathname}${url.search}`);
       toast('Проект обновлён.');
-      offerTaskDates(saved.id);
+      // Обязательным задачам нужна только дата выхода — от неё построится
+      // весь план. Остальные сроки спрашиваем, только если есть свои задачи.
+      if (!saved.release_at) offerReleaseDate(saved);
+      else offerTaskDates(saved.id);
     } catch (error) { toast(error.message || 'Не удалось сохранить проект.', 'error'); }
     finally { setBusy(submit, false); }
   }
@@ -3138,7 +3143,10 @@
   };
   const clearLyricsDraft = (projectId) => setLyricsDraft(projectId, '');
 
-  const unplannedTasks = (projectId = null) => (state.tasks || []).filter((task) => !task.is_done && !task.due_at && (!projectId || task.project_id === projectId));
+  // Автоматические задачи сроки не спрашивают: они получают их от даты
+  // релиза через свои этапы. Спрашивать девять дат руками — издевательство.
+  const unplannedTasks = (projectId = null) => (state.tasks || []).filter((task) => !task.is_done
+    && !task.due_at && !isAutoTask(task) && (!projectId || task.project_id === projectId));
 
   // После сохранения трека предлагаем сроки его задачам: без дат они не попадают
   // ни в календарь, ни в напоминания.
