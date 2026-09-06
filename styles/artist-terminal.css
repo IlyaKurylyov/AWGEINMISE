@@ -1897,7 +1897,17 @@ html[data-theme="light"] .rollout-mini.is-go:hover { color: #f2efe6; }
 .plan-pin.is-many { width: auto; height: auto; border-radius: 0; padding: 1px 4px; background: var(--red); color: #fff; font: 700 10px 'IBM Plex Mono', monospace; }
 .project-mini { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-top: 10px; border: 1px solid var(--line); background: transparent; padding: 8px 10px; cursor: pointer; font: inherit; }
 .project-mini:hover { border-color: var(--green); }
+.project-mini-body { display: block; flex: 1; min-width: 0; }
 .project-mini-dots { display: flex; align-items: center; gap: 0; flex: 1; min-width: 0; }
+/* Широкий вариант в рабочем пространстве: точки растянуты по ширине,
+   под каждой — название этапа и его дата. */
+.project-mini.is-wide { padding: 12px 14px; align-items: flex-start; }
+.project-mini.is-wide .project-mini-dots { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; justify-items: center; }
+.project-mini.is-wide .project-mini-dots i { margin: 0; }
+.project-mini.is-wide .project-mini-dots i:not(:last-child)::after { width: 100%; left: calc(50% + 6px); }
+.project-mini-labels { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; margin-top: 9px; }
+.project-mini-labels > span { min-width: 0; padding: 0 4px; text-align: center; color: var(--muted); font-size: 11.5px; line-height: 1.3; overflow-wrap: anywhere; }
+.project-mini-labels i { display: block; color: var(--dim, var(--muted)); font-style: normal; font-size: 10.5px; font-variant-numeric: tabular-nums; opacity: .8; }
 /* Точки соединены линией: это путь, а не набор значков. */
 .project-mini-dots i { position: relative; width: 9px; height: 9px; flex: none; border-radius: 50%; border: 1.5px solid var(--line-hi); background: var(--panel); }
 .project-mini-dots i + i { margin-left: 0; }

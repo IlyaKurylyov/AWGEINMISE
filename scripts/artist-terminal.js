@@ -1019,7 +1019,7 @@
   // Урезанная копия пути в карточке трека: посмотреть, где релиз, не
   // переключая фокус-проект на дашборде. Редактировать здесь нельзя —
   // клик уводит туда, где это делается.
-  function miniRollout(project) {
+  function miniRollout(project, withLabels = false) {
     const stages = (state.stages || []).filter((stage) => stage.project_id === project.id)
       .sort((a, b) => (dayStart(a.stage_date || 0) - dayStart(b.stage_date || 0)) || a.sort_order - b.sort_order);
     if (!stages.length) return '';
@@ -1032,9 +1032,14 @@
       return '<i class="' + cls + '" title="' + escapeHTML(stage.title)
         + (stage.stage_date ? ' · ' + shortDate(stage.stage_date) : ' · даты нет') + '"></i>';
     }).join('');
-    return '<button class="project-mini" type="button" data-mini-rollout="' + project.id + '"'
+    const labels = withLabels
+      ? '<span class="project-mini-labels">' + stages.map((stage) => '<span>' + escapeHTML(stage.title)
+        + '<i>' + (stage.stage_date ? shortDate(stage.stage_date) : 'без даты') + '</i></span>').join('') + '</span>'
+      : '';
+    return '<button class="project-mini' + (withLabels ? ' is-wide' : '') + '" type="button" data-mini-rollout="' + project.id + '"'
       + ' title="Открыть путь этого релиза на дашборде">'
-      + '<span class="project-mini-dots">' + dots + '</span>'
+      + '<span class="project-mini-body">'
+      + '<span class="project-mini-dots">' + dots + '</span>' + labels + '</span>'
       + '<span class="project-mini-count">' + done + ' из ' + stages.length + '</span></button>';
   }
 
@@ -2548,7 +2553,7 @@
       const coverMarkup = cover
         ? `<img class="project-cover-bg" src="${escapeHTML(cover)}" alt="" aria-hidden="true"><img class="project-cover-fg" src="${escapeHTML(cover)}" alt="">`
         : '<span>NO COVER</span>';
-      return `<article class="project-card" data-open-project="${project.id}"><div class="project-cover">${coverMarkup}</div><div class="project-body"><span class="eyebrow">${formatDate(project.release_at)}</span><h3>${escapeHTML(project.title)}</h3><p class="project-stage-copy">${PROJECT_STATUS_HINT[project.status] || ''}</p><div class="project-meta"><span>${project.beat_id ? 'Бит выбран' : 'Без бита'}</span><span class="status-chip ${project.status}">${PROJECT_STATUS[project.status] || project.status}</span></div>${miniRollout(project)}</div></article>`;
+      return `<article class="project-card" data-open-project="${project.id}"><div class="project-cover">${coverMarkup}</div><div class="project-body"><span class="eyebrow">${formatDate(project.release_at)}</span><h3>${escapeHTML(project.title)}</h3><p class="project-stage-copy">${PROJECT_STATUS_HINT[project.status] || ''}</p><div class="project-meta"><span>${project.beat_id ? 'Бит выбран' : 'Без бита'}</span><span class="status-chip ${project.status}">${PROJECT_STATUS[project.status] || project.status}</span></div></div></article>`;
     }));
     container.innerHTML = cards.join('');
     bindProjectButtons(container);
@@ -2707,7 +2712,7 @@
           </div>
           <div class="track-status-row">
             <p id="project-status-hint">${PROJECT_STATUS_HINT[selectedStatus] || ''}</p>
-            <div class="track-progress track-progress-compact" aria-label="Стадия релиза">${stageRail}</div>
+            ${project ? miniRollout(project, true) : `<div class="track-progress track-progress-compact" aria-label="Стадия релиза">${stageRail}</div>`}
           </div>
         </section>
 
