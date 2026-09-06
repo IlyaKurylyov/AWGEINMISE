@@ -2551,20 +2551,27 @@
     bindProjectButtons(container);
   }
 
+  // Клик по бару ведёт на дашборд, ставит этот релиз фокус-проектом
+  // и прокручивает к полному пути. Открытие трека при этом не срабатывает.
+  function bindRolloutJump(root) {
+    $$('[data-mini-rollout]', root).forEach((node) => {
+      node.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); node.click(); }
+      });
+      node.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        state.dashboardProjectId = node.dataset.miniRollout;
+        renderDashboardProjectSelect();
+        await goView('dashboard');
+        renderDashboard();
+        const panel = $('#dashboard-rollout');
+        if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    });
+  }
+
   function bindProjectButtons(root) {
-    // Клик по мини-бару не должен открывать трек: он ведёт на дашборд,
-    // ставит этот релиз в фокус и прокручивает к полному пути.
-    $$('[data-mini-rollout]', root).forEach((node) => node.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); node.click(); }
-    }));
-    $$('[data-mini-rollout]', root).forEach((node) => node.addEventListener('click', async (event) => {
-      event.stopPropagation();
-      state.dashboardProjectId = node.dataset.miniRollout;
-      await goView('dashboard');
-      renderDashboard();
-      const panel = $('#dashboard-rollout');
-      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }));
+    bindRolloutJump(root);
     $$('[data-open-project]', root).forEach((node) => node.addEventListener('click', () => {
       const source = $('.view.is-active')?.dataset.viewPanel;
       if (node.dataset.openProject) openProjectEditor(node.dataset.openProject, 'idea', source === 'dashboard' ? 'dashboard' : 'projects');
@@ -2758,6 +2765,7 @@
       const hint = $('#project-status-hint');
       if (hint) hint.textContent = PROJECT_STATUS_HINT[status] || '';
     };
+    bindRolloutJump(form);
     const stageButtons = $$('[data-track-stage]', form);
     const refreshStageRail = (status) => {
       const activeIndex = stageOrder.indexOf(status);
