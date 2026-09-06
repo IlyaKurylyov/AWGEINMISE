@@ -1016,31 +1016,14 @@
     renderDashboard();
   }
 
-  // Урезанная копия пути в карточке трека: посмотреть, где релиз, не
-  // переключая фокус-проект на дашборде. Редактировать здесь нельзя —
-  // клик уводит туда, где это делается.
-  function miniRollout(project, withLabels = false) {
+  // В карточке трека — ровно та же ось, что на дашборде, только смотреть.
+  function trackRollout(project) {
+    if (!project) return '';
     const stages = (state.stages || []).filter((stage) => stage.project_id === project.id)
       .sort((a, b) => (dayStart(a.stage_date || 0) - dayStart(b.stage_date || 0)) || a.sort_order - b.sort_order);
     if (!stages.length) return '';
-    const today = dayStart(new Date()).getTime();
-    const done = stages.filter((stage) => stage.is_done).length;
-    const dots = stages.map((stage) => {
-      const late = !stage.is_done && stage.day_offset !== 0 && stage.stage_date
-        && dayStart(stage.stage_date).getTime() < today;
-      const cls = stage.is_done ? 'is-done' : (late ? 'is-late' : (stage.day_offset === 0 ? 'is-release' : ''));
-      return '<i class="' + cls + '" title="' + escapeHTML(stage.title)
-        + (stage.stage_date ? ' · ' + shortDate(stage.stage_date) : ' · даты нет') + '"></i>';
-    }).join('');
-    const labels = withLabels
-      ? '<span class="project-mini-labels">' + stages.map((stage) => '<span>' + escapeHTML(stage.title)
-        + '<i>' + (stage.stage_date ? shortDate(stage.stage_date) : 'без даты') + '</i></span>').join('') + '</span>'
-      : '';
-    return '<button class="project-mini' + (withLabels ? ' is-wide' : '') + '" type="button" data-mini-rollout="' + project.id + '"'
-      + ' title="Открыть путь этого релиза на дашборде">'
-      + '<span class="project-mini-body">'
-      + '<span class="project-mini-dots">' + dots + '</span>' + labels + '</span>'
-      + '<span class="project-mini-count">' + done + ' из ' + stages.length + '</span></button>';
+    return '<div class="track-rollout" role="button" tabindex="0" data-mini-rollout="' + project.id + '"'
+      + ' title="Открыть путь этого релиза на дашборде">' + rolloutAxis(stages, { readonly: true }) + '</div>';
   }
 
   // Релиз для пути: выбранный в фокусе, иначе ближайший по дате выхода.
@@ -1051,6 +1034,68 @@
       .filter((project) => project.release_at && project.status !== 'archived')
       .sort((a, b) => new Date(a.release_at) - new Date(b.release_at));
     return dated[0] || null;
+  }
+
+  // Одна и та же ось рисуется и на дашборде, и в карточке трека, чтобы они
+  // не разъезжались. Без дат этапы всё равно стоят на линии — план виден
+  // до того, как назначен день Х.
+  function rolloutAxis(stages, options = {}) {
+    const readonly = !!options.readonly;
+    const today = dayStart(new Date()).getTime();
+    const dated = stages.every((stage) => stage.stage_date);
+    const times = dated ? stages.map((stage) => dayStart(stage.stage_date).getTime()) : [];
+    const count = stages.length;
+    const centerPct = (index) => ((index + 0.5) / count) * 100;
+
+    const todayPct = !dated ? 0 : (() => {
+      if (today <= times[0]) return 0;
+      if (today >= times[count - 1]) return 100;
+      for (let index = 1; index < count; index += 1) {
+        if (today <= times[index]) {
+          const before = times[index - 1];
+          const after = times[index];
+          const frac = after === before ? 0 : (today - before) / (after - before);
+          return centerPct(index - 1) + frac * (centerPct(index) - centerPct(index - 1));
+        }
+      }
+      return 100;
+    })();
+    const todayEdge = todayPct > 88 ? ' is-end' : (todayPct < 12 ? ' is-start' : '');
+
+    const stageClass = (stage) => {
+      if (stage.is_done) return 'is-done';
+      if (stage.day_offset === 0) return 'is-release';
+      return dated && dayStart(stage.stage_date).getTime() < today ? 'is-late' : '';
+    };
+
+    const caps = stages.map((stage, index) => '<span class="rollout-cap ' + stageClass(stage) + '" data-col="' + index + '">'
+      + '<b>' + escapeHTML(stage.title) + '</b>'
+      + '<span class="rollout-cap-date">' + (stage.stage_date ? shortDate(stage.stage_date) : '—') + '</span></span>').join('');
+
+    const nodeCells = stages.map((stage, index) => '<span data-col="' + index + '">'
+      + (stage.is_pinned && !readonly ? '<button class="rollout-lock" type="button" data-stage-pin="' + stage.id
+        + '" title="Закреплён: не сдвигается при переносе дня Х. Нажмите, чтобы снять"></button>' : '')
+      + '<' + (readonly ? 'span' : 'button') + ' class="rollout-node ' + stageClass(stage) + '"'
+      + (readonly ? '' : ' type="button" data-stage="' + stage.id + '"')
+      + ' title="' + escapeHTML(stage.title) + (stage.stage_date ? ' · ' + shortDate(stage.stage_date) : ' · даты нет')
+      + (stage.repeat_rule !== 'once' ? ' · ' + REPEAT_LABEL[stage.repeat_rule] : '') + '">'
+      + '</' + (readonly ? 'span' : 'button') + '></span>').join('');
+
+    const gapCells = stages.map((stage, index) => {
+      if (!index || !dated) return '<span></span>';
+      const days = Math.round((times[index] - times[index - 1]) / 86400000);
+      return '<span><i>' + days + ' ' + plural(days, 'день', 'дня', 'дней') + '</i></span>';
+    }).join('');
+
+    return '<div class="rollout-axis" style="--rollout-count:' + count + '">'
+      + '<div class="rollout-row">' + caps + '</div>'
+      + '<div class="rollout-noderow"><span class="rollout-bar"><i style="width:' + todayPct + '%"></i></span>'
+      + '<div class="rollout-row rollout-nodes">' + nodeCells + '</div>'
+      + (dated ? '<span class="rollout-today' + todayEdge + '" style="left:' + todayPct + '%">'
+        + '<b>сегодня · ' + shortDate(new Date()) + '</b></span>' : '')
+      + '</div>'
+      + '<div class="rollout-row rollout-gaps">' + gapCells + '</div>'
+      + '</div>';
   }
 
   function renderRollout() {
@@ -1065,7 +1110,7 @@
         + '</div>').join('') + '</div>'
       : '';
 
-    if (!project || !project.release_at) {
+    if (!project) {
       host.innerHTML = '<header class="panel-header"><div><span class="eyebrow">План выпуска</span><h3>Путь релиза</h3></div>'
         + '</header>'
         + '<p class="track-workspace-empty">Ни у одного релиза нет даты выхода. Поставьте дату — путь построится сам.</p>' + depot;
@@ -1090,61 +1135,14 @@
       return;
     }
 
-    // Ось разложена на три независимых ряда: подписи, узлы, интервалы. Раньше
-    // всё лежало в одном слое и позиционировалось календарной пропорцией —
-    // при близких датах подписи наезжали друг на друга. Теперь наезд невозможен
-    // по построению, а ритм плана передают числа в стыках, а не расстояние.
     const today = dayStart(new Date()).getTime();
-    const times = stages.map((stage) => dayStart(stage.stage_date).getTime());
-    const count = stages.length;
-    const centerPct = (index) => ((index + 0.5) / count) * 100;
-    const left = daysUntil(project.release_at);
-
-    const todayPct = (() => {
-      if (today <= times[0]) return 0;
-      if (today >= times[count - 1]) return 100;
-      for (let index = 1; index < count; index += 1) {
-        if (today <= times[index]) {
-          const before = times[index - 1];
-          const after = times[index];
-          const frac = after === before ? 0 : (today - before) / (after - before);
-          return centerPct(index - 1) + frac * (centerPct(index) - centerPct(index - 1));
-        }
-      }
-      return 100;
-    })();
-    const todayEdge = todayPct > 88 ? ' is-end' : (todayPct < 12 ? ' is-start' : '');
-
-    const stageClass = (stage) => {
-      if (stage.is_done) return 'is-done';
-      if (stage.day_offset === 0) return 'is-release';
-      return dayStart(stage.stage_date).getTime() < today ? 'is-late' : '';
-    };
-
-    const caps = stages.map((stage, index) => '<span class="rollout-cap ' + stageClass(stage) + '" data-col="' + index + '">'
-      + '<b>' + escapeHTML(stage.title) + '</b>'
-      + '<span class="rollout-cap-date">' + shortDate(stage.stage_date)
-      + '</span></span>').join('');
-
-    const nodeCells = stages.map((stage, index) => '<span data-col="' + index + '">'
-      + (stage.is_pinned ? '<button class="rollout-lock" type="button" data-stage-pin="' + stage.id
-        + '" title="Закреплён: не сдвигается при переносе дня Х. Нажмите, чтобы снять"></button>' : '')
-      + '<button class="rollout-node ' + stageClass(stage) + '" type="button"'
-      + ' data-stage="' + stage.id + '" title="' + escapeHTML(stage.title) + ' · ' + shortDate(stage.stage_date)
-      + (stage.repeat_rule !== 'once' ? ' · ' + REPEAT_LABEL[stage.repeat_rule] : '') + '"></button></span>').join('');
-
-    // Интервал стоит в стыке колонок, то есть ровно между соседними узлами.
-    const gapCells = stages.map((stage, index) => {
-      if (!index) return '<span></span>';
-      const days = Math.round((times[index] - times[index - 1]) / 86400000);
-      return '<span><i>' + days + ' ' + plural(days, 'день', 'дня', 'дней') + '</i></span>';
-    }).join('');
+    const left = project.release_at ? daysUntil(project.release_at) : null;
+    const lateList = stages.filter((stage) => !stage.is_done && stage.day_offset !== 0
+      && stage.stage_date && dayStart(stage.stage_date).getTime() < today);
 
     const doneCount = stages.filter((stage) => stage.is_done).length;
     // Просроченное больше не выносит приговор, а спрашивает: этап мог быть
     // сделан и просто не отмечен, и раньше это стоило четырёх действий.
-    const lateList = stages.filter((stage) => !stage.is_done && stage.day_offset !== 0
-      && dayStart(stage.stage_date).getTime() < today);
     const askBlock = lateList.length
       ? '<div class="rollout-ask"><div class="rollout-ask-head">'
         + '<span>' + lateList.length + ' ' + plural(lateList.length, 'этап', 'этапа', 'этапов')
@@ -1167,19 +1165,13 @@
       + (doneCount ? '<span class="rollout-progress">' + doneCount + ' из ' + stages.length + '</span>' : '')
       + '<button class="text-button" type="button" data-rollout-setup>настроить план</button>'
       + '<button class="text-button" type="button" data-rollout-rebuild>пересобрать</button></div></header>'
-      + '<div class="rollout-stage-wrap"><div class="rollout-axis" style="--rollout-count:' + count + '">'
-      + '<div class="rollout-row">' + caps + '</div>'
-      + '<div class="rollout-noderow"><span class="rollout-bar"><i style="width:' + todayPct + '%"></i></span>'
-      + '<div class="rollout-row rollout-nodes">' + nodeCells + '</div>'
-      + '<span class="rollout-today' + todayEdge + '" style="left:' + todayPct + '%">'
-      + '<b>сегодня · ' + shortDate(new Date()) + '</b></span>'
-      + '</div>'
-      + '<div class="rollout-row rollout-gaps">' + gapCells + '</div>'
-      + '</div></div>'
-      + '<div class="rollout-foot"><div class="rollout-count"><b>' + Math.abs(left) + '</b><span>'
-      + (left >= 0 ? plural(Math.abs(left), 'день', 'дня', 'дней') + ' до выхода' : plural(Math.abs(left), 'день', 'дня', 'дней') + ' назад вышел')
-      + '</span></div><div class="rollout-foot-main"><strong>' + escapeHTML(project.title || 'Без названия') + '</strong>'
-      + '<small>' + shortDate(project.release_at)
+      + '<div class="rollout-stage-wrap">' + rolloutAxis(stages) + '</div>'
+      + '<div class="rollout-foot"><div class="rollout-count">'
+      + (left === null ? '<b>—</b><span>дата не назначена</span>'
+        : '<b>' + Math.abs(left) + '</b><span>'
+          + plural(Math.abs(left), 'день', 'дня', 'дней') + (left >= 0 ? ' до выхода' : ' назад вышел') + '</span>')
+      + '</div><div class="rollout-foot-main"><strong>' + escapeHTML(project.title || 'Без названия') + '</strong>'
+      + '<small>' + (project.release_at ? shortDate(project.release_at) : 'дня Х ещё нет')
       + '<button class="rollout-editdate" type="button" data-rollout-date aria-label="Изменить дату выхода"></button>'
       + ' · этап «' + (PROJECT_STATUS[project.status] || project.status) + '»</small></div></div>'
       + askBlock + depot;
@@ -2562,6 +2554,9 @@
   function bindProjectButtons(root) {
     // Клик по мини-бару не должен открывать трек: он ведёт на дашборд,
     // ставит этот релиз в фокус и прокручивает к полному пути.
+    $$('[data-mini-rollout]', root).forEach((node) => node.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); node.click(); }
+    }));
     $$('[data-mini-rollout]', root).forEach((node) => node.addEventListener('click', async (event) => {
       event.stopPropagation();
       state.dashboardProjectId = node.dataset.miniRollout;
@@ -2704,15 +2699,13 @@
         <section class="panel track-workspace-hero">
           <label class="cover-upload track-workspace-cover" id="project-cover-label">${cover ? `<img src="${escapeHTML(cover)}" alt="Обложка">` : '<span>+ Обложка</span>'}<input name="cover" type="file" accept="image/*" hidden></label>
           <div class="track-workspace-title" ${project ? `draggable="true" data-track-project-drag="${project.id}" title="Перетащите трек на нужную стадию"` : ''}>
-            <span class="eyebrow">Текст · релиз · задачи · промо</span>
             <input class="track-title-input" name="title" value="${escapeHTML(project?.title || '')}" required placeholder="Название трека">
           </div>
           <div class="track-workspace-actions">
             <button class="button button-primary track-save-button" type="submit">${project && !isPristineDraft(project) ? 'Сохранить трек' : 'Создать трек'}</button>
           </div>
           <div class="track-status-row">
-            <p id="project-status-hint">${PROJECT_STATUS_HINT[selectedStatus] || ''}</p>
-            ${project ? miniRollout(project, true) : `<div class="track-progress track-progress-compact" aria-label="Стадия релиза">${stageRail}</div>`}
+            ${trackRollout(project)}
           </div>
         </section>
 
@@ -2762,7 +2755,8 @@
     let acceptedStage = selectedStatus;
     const syncTrackStatus = (status) => {
       statusSelect.value = status;
-      $('#project-status-hint').textContent = PROJECT_STATUS_HINT[status] || '';
+      const hint = $('#project-status-hint');
+      if (hint) hint.textContent = PROJECT_STATUS_HINT[status] || '';
     };
     const stageButtons = $$('[data-track-stage]', form);
     const refreshStageRail = (status) => {

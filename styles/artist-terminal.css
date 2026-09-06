@@ -397,7 +397,9 @@ html[data-theme="light"] .soon-badge { border-color: #b3afa3; color: #6a6d63; }
 .drawer-section { margin-bottom: 24px; border-bottom: 1px solid var(--line); padding-bottom: 20px; }
 .drawer-section h3 { margin: 0 0 13px; font: 500 17px 'Oswald', sans-serif; }
 .drawer-actions { display: flex; justify-content: space-between; gap: 10px; }
-.cover-upload { height: 190px; display: grid; place-items: center; overflow: hidden; border: 1px dashed #495148; color: #6b7469; background: #090b09; cursor: pointer; }
+.cover-upload { height: 190px; display: grid; place-items: center; overflow: hidden; border: 1px dashed #495148; color: #6b7469; background: #090b09; cursor: pointer; text-align: center; transition: border-color .15s ease, color .15s ease; }
+.cover-upload span { display: block; padding: 0 8px; line-height: 1.35; }
+.cover-upload:hover, .cover-upload:focus-within { border-color: var(--green); color: var(--green); }
 .cover-upload img { width: 100%; height: 100%; object-fit: cover; }
 .toast-stack { position: fixed; right: 18px; bottom: 18px; z-index: 1200; display: grid; gap: 8px; }
 .toast { min-width: 260px; max-width: 420px; border: 1px solid #3d503e; padding: 12px 14px; color: #a8c9a7; background: #0d150e; box-shadow: var(--shadow); animation: toastIn .2s ease-out; }
@@ -1918,6 +1920,11 @@ html[data-theme="light"] .rollout-mini.is-go:hover { color: #f2efe6; }
 .project-mini-dots i.is-late { border-color: var(--red); }
 .project-mini-dots i.is-release { width: 12px; height: 12px; border-color: var(--amber); }
 .project-mini-count { flex: none; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+.track-rollout { display: block; width: 100%; border: 0; background: transparent; padding: 6px 0 0; margin: 0; cursor: pointer; font: inherit; text-align: left; }
+.track-rollout .rollout-axis { min-width: 0; }
+.track-rollout .rollout-node { cursor: pointer; }
+.track-rollout:hover .rollout-bar { background: var(--line-hi); }
 
 .plan-picks { display: grid; gap: 9px; margin: 14px 0 4px; }
 .plan-pick { display: block; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel-2); padding: 13px 15px; cursor: pointer; font: inherit; }
