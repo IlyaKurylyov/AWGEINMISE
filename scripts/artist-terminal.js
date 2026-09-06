@@ -1813,7 +1813,7 @@
         ? 'ждёт: ' + blockers.join(', ')
         : `${escapeHTML(project?.title || 'Без релиза')} · ${task.due_at ? formatDate(task.due_at, { year: undefined }) : 'без даты'}`;
       return `<article class="dashboard-task-row ${task.is_done ? 'is-done' : ''} ${blockers.length ? 'is-blocked' : ''}" data-task-drag="${task.id}" draggable="true">
-        <label><input type="checkbox" data-dashboard-task-check="${task.id}" ${task.is_done ? 'checked' : ''}><span></span></label>
+        <label><input type="checkbox" data-dashboard-task-check="${task.id}" ${task.is_done ? 'checked' : ''} ${blockers.length ? 'disabled' : ''}><span></span></label>
         <button data-open-task="${task.id}" type="button"><strong>${escapeHTML(task.title)}</strong><small>${escapeHTML(note)}</small></button>
       </article>`;
     }).join('') : `<div class="empty-list">${selectedProject ? 'У этого релиза задач пока нет.' : 'Задач пока нет.'}</div>`;
@@ -2159,6 +2159,16 @@
   async function toggleTask(id, isDone) {
     const previous = state.tasks.find((task) => task.id === id)?.is_done;
     const task = state.tasks.find((item) => item.id === id);
+    // Единственная точка, через которую задачи закрываются. Проверка стоит
+    // здесь, а не в разметке: списков три, и каждый забывал про блокировку.
+    if (isDone && task) {
+      const blockers = taskBlockers(task);
+      if (blockers.length) {
+        renderDashboard(); renderTasksView();
+        if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
+        return toast('Сначала: ' + blockers.join(', ') + '.', 'error');
+      }
+    }
     const previousWorkflow = task ? taskWorkflow(task) : 'idea';
     const workflowStatus = isDone ? 'uploaded' : (previousWorkflow === 'uploaded' ? 'doing' : previousWorkflow);
     if (task) { task.is_done = isDone; task.workflow_status = workflowStatus; }
@@ -2682,10 +2692,18 @@
     const linkedLyrics = project ? state.lyrics.filter((doc) => doc.project_id === project.id) : [];
     const taskRows = linkedTasks.length ? [...linkedTasks]
       .sort((a, b) => Number(a.is_done) - Number(b.is_done) || new Date(a.due_at || '2999-12-31') - new Date(b.due_at || '2999-12-31'))
-      .map((task) => `<article class="dashboard-task-row track-task-row ${task.is_done ? 'is-done' : ''}">
-        <label><input type="checkbox" data-track-task-check="${task.id}" ${task.is_done ? 'checked' : ''}><span></span></label>
-        <button data-open-task="${task.id}" type="button"><strong>${escapeHTML(task.title)}</strong><small>${task.due_at ? formatDate(task.due_at, { year: undefined }) : 'без даты'} · ${TASK_WORKFLOW[taskWorkflow(task)]}</small></button>
-      </article>`).join('') : '<p class="track-workspace-empty">Задач пока нет.</p>';
+      .map((task) => {
+        // Здесь задачи закрывались в любом порядке: блокировка учитывалась
+        // только на дашборде, и питч можно было отметить раньше загрузки.
+        const blockers = task.is_done ? [] : taskBlockers(task);
+        const note = blockers.length
+          ? 'ждёт: ' + blockers.join(', ')
+          : `${task.due_at ? formatDate(task.due_at, { year: undefined }) : 'без даты'} · ${TASK_WORKFLOW[taskWorkflow(task)]}`;
+        return `<article class="dashboard-task-row track-task-row ${task.is_done ? 'is-done' : ''} ${blockers.length ? 'is-blocked' : ''}">
+        <label><input type="checkbox" data-track-task-check="${task.id}" ${task.is_done ? 'checked' : ''} ${blockers.length ? 'disabled' : ''}><span></span></label>
+        <button data-open-task="${task.id}" type="button"><strong>${escapeHTML(task.title)}</strong><small>${escapeHTML(note)}</small></button>
+      </article>`;
+      }).join('') : '<p class="track-workspace-empty">Задач пока нет.</p>';
     const fileRows = linkedFiles.length
       ? linkedFiles.map((file) => (file.link_url
         ? `<div class="track-material-row"><a class="track-workspace-list-row is-link" href="${escapeHTML(file.link_url)}" target="_blank" rel="noopener"><span>${escapeHTML(file.original_name)}</span><small>${escapeHTML(file.file_kind)} · внешняя ссылка</small></a><button class="track-material-del" data-delete-file="${file.id}" type="button" aria-label="Удалить ссылку «${escapeHTML(file.original_name)}»" title="Удалить">×</button></div>`

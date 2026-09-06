@@ -1824,6 +1824,7 @@ html[data-theme="light"] .rollout-stage-wrap { background: rgba(73,82,71,.035); 
    и почему, а не просто исчезла из списка. */
 .dashboard-task-row.is-blocked { opacity: .55; }
 .dashboard-task-row.is-blocked input[type="checkbox"] { pointer-events: none; }
+.dashboard-task-row.is-blocked label { cursor: not-allowed; }
 .dashboard-task-row.is-blocked small { color: var(--amber); }
 .rollout-cap { transition: background-color .15s ease; border-radius: 2px; }
 .rollout-cap.is-hover { background: rgba(255,255,255,.05); }
