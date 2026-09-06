@@ -784,8 +784,37 @@
         console.warn(`[artist-terminal] ${keys[index]}:`, result.reason);
       }
     });
+    await reconcileReleased();
     renderEverything();
     setSystemStatus('Система онлайн');
+  }
+
+  // День выхода наступил, а релиз оставался «Запланирован»: путь горел
+  // красным бесконечно, и в «пропущено» попадал сам день Х. Раз статус
+  // больше не выставляется руками, закрывать его должна система.
+  async function reconcileReleased() {
+    const today = dayStart(new Date()).getTime();
+    const due = state.projects.filter((project) => project.status === 'scheduled'
+      && project.release_at && dayStart(project.release_at).getTime() <= today);
+    if (!due.length) return;
+    const ids = due.map((project) => project.id);
+    const { error } = await db.from('artist_projects').update({ status: 'released' })
+      .in('id', ids).eq('artist_id', state.artist.id);
+    if (error) return console.warn('[artist-terminal] reconcileReleased:', error);
+    state.projects = state.projects.map((project) => (ids.includes(project.id)
+      ? { ...project, status: 'released' } : project));
+    const closing = (state.stages || []).filter((stage) => stage.day_offset === 0
+      && !stage.is_done && ids.includes(stage.project_id));
+    if (closing.length) {
+      const stageIds = closing.map((stage) => stage.id);
+      const { error: stageError } = await db.from('release_stages').update({ is_done: true })
+        .in('id', stageIds).eq('artist_id', state.artist.id);
+      if (stageError) console.warn('[artist-terminal] reconcileReleased stages:', stageError);
+      else state.stages = state.stages.map((stage) => (stageIds.includes(stage.id)
+        ? { ...stage, is_done: true } : stage));
+    }
+    due.forEach((project) => logEvent('release', 'Релиз вышел', project.title || 'Без названия',
+      { view: 'dashboard', project: project.id }));
   }
 
   function syncIdentity() {
@@ -2730,6 +2759,12 @@
             <button class="button button-primary track-save-button" type="submit">${project && !isPristineDraft(project) ? 'Сохранить трек' : 'Создать трек'}</button>
           </div>
           <div class="track-status-row">
+            <div class="track-status-line">
+              <select class="track-status-chip" name="status" aria-label="Статус релиза">${Object.entries(PROJECT_STATUS).map(([value,label]) => `<option value="${value}" ${selectedStatus === value ? 'selected' : ''}>${label}</option>`).join('')}</select>
+              <span class="track-release-date">${project?.release_at ? shortDate(project.release_at) : 'дня Х нет'}</span>
+              <button class="rollout-editdate" type="button" data-track-setdate aria-label="Изменить дату выхода"></button>
+              <input name="release_at" type="datetime-local" value="${toLocalInput(project?.release_at)}" hidden>
+            </div>
             ${trackRollout(project)}
           </div>
         </section>
@@ -2740,13 +2775,6 @@
             <div class="track-workspace-list track-workspace-lyrics-list">${project ? lyricRows : '<p class="track-workspace-empty">Сначала сохраните трек.</p>'}</div>
           </section>
 
-          <section class="panel track-workspace-release">
-            <header class="panel-header"><div><span class="eyebrow">Публикация</span><h3>Релиз</h3></div></header>
-            <div class="track-workspace-section-body">
-              <label class="field"><span>Статус</span><select name="status">${Object.entries(PROJECT_STATUS).map(([value,label]) => `<option value="${value}" ${selectedStatus === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
-              <label class="field"><span>Дата релиза</span><input name="release_at" type="datetime-local" value="${toLocalInput(project?.release_at)}"><small>Запланированные и выпущенные релизы появляются в календаре.</small></label>
-            </div>
-          </section>
 
           <section class="panel track-workspace-main">
             <header class="panel-header"><div><span class="eyebrow">Внутреннее</span><h3>Бит и заметки</h3></div><select class="track-beat-select" name="beat_id" aria-label="Бит">${beatOptions}</select></header>
@@ -2783,6 +2811,18 @@
       const hint = $('#project-status-hint');
       if (hint) hint.textContent = PROJECT_STATUS_HINT[status] || '';
     };
+    const setDate = $('[data-track-setdate]', form);
+    if (setDate) setDate.addEventListener('click', async () => {
+      if (!project) return toast('Сначала сохраните трек.', 'error');
+      // Шторка даты перерисовывает всё рабочее пространство, поэтому
+      // недописанное название и заметки сначала уходят в автосохранение.
+      if (activeWorkspaceFlush) {
+        const flush = activeWorkspaceFlush;
+        activeWorkspaceFlush = null;
+        try { await flush(); } catch (error) { console.warn('[artist-terminal] flush before date:', error); }
+      }
+      offerReleaseDate(project);
+    });
     bindRolloutJump(form);
     const stageButtons = $$('[data-track-stage]', form);
     const refreshStageRail = (status) => {

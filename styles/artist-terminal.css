@@ -701,9 +701,9 @@ html[data-theme="light"] .pipeline-board .pipeline-column.is-dragover, html[data
 .track-workspace-grid .panel-header h3 { margin-top: 0; font-size: 19px; line-height: 1.05; }
 .track-workspace-grid .panel-header .eyebrow { font-size: 11px; line-height: 1.1; }
 .track-workspace-lyrics { grid-column: 1; grid-row: 1; }
-.track-workspace-tasks { grid-column: 2; grid-row: 1; }
+.track-workspace-tasks { grid-column: 2; grid-row: 1 / span 2; }
 .track-workspace-main { grid-column: 1; grid-row: 2; }
-.track-workspace-release { grid-column: 2; grid-row: 2; }
+
 .track-workspace-files { grid-column: 1 / -1; grid-row: 3; }
 .track-workspace-danger { grid-column: 1 / -1; grid-row: 4; }
 .track-workspace-danger { border: 0; background: transparent; box-shadow: none; }
@@ -1927,6 +1927,11 @@ html[data-theme="light"] .rollout-mini.is-go:hover { color: #f2efe6; }
 .track-rollout .rollout-axis { min-width: 0; }
 .track-rollout .rollout-node { cursor: pointer; }
 .track-rollout:hover .rollout-bar { background: var(--line-hi); }
+
+.track-status-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.track-status-chip { border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; font-size: 13px; padding: 5px 9px; }
+.track-status-chip:hover { border-color: var(--green); }
+.track-release-date { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 
 .plan-picks { display: grid; gap: 9px; margin: 14px 0 4px; }
 .plan-pick { display: block; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel-2); padding: 13px 15px; cursor: pointer; font: inherit; }
