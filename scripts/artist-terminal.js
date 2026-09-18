@@ -2726,7 +2726,15 @@
           <section class="panel track-workspace-main">
             <header class="panel-header"><div><span class="eyebrow">Внутреннее</span><h3>Бит и заметки</h3></div><select class="track-beat-select" name="beat_id" aria-label="Бит">${beatOptions}</select></header>
             <div class="track-workspace-section-body">
-              <div class="field notes-field"><div class="notes-toolbar"><button type="button" class="notes-toolbar-btn" data-note-format="bold" title="Жирный текст"><b>B</b></button><button type="button" class="notes-toolbar-btn" data-note-format="insertUnorderedList" title="Список точками">&bull;</button><button type="button" class="notes-toolbar-btn" data-note-format="insertOrderedList" title="Нумерованный список">1.</button></div><div class="notes-editor" data-notes-editor contenteditable="true" role="textbox" aria-multiline="true" aria-label="Заметки по треку" data-placeholder="Заметки по треку…">${notesToHTML(project?.description || '')}</div></div>
+              <div class="notes-toolbar" role="toolbar" aria-label="Форматирование заметок">
+                <button type="button" class="notes-toolbar-btn" data-note-format="bold" title="Жирный"><b>B</b></button>
+                <button type="button" class="notes-toolbar-btn" data-note-format="italic" title="Курсив"><i>I</i></button>
+                <button type="button" class="notes-toolbar-btn" data-note-format="underline" title="Подчёркнутый"><u>U</u></button>
+                <label class="notes-toolbar-btn notes-color" title="Цвет текста"><span>A</span><i></i><input type="color" data-note-color value="#eef0df"></label>
+                <button type="button" class="notes-toolbar-btn" data-note-format="insertUnorderedList" title="Список точками">&bull;</button>
+                <button type="button" class="notes-toolbar-btn" data-note-format="insertOrderedList" title="Нумерованный список">1.</button>
+              </div>
+              <div class="field notes-field"><div class="notes-editor" data-notes-editor contenteditable="true" role="textbox" aria-multiline="true" aria-label="Заметки по треку" data-placeholder="Заметки по треку…">${notesToHTML(project?.description || '')}</div></div>
             </div>
           </section>
 
@@ -2910,6 +2918,22 @@
           projectDirty = true;
           scheduleWorkspaceSave();
         }));
+        const colorInput = $('[data-note-color]', form);
+        if (colorInput) {
+          let savedRange = null;
+          colorInput.parentElement.addEventListener('mousedown', () => {
+            const selection = window.getSelection();
+            savedRange = selection && selection.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
+          });
+          colorInput.addEventListener('input', () => {
+            notesEditor.focus();
+            if (savedRange) { const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(savedRange); }
+            document.execCommand('foreColor', false, colorInput.value);
+            colorInput.parentElement.querySelector('i').style.background = colorInput.value;
+            projectDirty = true;
+            scheduleWorkspaceSave();
+          });
+        }
         notesEditor.addEventListener('paste', (event) => {
           event.preventDefault();
           const text = (event.clipboardData || window.clipboardData).getData('text/plain');
