@@ -1116,9 +1116,15 @@
       return '<span><i>' + days + ' ' + plural(days, 'день', 'дня', 'дней') + '</i></span>';
     }).join('');
 
+    // Этап с повтором — это период, а не точка: тизеры идут раз в два дня
+    // до следующего узла. Штрихуем этот отрезок, иначе он выглядит перерывом.
+    const step = count > 1 ? 100 / count : 0;
+    const bands = stages.map((stage, index) => (stage.repeat_rule !== 'once' && index < count - 1
+      ? '<span class="rollout-band" style="left:' + centerPct(index) + '%; width:' + step + '%" title="'
+        + escapeHTML(REPEAT_LABEL[stage.repeat_rule] || '') + '"></span>' : '')).join('');
     return '<div class="rollout-axis" style="--rollout-count:' + count + '">'
       + '<div class="rollout-row">' + caps + '</div>'
-      + '<div class="rollout-noderow"><span class="rollout-bar"><i style="width:' + todayPct + '%"></i></span>'
+      + '<div class="rollout-noderow"><span class="rollout-bar"><i style="width:' + todayPct + '%"></i>' + bands + '</span>'
       + '<div class="rollout-row rollout-nodes">' + nodeCells + '</div>'
       + (dated ? '<span class="rollout-today' + todayEdge + '" style="left:' + todayPct + '%">'
         + '<b>сегодня · ' + shortDate(new Date()) + '</b></span>' : '')
@@ -1157,8 +1163,7 @@
         // вместо шаблона предлагаем расставить даты руками.
         + '<div class="rollout-empty"><p>Плана выпуска ещё нет. Соберём его на пять недель: '
         + 'права, дистрибуция, сведение, тизеры, день Х.</p><div class="rollout-empty-actions">'
-        + '<button class="button button-primary" type="button" data-rollout-build>Собрать план</button>'
-        + '<button class="text-button" type="button" data-rollout-setup>настроить вручную</button></div></div>'
+        + '<button class="button button-primary" type="button" data-rollout-build>Собрать план</button></div></div>'
         + depot;
       bindRollout(host, project);
       return;
@@ -1192,8 +1197,8 @@
       + '<div><span class="eyebrow">Путь релиза</span><h3>' + escapeHTML(project.title || 'Без названия') + '</h3></div>'
       + '<div class="rollout-head-actions">'
       + (doneCount ? '<span class="rollout-progress">' + doneCount + ' из ' + stages.length + '</span>' : '')
-      + '<button class="text-button" type="button" data-rollout-setup>настроить план</button>'
-      + '<button class="text-button" type="button" data-rollout-rebuild>пересобрать</button></div></header>'
+      + '<button class="text-button" type="button" data-rollout-add>+ этап</button>'
+      + '<button class="text-button" type="button" data-rollout-reset>сбросить к шаблону</button></div></header>'
       + '<div class="rollout-stage-wrap">' + rolloutAxis(stages) + '</div>'
       + '<div class="rollout-foot"><div class="rollout-count">'
       + (left === null ? '<b>—</b><span>дата не назначена</span>'
@@ -1210,14 +1215,15 @@
   function bindRollout(host, project) {
     const build = $('[data-rollout-build]', host);
     if (build) build.addEventListener('click', () => buildFiveWeeks(project, build));
-    const rebuild = $('[data-rollout-rebuild]', host);
-    if (rebuild) rebuild.addEventListener('click', () => {
-      openRebuildPlan(project);
+    const add = $('[data-rollout-add]', host);
+    if (add) add.addEventListener('click', () => openStageEditor(null, project));
+    // Сброс — это бывшая «пересборка»: шаблон один, спрашивать нечего.
+    const reset = $('[data-rollout-reset]', host);
+    if (reset) reset.addEventListener('click', () => {
+      if (confirm('Собрать план заново по шаблону? Ручные даты и добавленные этапы будут потеряны, закреплённые останутся.')) buildFiveWeeks(project, reset);
     });
     const editDate = $('[data-rollout-date]', host);
     if (editDate) editDate.addEventListener('click', () => offerReleaseDate(project));
-    const setup = $('[data-rollout-setup]', host);
-    if (setup) setup.addEventListener('click', () => openPlanSetup(project));
     $$('[data-stage-pin]', host).forEach((button) => button.addEventListener('click', () => {
       toggleStagePin(button.dataset.stagePin, button);
     }));
@@ -1255,57 +1261,8 @@
     return (state.stages || []).filter((row) => row.id === id)[0] || null;
   }
 
-  const offsetLabel = (offset) => {
-    if (offset === 0) return 'в день Х';
-    const days = Math.abs(offset);
-    const word = plural(days, 'день', 'дня', 'дней');
-    return offset < 0 ? 'за ' + days + ' ' + word : 'через ' + days + ' ' + word;
-  };
-
-  // Сколько дней разбега нужно шаблону до дня Х.
   const templateNeed = (key) => Math.abs(Math.min.apply(null,
     ROLLOUT_TEMPLATES[key].stages.map((stage) => stage.day)));
-
-  // Пересборка раньше молча брала сингл и считала назад от дня Х — а если день Х
-  // уже прошёл, план заново ложился в прошлое, и кнопка не делала ничего.
-  // Теперь спрашивает шаблон и, когда разбега не хватает, предлагает выбор.
-  function openRebuildPlan(project) {
-    if (!project || !project.release_at) return toast('Сначала задайте дату релиза.', 'error');
-    const host = () => $('#plan-rebuild');
-
-    function pickTemplate() {
-      const runway = daysUntil(project.release_at);
-      const picks = Object.keys(ROLLOUT_TEMPLATES).map((key) => {
-        const need = templateNeed(key);
-        const fits = runway >= need;
-        return '<button class="plan-pick" type="button" data-template="' + key + '">'
-          + '<strong>' + ROLLOUT_TEMPLATES[key].label + '</strong><small>'
-          + (fits ? 'помещается — до выхода ' + runway + ' ' + plural(runway, 'день', 'дня', 'дней')
-            : 'нужно ' + need + ' ' + plural(need, 'день', 'дня', 'дней') + ' — этапы ужмутся в оставшиеся '
-              + Math.max(0, runway)) + '</small></button>';
-      }).join('');
-      host().innerHTML = '<p class="drawer-note">Ручные правки этапов будут потеряны. '
-        + 'Выберите, по какому шаблону собрать план.</p><div class="plan-picks">' + picks
-        + '<button class="plan-pick" type="button" data-template="custom"><strong>Настроить вручную</strong>'
-        + '<small>расставить даты самому по оставшимся дням</small></button></div>';
-      $$('[data-template]', host()).forEach((button) => button.addEventListener('click', () => {
-        const key = button.dataset.template;
-        if (key === 'custom') { closeDrawer(true); return openPlanSetup(project); }
-        closeDrawer(true);
-        buildFiveWeeks(project, button);
-      }));
-    }
-
-    async function build(key, button) {
-      await generateRollout(project, key, button);
-      closeDrawer(true);
-      renderCalendar();
-      renderDashboard();
-    }
-
-    openDrawer('РЕЛИЗ / ПЛАН', 'Пересобрать план', '<div id="plan-rebuild"></div>');
-    pickTemplate();
-  }
 
   // Шаблон считает назад от дня Х на пять недель. Если до выхода осталось
   // меньше, офсеты сжимаются пропорционально: форма плана сохраняется, а даты
@@ -1321,174 +1278,32 @@
     return true;
   }
 
-  // Расстановка дат вручную. Линейка сверху и строки снизу — одно и то же
-  // показанное дважды: сверху результат, снизу управление. Столкновение двух
-  // этапов на одном дне видно на линейке раньше, чем прочитаешь предупреждение.
-  function openPlanSetup(project) {
-    if (!project || !project.release_at) return toast('Сначала задайте дату релиза.', 'error');
-    const existing = (state.stages || []).filter((stage) => stage.project_id === project.id)
-      .sort((a, b) => a.sort_order - b.sort_order);
-    const rows = existing.length
-      ? existing.map((stage) => ({
-        id: stage.id,
-        title: stage.title,
-        offset: Math.round((dayStart(stage.stage_date) - dayStart(project.release_at)) / 86400000),
-        repeat: stage.repeat_rule || 'once',
-        done: !!stage.is_done,
-        pinned: !!stage.is_pinned,
-      }))
-      : ROLLOUT_TEMPLATES.single.stages.map((stage) => ({
-        id: null, title: stage.title, offset: stage.day, repeat: stage.repeat, done: false, pinned: false,
-      }));
-    const removed = [];
-    // Если план целиком отстал от сегодняшнего дня — он не «настроен вручную»,
-    // а просто устарел. Ужимаем его под остаток и говорим об этом вслух.
-    const runway = daysUntil(project.release_at);
-    const stale = rows.some((row) => row.offset < 0
-      && dayStart(addDays(project.release_at, row.offset)).getTime() < dayStart(new Date()).getTime());
-    const wasFitted = stale ? fitOffsets(rows, runway) : false;
-
-    openDrawer('РЕЛИЗ / ПЛАН', 'Настроить план', '<div id="plan-setup"></div>');
-    const host = $('#plan-setup');
-    const rowDate = (offset) => addDays(project.release_at, offset);
-
-    function draw() {
-      const releaseDay = dayStart(project.release_at).getTime();
-      const todayDay = dayStart(new Date()).getTime();
-      const start = Math.min(todayDay, releaseDay);
-      const total = Math.round((releaseDay - start) / 86400000) + 1;
-      const span = Math.min(31, Math.max(1, total));
-      const perDay = {};
-      rows.forEach((row) => {
-        const key = localDateKey(rowDate(row.offset));
-        perDay[key] = (perDay[key] || 0) + 1;
-      });
-      const clashes = Object.keys(perDay).filter((key) => perDay[key] > 1);
-
-      let ruler = '';
-      for (let index = 0; index < span; index += 1) {
-        const current = addDays(new Date(start), index);
-        const key = localDateKey(current);
-        const hits = perDay[key] || 0;
-        const classes = ['plan-day'];
-        if (current.getTime() === todayDay) classes.push('is-today');
-        if (current.getTime() === releaseDay) classes.push('is-release');
-        ruler += '<div class="' + classes.join(' ') + '">'
-          + '<em>' + current.toLocaleDateString('ru-RU', { weekday: 'short' }) + '</em>'
-          + '<b>' + current.getDate() + '</b>'
-          + (hits > 1 ? '<span class="plan-pin is-many">' + hits + '</span>'
-            : (hits ? '<span class="plan-pin"></span>' : ''))
-          + '</div>';
-      }
-
-      const days = daysUntil(project.release_at);
-      // День Х уже прошёл — сжимать план не во что, линейка выродилась бы
-      // в одну клетку. Сначала новая дата выхода, потом расстановка.
-      const intro = days < 1
-        ? '<p class="drawer-note">День выхода ' + (days === 0 ? 'сегодня' : 'уже прошёл')
-          + '. Расставлять этапы не по чему — сначала поставьте новую дату релиза.</p>'
-          + '<div class="drawer-actions"><span></span>'
-          + '<button class="button button-primary" type="button" id="plan-newdate">Поставить дату выхода</button></div>'
-        : '<p class="drawer-note">До выхода ' + days + ' ' + plural(days, 'день', 'дня', 'дней') + '. '
-          + (wasFitted ? 'План не помещался в этот срок, поэтому этапы ужаты пропорционально — подвиньте, если надо. '
-            : 'Двигайте этапы кнопками — ')
-          + 'линейка сверху сразу покажет, куда они попадут.</p>'
-          + '<div class="plan-ruler"><div class="plan-ruler-head"><span>сегодня</span><span>день выхода</span></div>'
-          + '<div class="plan-days" style="--plan-span:' + span + '">' + ruler + '</div></div>';
-      if (days < 1) {
-        host.innerHTML = intro;
-        $('#plan-newdate', host).addEventListener('click', () => { closeDrawer(true); offerReleaseDate(project); });
-        return;
-      }
-      host.innerHTML = intro
-        + '<div class="plan-rows">' + rows.map((row, index) => '<div class="plan-row">'
-          + '<span class="plan-name">' + escapeHTML(row.title) + (row.done ? ' <i>сделан</i>' : '')
-          + (row.pinned ? '<button class="plan-lock" type="button" data-plan-pin="' + index
-            + '" aria-label="Разблокировать этап"></button>' : '') + '</span>'
-          + '<span class="plan-step' + (row.pinned ? ' is-locked' : '') + '">'
-          + '<button type="button" data-plan-dec="' + index + '" aria-label="Раньше"' + (row.pinned ? ' disabled' : '') + '>−</button>'
-          + '<span>' + offsetLabel(row.offset) + '</span>'
-          + '<button type="button" data-plan-inc="' + index + '" aria-label="Позже"' + (row.pinned ? ' disabled' : '') + '>+</button></span>'
-          + '<span class="plan-res">' + shortDate(rowDate(row.offset)) + '</span>'
-          + '<button class="plan-del" type="button" data-plan-del="' + index + '" aria-label="Убрать этап">×</button>'
-          + '</div>').join('') + '</div>'
-        + (clashes.length ? '<div class="plan-warn"><span>▲</span><span>На один день назначено несколько этапов. '
-          + 'Так можно — если это не случайность, оставьте как есть.</span></div>' : '')
-        + '<div class="plan-add"><button class="text-button" type="button" id="plan-add">+ Добавить этап</button></div>'
-        + '<div class="drawer-actions"><button class="text-button" type="button" id="plan-even">распределить ровно</button>'
-        + '<button class="button button-primary" type="button" id="plan-save">Сохранить план</button></div>';
-
-      $$('[data-plan-dec]', host).forEach((button) => button.addEventListener('click', () => {
-        rows[Number(button.dataset.planDec)].offset -= 1; draw();
-      }));
-      $$('[data-plan-inc]', host).forEach((button) => button.addEventListener('click', () => {
-        rows[Number(button.dataset.planInc)].offset += 1; draw();
-      }));
-      $$('[data-plan-pin]', host).forEach((button) => button.addEventListener('click', () => {
-        if (!confirm('Разблокировать этап?')) return;
-        rows[Number(button.dataset.planPin)].pinned = false;
-        draw();
-      }));
-      $$('[data-plan-del]', host).forEach((button) => button.addEventListener('click', () => {
-        const index = Number(button.dataset.planDel);
-        if (rows[index].id) removed.push(rows[index].id);
-        rows.splice(index, 1); draw();
-      }));
-      $('#plan-add', host).addEventListener('click', () => {
-        const title = prompt('Название этапа');
-        if (!title || !title.trim()) return;
-        rows.push({ id: null, title: title.trim(), offset: 0, repeat: 'once', done: false });
-        draw();
-      });
-      $('#plan-even', host).addEventListener('click', () => {
-        // Равные промежутки по реальному остатку. Раньше здесь стоял зажим
-        // минимумом в 1, и при дне Х в прошлом всё схлопывалось в «за 1 день».
-        const before = rows.filter((row) => row.offset < 0);
-        const room = Math.max(1, daysUntil(project.release_at));
-        before.forEach((row, index) => {
-          row.offset = -Math.round((room * (before.length - index)) / before.length);
-        });
-        draw();
-      });
-      $('#plan-save', host).addEventListener('click', (event) => savePlan(event.currentTarget));
+  // Этап ушёл за день выхода. День Х сам не едет никогда — это слишком крупное
+  // последствие, чтобы прятать его в общий вопрос. Спрашиваем отдельно и
+  // называем дату, чтобы решение принималось глядя на результат.
+  async function offerReleaseShift(project, delta, title) {
+    if (!project || !project.release_at || !delta) return;
+    const moved = addDays(project.release_at, delta);
+    const days = Math.abs(delta);
+    const ok = confirm('«' + title + '» теперь позже дня выхода.\n\nПеренести день Х на ' + days + ' '
+      + plural(days, 'день', 'дня', 'дней') + ' — на ' + shortDate(moved) + '?\n\n'
+      + 'ОК — перенести. Отмена — указать свою дату.');
+    if (!ok) return offerReleaseDate(project);
+    const previousReleaseAt = project.release_at;
+    const { error } = await db.from('artist_projects').update({ release_at: moved.toISOString() })
+      .eq('id', project.id).eq('artist_id', state.artist.id);
+    if (error) return toast(error.message || 'Не удалось перенести дату.', 'error');
+    project.release_at = moved.toISOString();
+    state.projects = state.projects.map((row) => (row.id === project.id ? { ...row, release_at: project.release_at } : row));
+    // Нулевой этап — сам день Х — тоже переезжает на новую дату.
+    const releaseStage = (state.stages || []).filter((row) => row.project_id === project.id && row.day_offset === 0)[0];
+    if (releaseStage) {
+      await db.from('release_stages').update({ stage_date: isoDate(moved) }).eq('id', releaseStage.id).eq('artist_id', state.artist.id);
+      state.stages = state.stages.map((row) => (row.id === releaseStage.id ? { ...row, stage_date: isoDate(moved) } : row));
     }
-
-    async function savePlan(button) {
-      setBusy(button, true, 'Сохраняем…');
-      try {
-        for (const id of removed) {
-          const { error } = await db.from('release_stages').delete().eq('id', id).eq('artist_id', state.artist.id);
-          if (error) throw error;
-        }
-        for (let index = 0; index < rows.length; index += 1) {
-          const row = rows[index];
-          const payload = {
-            artist_id: state.artist.id,
-            project_id: project.id,
-            title: row.title,
-            stage_date: isoDate(rowDate(row.offset)),
-            day_offset: row.offset,
-            repeat_rule: row.repeat,
-            is_pinned: !!row.pinned,
-            sort_order: index,
-          };
-          const { error } = row.id
-            ? await db.from('release_stages').update(payload).eq('id', row.id).eq('artist_id', state.artist.id)
-            : await db.from('release_stages').insert(payload);
-          if (error) throw error;
-        }
-        state.stages = await safeQuery(db.from('release_stages').select('*').eq('artist_id', state.artist.id).order('sort_order'));
-        closeDrawer(true);
-        toast('План сохранён: ' + rows.length + ' ' + plural(rows.length, 'этап', 'этапа', 'этапов') + '.');
-        logEvent('release', 'План выпуска настроен', project.title || '', { view: 'dashboard', project: project.id });
-        renderRollout();
-        renderDashboardCalendar();
-      } catch (error) {
-        toast(error.message || 'Не удалось сохранить план.', 'error');
-      } finally { setBusy(button, false); }
-    }
-
-    draw();
+    toast('День Х перенесён на ' + shortDate(moved) + '.');
+    logEvent('release', 'День Х перенесён за этапом', project.title || '', { view: 'dashboard', project: project.id });
+    renderCalendar(); renderDashboard();
   }
 
   // Клик по узлу объясняет этап, а не сразу открывает правку: порядок этапов
@@ -1699,6 +1514,30 @@
         is_pinned: data.get('is_pinned') === 'on',
         sort_order: stage ? stage.sort_order : (state.stages || []).length,
       };
+      // Дата сдвинулась — решаем, едут ли за ней следующие этапы.
+      // Пример: «Сведение» с 24-го на 29-е — «Дистрибуция» и «Пресейв»
+      // либо остаются, либо тоже уезжают на 5 дней, промежутки те же.
+      const oldDate = stage && stage.stage_date ? dayStart(stage.stage_date).getTime() : null;
+      const newDate = dayStart(stageDate).getTime();
+      const delta = oldDate === null ? 0 : Math.round((newDate - oldDate) / 86400000);
+      const isRelease = stage && stage.day_offset === 0;
+      const followers = (delta && !isRelease) ? (state.stages || []).filter((row) => row.project_id === project.id
+        && row.id !== stage.id && !row.is_done && !row.is_pinned && row.day_offset !== 0
+        && row.stage_date && dayStart(row.stage_date).getTime() > oldDate) : [];
+      const releaseDay = project.release_at ? dayStart(project.release_at).getTime() : null;
+      const pastRelease = releaseDay !== null && !isRelease && newDate > releaseDay;
+      let shiftFollowers = false;
+      if (pastRelease) {
+        // За днём Х следующие едут без вопроса: иначе дистрибуция окажется
+        // раньше сведения, а так не бывает.
+        shiftFollowers = followers.length > 0;
+      } else if (followers.length) {
+        const days = Math.abs(delta);
+        shiftFollowers = confirm('«' + payload.title + '» сдвигается на ' + days + ' ' + plural(days, 'день', 'дня', 'дней')
+          + (delta > 0 ? ' вперёд' : ' назад') + '.\n\nСдвинуть и ' + followers.length + ' '
+          + plural(followers.length, 'следующий этап', 'следующих этапа', 'следующих этапов') + ' на столько же?\n\n'
+          + 'ОК — сдвинуть и их. Отмена — только этот.');
+      }
       setBusy(button, true, 'Сохраняем…');
       try {
         const query = stage
@@ -1706,10 +1545,19 @@
           : db.from('release_stages').insert(payload);
         const { error } = await query;
         if (error) throw error;
+        if (shiftFollowers) {
+          const results = await Promise.all(followers.map((row) => db.from('release_stages')
+            .update({ stage_date: isoDate(addDays(row.stage_date, delta)), day_offset: row.day_offset + delta })
+            .eq('id', row.id).eq('artist_id', state.artist.id)));
+          const failed = results.filter((result) => result.error).length;
+          if (failed) toast('Не удалось сдвинуть ' + failed + ' из ' + followers.length + ' этапов.', 'error');
+        }
         state.stages = await safeQuery(db.from('release_stages').select('*').eq('artist_id', state.artist.id).order('sort_order'));
         closeDrawer(true);
-        toast(stage ? 'Этап обновлён.' : 'Этап добавлен.');
+        toast(stage ? (shiftFollowers ? 'Этап и ' + followers.length + ' следующих сдвинуты.' : 'Этап обновлён.') : 'Этап добавлен.');
         renderRollout();
+        renderDashboardCalendar();
+        if (pastRelease) offerReleaseShift(project, delta, payload.title);
       } catch (error) { toast(error.message || 'Не удалось сохранить этап.', 'error'); }
       finally { setBusy(button, false); }
     });
