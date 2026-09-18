@@ -1745,6 +1745,34 @@
       && dayStart(last).getTime() >= dayStart(now).getTime();
   }
 
+  // Полоса-ручка под полем: тянет высоту соседа сверху. Только по вертикали —
+  // ширину задаёт колонка, и тянуть вширь тут нечего. Работает и пальцем.
+  function bindResizeBars(root) {
+    $$('[data-resize-bar]', root).forEach((bar) => {
+      const target = bar.previousElementSibling;
+      if (!target) return;
+      bar.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        const startY = event.clientY;
+        const startHeight = target.getBoundingClientRect().height;
+        bar.setPointerCapture(event.pointerId);
+        bar.classList.add('is-dragging');
+        const onMove = (move) => {
+          target.style.height = Math.max(120, Math.round(startHeight + move.clientY - startY)) + 'px';
+        };
+        const onUp = () => {
+          bar.classList.remove('is-dragging');
+          bar.removeEventListener('pointermove', onMove);
+          bar.removeEventListener('pointerup', onUp);
+          bar.removeEventListener('pointercancel', onUp);
+        };
+        bar.addEventListener('pointermove', onMove);
+        bar.addEventListener('pointerup', onUp);
+        bar.addEventListener('pointercancel', onUp);
+      });
+    });
+  }
+
   function bindStageButtons(host) {
     $$('[data-open-stage]', host).forEach((button) => button.addEventListener('click', () => {
       const stage = stageById(button.dataset.openStage);
@@ -2691,8 +2719,8 @@
     // Пустое поле сразу пишущее: черновик хранится локально и подхватится,
     // когда текст создадут — так «Добавить» не обязательно нажимать первым.
     const lyricRows = linkedLyrics.length
-      ? linkedLyrics.map((doc) => `<article class="track-lyrics-inline" data-track-lyrics-inline="${doc.id}"><textarea data-inline-lyrics-body="${doc.id}" placeholder="Слова, строки, идеи…">${escapeHTML(doc.body || '')}</textarea><footer><button class="text-button" data-project-lyrics="${doc.id}" type="button">Открыть полностью</button><button class="button button-primary" data-save-inline-lyrics="${doc.id}" type="button">Сохранить</button></footer></article>`).join('')
-      : `<article class="track-lyrics-inline"><textarea id="track-lyrics-draft" placeholder="Слова, строки, идеи… Текст создастся при сохранении.">${escapeHTML(lyricsDraft(id))}</textarea><footer><button class="button button-primary" id="track-lyrics-draft-save" type="button">Сохранить текст</button></footer></article>`;
+      ? linkedLyrics.map((doc) => `<article class="track-lyrics-inline" data-track-lyrics-inline="${doc.id}"><textarea data-inline-lyrics-body="${doc.id}" placeholder="Слова, строки, идеи…">${escapeHTML(doc.body || '')}</textarea><div class="resize-bar" data-resize-bar title="Потяните, чтобы изменить высоту"></div><footer><button class="text-button" data-project-lyrics="${doc.id}" type="button">Открыть полностью</button><button class="button button-primary" data-save-inline-lyrics="${doc.id}" type="button">Сохранить</button></footer></article>`).join('')
+      : `<article class="track-lyrics-inline"><textarea id="track-lyrics-draft" placeholder="Слова, строки, идеи… Текст создастся при сохранении.">${escapeHTML(lyricsDraft(id))}</textarea><div class="resize-bar" data-resize-bar title="Потяните, чтобы изменить высоту"></div><footer><button class="button button-primary" id="track-lyrics-draft-save" type="button">Сохранить текст</button></footer></article>`;
     const container = $('#track-workspace');
     container.innerHTML = `
       <div class="track-workspace-toolbar">
@@ -2734,7 +2762,7 @@
                 <button type="button" class="notes-toolbar-btn" data-note-format="insertUnorderedList" title="Список точками">&bull;</button>
                 <button type="button" class="notes-toolbar-btn" data-note-format="insertOrderedList" title="Нумерованный список">1.</button>
               </div>
-              <div class="field notes-field"><div class="notes-editor" data-notes-editor contenteditable="true" role="textbox" aria-multiline="true" aria-label="Заметки по треку" data-placeholder="Заметки по треку…">${notesToHTML(project?.description || '')}</div></div>
+              <div class="field notes-field"><div class="notes-editor" data-notes-editor contenteditable="true" role="textbox" aria-multiline="true" aria-label="Заметки по треку" data-placeholder="Заметки по треку…">${notesToHTML(project?.description || '')}</div><div class="resize-bar" data-resize-bar title="Потяните, чтобы изменить высоту"></div></div>
             </div>
           </section>
 
@@ -2779,6 +2807,7 @@
       offerReleaseDate(project);
     });
     bindRolloutJump(form);
+    bindResizeBars(form);
     const stageButtons = $$('[data-track-stage]', form);
     const refreshStageRail = (status) => {
       const activeIndex = stageOrder.indexOf(status);
