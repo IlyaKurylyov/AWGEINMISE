@@ -1747,6 +1747,7 @@ html[data-theme="light"] .lyrics-wrap.has-rhymes textarea { background: transpar
 .lyrics-backdrop { position: absolute; left: 0; top: 0; z-index: 0; overflow: hidden; box-sizing: border-box; border: 0 solid transparent; color: transparent; white-space: pre-wrap; overflow-wrap: break-word; pointer-events: none; }
 .lyrics-wrap.has-rhymes .lyrics-backdrop { background: var(--lyrics-bg); }
 .lyrics-backdrop mark { color: transparent; border-radius: 3px; }
+.lyrics-backdrop mark.is-guess { opacity: .45; } /* ударение угадано, не из словаря */
 .lyrics-gutter { position: absolute; top: 1px; right: 1px; bottom: 1px; z-index: 2; width: 60px; overflow: hidden; padding: 12px 10px 12px 0; box-sizing: border-box; pointer-events: none; }
 .lyrics-gutter > span { display: flex; align-items: flex-start; justify-content: flex-end; box-sizing: border-box; }
 .lyrics-gutter b { min-width: 22px; text-align: right; color: var(--muted); font: 500 12px/1.5 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; opacity: .75; }

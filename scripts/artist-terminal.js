@@ -1747,14 +1747,24 @@
       && dayStart(last).getTime() >= dayStart(now).getTime();
   }
 
-  // Помощники для текста: слоги и рифмы. Считаются из самого текста, без
-  // словарей. Слоги — числом в колонке справа. Рифмы — подкрашенные хвосты
-  // слов прямо в тексте: под прозрачным полем лежит подложка с теми же
-  // строками и переносами, красим в ней.
+  // Помощники для текста: слоги и рифмы. Слоги — числом в колонке справа.
+  // Рифмы — подкрашенные куски слов прямо в тексте: под прозрачным полем
+  // лежит подложка с теми же строками и переносами, красим в ней.
+  //
+  // Рифма считается от ударной гласной. Откуда берём ударение, по старшинству:
+  //   1. заглавная гласная внутри слова — артист поставил сам («нЕльзя»);
+  //   2. словарь ударений (assets/stress, грузится при первом включении);
+  //   3. слово неизвестно — пробуем два последних слога, красим бледнее.
   const LYRICS_TOOLS_KEY = 'inmise-lyrics-tools';
-  const RHYME_COLORS = ['rgba(112,238,121,.45)', 'rgba(213,154,77,.5)', 'rgba(125,149,200,.55)', 'rgba(212,85,73,.45)', 'rgba(197,138,217,.5)', 'rgba(95,196,196,.5)', 'rgba(224,179,76,.5)', 'rgba(155,212,90,.45)', 'rgba(232,120,160,.45)', 'rgba(240,140,60,.45)', 'rgba(140,120,230,.5)', 'rgba(180,140,90,.5)'];
   const RHYME_WINDOW = 4; // пару ищем в пределах четырёх строк вверх и вниз
-  const VOWEL_RE = /[аеиоуэюя]/;
+  const RHYME_COLORS = ['rgba(112,238,121,.45)', 'rgba(213,154,77,.5)', 'rgba(125,149,200,.55)', 'rgba(212,85,73,.45)', 'rgba(197,138,217,.5)', 'rgba(95,196,196,.5)', 'rgba(224,179,76,.5)', 'rgba(155,212,90,.45)', 'rgba(232,120,160,.45)', 'rgba(240,140,60,.45)', 'rgba(140,120,230,.5)', 'rgba(180,140,90,.5)'];
+  // В режиме «все рифмы» цвет привязан к гласной, чтобы его можно было выучить.
+  const VOWEL_COLORS = { 'а': 'rgba(213,154,77,.5)', 'о': 'rgba(125,149,200,.55)', 'у': 'rgba(197,138,217,.5)', 'е': 'rgba(112,238,121,.45)', 'и': 'rgba(95,196,196,.5)' };
+  const VOWEL_CLASS = { 'а': 'а', 'я': 'а', 'о': 'о', 'е': 'е', 'ё': 'е', 'э': 'е', 'и': 'и', 'ы': 'и', 'у': 'у', 'ю': 'у' };
+  const VOWEL_RE = /[аеёиоуыэюя]/;
+  // Служебные слова, которые в речи обычно без ударения. В режиме «все»
+  // не красим, если артист не поставил ударение сам.
+  const RHYME_STOP = new Set('это эта этот эти все всё вся весь меня тебя себя него неё нее них нам вам его её ее ему ей ими мне тебе себе нас вас как так что кто где куда когда тут там вот еще ещё уже или либо если чтоб чтобы пока даже ведь лишь только тоже также был была было были быть есть нет над под при про без для через между потом тогда сюда туда'.split(' '));
 
   function lyricsToolsState() {
     let saved = {};
@@ -1765,92 +1775,167 @@
 
   const countSyllables = (line) => (line.match(/[аеёиоуыэюя]/gi) || []).length;
 
-  // Разбор слова на «токены» — куски, которые могут рифмоваться.
-  // Концовки (ударения не знаем, поэтому три кандидата):
-  //   m — последний слог («окно/давно» → «но», «дом/ком» → «ом»),
-  //   f — от предпоследней гласной до конца («бита/копыта» → «ита»),
-  //   c — предпоследняя гласная с согласными после («удачи/иначе» → «ач»).
-  // Слоги (только в режиме «все рифмы»): согласная + гласная,
-  //   «четы / черту / никчемные» → «че». Голые гласные не берём.
-  function wordTokens(raw, wordId, withSyllables) {
-    const word = raw.toLowerCase().replace(/ё/g, 'е').replace(/ы/g, 'и');
-    if (word.length < 3) return [];
-    const vowels = [];
-    for (let i = 0; i < word.length; i += 1) if (VOWEL_RE.test(word[i])) vowels.push(i);
-    if (!vowels.length) return [];
-    const tokens = [];
-    const last = vowels[vowels.length - 1];
-    const open = last === word.length - 1;
-    const mStart = open && last > 0 && !VOWEL_RE.test(word[last - 1]) ? last - 1 : last;
-    tokens.push({ key: 'm:' + word.slice(mStart), from: mStart, to: word.length, ending: true, wordId });
-    if (vowels.length > 1) {
-      const prev = vowels[vowels.length - 2];
-      tokens.push({ key: 'f:' + word.slice(prev), from: prev, to: word.length, ending: true, wordId });
-      if (last - prev > 1) tokens.push({ key: 'c:' + word.slice(prev, last), from: prev, to: word.length, ending: true, wordId });
+  // Словарь ударений: отсортированный список форм слов и номера ударных
+  // гласных (у омографов несколько). Файл ≈0,5 МБ, грузится один раз при
+  // первом включении рифм; поиск двоичный, чтобы не держать в памяти Map.
+  const STRESS_DICT_URL = '/assets/stress/ru-stress.txt.gz?v=1';
+  let stressDict = null;
+  let stressDictLoading = null;
+  let stressDictFailed = false;
+
+  function loadStressDict() {
+    if (stressDict) return Promise.resolve(stressDict);
+    if (stressDictLoading) return stressDictLoading;
+    if (stressDictFailed) return Promise.resolve(null);
+    if (!window.DecompressionStream) {
+      stressDictFailed = true;
+      toast('Браузер не умеет распаковывать словарь ударений — рифмы считаются приблизительно.', 'error');
+      return Promise.resolve(null);
     }
-    if (withSyllables) {
-      vowels.forEach((v) => {
-        const onset = v > 0 && !VOWEL_RE.test(word[v - 1]) && !/[ьъ]/.test(word[v - 1]) ? word[v - 1] : '';
-        if (onset) tokens.push({ key: 's:' + onset + word[v], from: v - 1, to: v + 1, ending: false, wordId });
-      });
-    }
-    return tokens;
+    toast('Загружаем словарь ударений…');
+    stressDictLoading = fetch(STRESS_DICT_URL).then(async (response) => {
+      if (!response.ok) throw new Error('Словарь ударений не найден на сервере.');
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      let text;
+      if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
+        text = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+      } else {
+        text = new TextDecoder().decode(bytes); // сервер распаковал сам
+      }
+      const words = [];
+      const stress = [];
+      let prev = '';
+      for (const line of text.split('\n')) {
+        if (!line) continue;
+        let end = line.length;
+        while (end > 1 && /[0-9a-z]/.test(line[end - 1])) end -= 1;
+        const word = prev.slice(0, parseInt(line[0], 36)) + line.slice(1, end);
+        words.push(word);
+        stress.push([...line.slice(end)].map((c) => parseInt(c, 36)));
+        prev = word;
+      }
+      stressDict = { words, stress };
+      toast('Словарь загружен. Ударение можно поправить заглавной буквой: нЕльзя.');
+      return stressDict;
+    }).catch((error) => {
+      stressDictFailed = true;
+      toast(error.message || 'Не удалось загрузить словарь ударений.', 'error');
+      return null;
+    }).finally(() => { stressDictLoading = null; });
+    return stressDictLoading;
   }
 
-  // Что красить: для каждой строки список { from, to, color }. Токены с общим
-  // ключом в пределах RHYME_WINDOW строк склеиваются в группу (union-find),
-  // группа — один цвет. Концовка слова красится поверх слогов.
+  function stressLookup(word) {
+    if (!stressDict) return null;
+    const { words, stress } = stressDict;
+    let lo = 0;
+    let hi = words.length - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (words[mid] === word) return stress[mid];
+      if (words[mid] < word) lo = mid + 1; else hi = mid - 1;
+    }
+    return null;
+  }
+
+  // Где ударение в слове: индексы ударных гласных (обычно один, у омографов
+  // два), manual — поставил артист, guessed — не знаем, пробуем два последних.
+  function stressCandidates(raw, firstInLine) {
+    const lower = raw.toLowerCase();
+    const vowels = [];
+    for (let i = 0; i < lower.length; i += 1) if (VOWEL_RE.test(lower[i])) vowels.push(i);
+    if (!vowels.length) return null;
+    if (raw !== lower && raw !== raw.toUpperCase()) {
+      const manual = vowels.filter((i) => raw[i] !== lower[i] && !(i === 0 && firstInLine));
+      if (manual.length) return { positions: [manual[manual.length - 1]], manual: true };
+    }
+    const found = stressLookup(lower.replace(/ё/g, 'е'));
+    if (found) {
+      const positions = found.map((n) => vowels[n]).filter((i) => i !== undefined);
+      if (positions.length) return { positions, manual: false };
+    }
+    if (lower.includes('ё')) return { positions: [lower.indexOf('ё')], manual: false };
+    if (vowels.length === 1) return { positions: [vowels[0]], manual: false };
+    return { positions: vowels.slice(-2), manual: false, guessed: true };
+  }
+
+  // Хвост слова от ударной гласной «как слышится»: ё/э → е, ы → и; после
+  // ударения безударные о → а, е/я → и, ю → у; звонкая согласная на конце
+  // глохнет («год/рот» → «от»); «-тся/-ться» → «ца». Если слово кончается
+  // ударной гласной, берём и согласную перед ней («окно/давно» → «но»).
+  function rhymeTail(word, at) {
+    const head = VOWEL_CLASS[word[at]] || word[at];
+    let rest = word.slice(at + 1).replace(/ъ/g, '')
+      .replace(/ть?ся$/, 'ца')
+      .replace(/о/g, 'а').replace(/[еэёяы]/g, 'и').replace(/ю/g, 'у')
+      .replace(/([бвгдзж])(ь?)$/, (m, c, soft) => ({ 'б': 'п', 'в': 'ф', 'г': 'к', 'д': 'т', 'з': 'с', 'ж': 'ш' })[c] + soft);
+    const support = at === word.length - 1 && at > 0 && !VOWEL_RE.test(word[at - 1]) ? word[at - 1] : '';
+    return { key: support + head + rest, from: support ? at - 1 : at };
+  }
+
+  // Токены слова — куски, которые могут рифмоваться, по одному на каждое
+  // возможное ударение. «В конце» — хвост до конца слова; «все» — ударный
+  // слог: согласная перед гласной, гласная и согласная после.
+  function wordTokens(raw, wordId, mode, firstInLine) {
+    const lower = raw.toLowerCase();
+    const info = stressCandidates(raw, firstInLine);
+    if (!info) return [];
+    if (!info.manual && (lower.length < 3 || (mode === 'all' && RHYME_STOP.has(lower)))) return [];
+    return info.positions.map((at) => {
+      if (mode === 'all') {
+        const vowel = VOWEL_CLASS[lower[at]] || lower[at];
+        const from = at > 0 && !VOWEL_RE.test(lower[at - 1]) && !/[ьъ]/.test(lower[at - 1]) ? at - 1 : at;
+        let to = at + 1;
+        if (to < lower.length && !VOWEL_RE.test(lower[to])) {
+          to += 1;
+          if (to < lower.length && /[ьй]/.test(lower[to])) to += 1;
+        }
+        return { key: 'v:' + vowel, from, to, wordId, guess: !!info.guessed, color: VOWEL_COLORS[vowel] || null };
+      }
+      const tail = rhymeTail(lower, at);
+      return { key: 'e:' + tail.key, from: tail.from, to: lower.length, wordId, guess: !!info.guessed, color: null };
+    });
+  }
+
+  // Что красить: для каждой строки список { from, to, color, guess }. Токен
+  // активен, если такой же ключ есть у другого слова в пределах RHYME_WINDOW
+  // строк. Группа — сам ключ, поэтому цепочки «стола → дела → делать →
+  // забрать» не склеиваются в один цвет. Уверенное ударение красится поверх
+  // угаданного.
   function rhymeMarks(lines, mode) {
     const tokens = [];
     let wordId = 0;
     lines.forEach((line, lineIndex) => {
+      let firstInLine = true;
       for (const match of line.matchAll(/[а-яёa-z]+/gi)) {
-        wordTokens(match[0], wordId++, mode === 'all').forEach((token) => {
+        wordTokens(match[0], wordId++, mode, firstInLine).forEach((token) => {
           tokens.push({ ...token, line: lineIndex, from: match.index + token.from, to: match.index + token.to, active: false });
         });
+        firstInLine = false;
       }
     });
     const byKey = {};
     tokens.forEach((token, index) => { (byKey[token.key] = byKey[token.key] || []).push(index); });
-    const parent = tokens.map((_, index) => index);
-    const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
-    const union = (a, b) => { parent[find(a)] = find(b); };
-    tokens.forEach((token, index) => {
-      const mates = byKey[token.key].filter((other) => tokens[other].wordId !== token.wordId && Math.abs(tokens[other].line - token.line) <= RHYME_WINDOW);
-      if (!mates.length) return;
-      token.active = true;
-      mates.forEach((other) => union(other, index));
-    });
-    // Все концовки одного слова — одно целое, один цвет.
-    tokens.forEach((token, index) => {
-      if (token.ending && index > 0 && tokens[index - 1].ending && tokens[index - 1].wordId === token.wordId) union(index - 1, index);
-    });
     const colors = {};
     let next = 0;
-    const colorOf = (index) => {
-      const root = find(index);
-      if (!(root in colors)) colors[root] = RHYME_COLORS[next++ % RHYME_COLORS.length];
-      return colors[root];
-    };
-    // Сначала концовки, потом слоги — и только на свободные клетки. Слог,
-    // чья гласная уже занята концовкой, пропускаем целиком, иначе от него
-    // остаётся одинокая крашеная согласная.
+    tokens.forEach((token) => {
+      token.active = byKey[token.key].some((other) => tokens[other].wordId !== token.wordId && Math.abs(tokens[other].line - token.line) <= RHYME_WINDOW);
+      if (!token.active || token.color) return;
+      if (!(token.key in colors)) colors[token.key] = RHYME_COLORS[next++ % RHYME_COLORS.length];
+      token.color = colors[token.key];
+    });
     const paint = lines.map((line) => new Array(line.length).fill(null));
-    [true, false].forEach((endingPass) => {
-      tokens.forEach((token, index) => {
-        if (!token.active || token.ending !== endingPass) return;
-        const row = paint[token.line];
-        if (!token.ending && row[token.to - 1]) return;
-        const color = colorOf(index);
-        for (let i = token.from; i < token.to; i += 1) if (!row[i]) row[i] = color;
-      });
+    tokens.forEach((token) => {
+      if (!token.active) return;
+      const row = paint[token.line];
+      for (let i = token.from; i < token.to; i += 1) if (!row[i] || (row[i].guess && !token.guess)) row[i] = token;
     });
     return paint.map((row) => {
       const marks = [];
-      row.forEach((color, i) => {
+      row.forEach((token, i) => {
         const open = marks[marks.length - 1];
-        if (color && open && open.to === i && open.color === color) open.to = i + 1;
-        else if (color) marks.push({ from: i, to: i + 1, color });
+        if (token && open && open.to === i && open.color === token.color && open.guess === token.guess) open.to = i + 1;
+        else if (token) marks.push({ from: i, to: i + 1, color: token.color, guess: token.guess });
       });
       return marks;
     });
@@ -1859,8 +1944,8 @@
   function markupLine(line, marks) {
     let html = '';
     let cursor = 0;
-    marks.forEach(({ from, to, color }) => {
-      html += escapeHTML(line.slice(cursor, from)) + '<mark style="background:' + color + '">' + escapeHTML(line.slice(from, to)) + '</mark>';
+    marks.forEach(({ from, to, color, guess }) => {
+      html += escapeHTML(line.slice(cursor, from)) + '<mark' + (guess ? ' class="is-guess"' : '') + ' style="background:' + color + '">' + escapeHTML(line.slice(from, to)) + '</mark>';
       cursor = to;
     });
     return html + escapeHTML(line.slice(cursor));
@@ -1875,6 +1960,9 @@
     const showRhy = tools.rhymes === 'ends' || tools.rhymes === 'all';
     wrap.classList.toggle('has-gutter', showSyl);
     wrap.classList.toggle('has-rhymes', showRhy);
+    if (showRhy && !stressDict && !stressDictFailed) {
+      loadStressDict().then((dict) => { if (dict) $$('[data-lyrics-tools]').forEach(paintLyrics); });
+    }
     const backdrop = getLyricsBackdrop(textarea);
     const lines = textarea.value.split('\n');
     const marks = showRhy ? rhymeMarks(lines, tools.rhymes) : null;
@@ -3052,8 +3140,8 @@
             <header class="panel-header"><div><span class="eyebrow">Материал</span><h3>Текст</h3></div>
               <div class="lyrics-tools" role="group" aria-label="Помощники для текста">
                 <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="syllables"><span>слоги</span></label>
-                <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="rhymes" value="ends"><span>рифмы в конце</span></label>
-                <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="rhymes" value="all"><span>все рифмы</span></label>
+                <label class="lyrics-tool" title="Рифма от ударной гласной до конца слова. Ударение можно поставить самому заглавной буквой: нЕльзя"><input type="checkbox" data-lyrics-tool="rhymes" value="ends"><span>рифмы в конце</span></label>
+                <label class="lyrics-tool" title="Созвучие по ударной гласной в любом месте слова. Ударение можно поставить самому заглавной буквой: нЕльзя"><input type="checkbox" data-lyrics-tool="rhymes" value="all"><span>все рифмы</span></label>
                 <button class="lyrics-beat" type="button" data-lyrics-beat hidden title="Включить бит трека"><span>▶</span> бит</button>
                 <span class="lyrics-beat-counter" data-lyrics-beat-counter hidden><b data-beat-bar></b><span data-beat-time></span><button class="text-button" type="button" data-beat-bpm hidden>указать BPM</button></span>
                 ${project ? '<button class="text-button" id="track-add-lyrics" type="button">+ Добавить</button>' : ''}
