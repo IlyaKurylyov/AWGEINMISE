@@ -1745,6 +1745,115 @@
       && dayStart(last).getTime() >= dayStart(now).getTime();
   }
 
+  // Помощники для текста: слоги и рифмы. Считаются из самого текста, без
+  // словарей. Живут в гаттере справа от поля — в textarea буквы красить
+  // нельзя, а колонка чисел и точек читается не хуже.
+  const LYRICS_TOOLS_KEY = 'inmise-lyrics-tools';
+  const RHYME_COLORS = ['#70ee79', '#d59a4d', '#7d95c8', '#d45549', '#c58ad9', '#5fc4c4', '#e0b34c', '#9bd45a'];
+
+  function lyricsToolsState() {
+    try { return JSON.parse(localStorage.getItem(LYRICS_TOOLS_KEY) || '{}') || {}; } catch (_) { return {}; }
+  }
+
+  const countSyllables = (line) => (line.match(/[аеёиоуыэюя]/gi) || []).length;
+
+  // Ключ рифмы — хвост последнего слова от последней гласной («дом/ком» → «ом»).
+  // Если слово кончается на гласную, берём и согласную перед ней
+  // («окно/давно» → «но», «бита/копыта» → «та»). Ударений мы не знаем,
+  // поэтому это слух на глазок: точные рифмы ловит, иногда ловит лишнее.
+  function rhymeKey(line) {
+    const words = line.toLowerCase().replace(/[^а-яё\s-]/g, ' ').trim().split(/\s+/);
+    const word = (words[words.length - 1] || '').replace(/ё/g, 'е').replace(/ы/g, 'и');
+    const vowels = [...word.matchAll(/[аеиоуэюя]/g)].map((m) => m.index);
+    if (!vowels.length) return '';
+    const last = vowels[vowels.length - 1];
+    const tail = word.slice(last);
+    if (last !== word.length - 1) return tail;
+    const before = word[last - 1] || '';
+    return (/[аеиоуэюя]/.test(before) ? '' : before) + tail;
+  }
+
+  function paintLyricsGutter(textarea) {
+    const wrap = textarea.closest('.lyrics-wrap');
+    const gutter = wrap && wrap.querySelector('.lyrics-gutter');
+    if (!gutter) return;
+    const tools = lyricsToolsState();
+    const showSyl = !!tools.syllables;
+    const showRhy = !!tools.rhymes;
+    wrap.classList.toggle('has-gutter', showSyl || showRhy);
+    if (!showSyl && !showRhy) { gutter.innerHTML = ''; return; }
+
+    const lines = textarea.value.split('\n');
+    // Группы рифм: одинаковый ключ в окне из восьми строк — один цвет.
+    const groups = {};
+    let nextColor = 0;
+    const colorOf = lines.map(() => '');
+    if (showRhy) {
+      lines.forEach((line, index) => {
+        const key = rhymeKey(line);
+        if (!key) return;
+        for (let back = 1; back <= 8 && index - back >= 0; back += 1) {
+          if (rhymeKey(lines[index - back]) === key) {
+            if (!groups[key]) groups[key] = RHYME_COLORS[nextColor++ % RHYME_COLORS.length];
+            colorOf[index] = groups[key]; colorOf[index - back] = groups[key];
+            break;
+          }
+        }
+      });
+    }
+
+    // Высота каждой логической строки с учётом переноса — через зеркало
+    // той же ширины и того же шрифта.
+    const mirror = getLyricsMirror(textarea);
+    gutter.innerHTML = lines.map((line, index) => {
+      mirror.textContent = line || ' ';
+      const height = mirror.getBoundingClientRect().height;
+      const syl = showSyl && line.trim() ? countSyllables(line) : '';
+      const dot = showRhy && colorOf[index] ? '<i style="background:' + colorOf[index] + '"></i>' : (showRhy ? '<i></i>' : '');
+      return '<span style="height:' + height + 'px">' + dot + '<b>' + syl + '</b></span>';
+    }).join('');
+    gutter.scrollTop = textarea.scrollTop;
+  }
+
+  function getLyricsMirror(textarea) {
+    const wrap = textarea.closest('.lyrics-wrap');
+    let mirror = wrap.querySelector('.lyrics-mirror');
+    if (!mirror) {
+      mirror = document.createElement('div');
+      mirror.className = 'lyrics-mirror';
+      mirror.setAttribute('aria-hidden', 'true');
+      wrap.appendChild(mirror);
+    }
+    const cs = getComputedStyle(textarea);
+    ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth']
+      .forEach((prop) => { mirror.style[prop] = cs[prop]; });
+    mirror.style.width = textarea.clientWidth + 'px';
+    return mirror;
+  }
+
+  function bindLyricsTools(root) {
+    const state = lyricsToolsState();
+    $$('[data-lyrics-tool]', root).forEach((input) => {
+      input.checked = !!state[input.dataset.lyricsTool];
+      input.addEventListener('change', () => {
+        const next = lyricsToolsState();
+        next[input.dataset.lyricsTool] = input.checked;
+        try { localStorage.setItem(LYRICS_TOOLS_KEY, JSON.stringify(next)); } catch (_) {}
+        $$('[data-lyrics-tools]', root).forEach(paintLyricsGutter);
+      });
+    });
+    $$('[data-lyrics-tools]', root).forEach((textarea) => {
+      const repaint = () => paintLyricsGutter(textarea);
+      textarea.addEventListener('input', repaint);
+      textarea.addEventListener('scroll', () => {
+        const gutter = textarea.closest('.lyrics-wrap').querySelector('.lyrics-gutter');
+        if (gutter) gutter.scrollTop = textarea.scrollTop;
+      });
+      if (window.ResizeObserver) new ResizeObserver(repaint).observe(textarea);
+      repaint();
+    });
+  }
+
   // Полоса-ручка под полем: тянет высоту соседа сверху. Только по вертикали —
   // ширину задаёт колонка, и тянуть вширь тут нечего. Работает и пальцем.
   function bindResizeBars(root) {
@@ -2719,8 +2828,8 @@
     // Пустое поле сразу пишущее: черновик хранится локально и подхватится,
     // когда текст создадут — так «Добавить» не обязательно нажимать первым.
     const lyricRows = linkedLyrics.length
-      ? linkedLyrics.map((doc) => `<article class="track-lyrics-inline" data-track-lyrics-inline="${doc.id}"><textarea data-inline-lyrics-body="${doc.id}" placeholder="Слова, строки, идеи…">${escapeHTML(doc.body || '')}</textarea><div class="resize-bar" data-resize-bar title="Потяните, чтобы изменить высоту"></div><footer><button class="text-button" data-project-lyrics="${doc.id}" type="button">Открыть полностью</button><button class="button button-primary" data-save-inline-lyrics="${doc.id}" type="button">Сохранить</button></footer></article>`).join('')
-      : `<article class="track-lyrics-inline"><textarea id="track-lyrics-draft" placeholder="Слова, строки, идеи… Текст создастся при сохранении.">${escapeHTML(lyricsDraft(id))}</textarea><div class="resize-bar" data-resize-bar title="Потяните, чтобы изменить высоту"></div><footer><button class="button button-primary" id="track-lyrics-draft-save" type="button">Сохранить текст</button></footer></article>`;
+      ? linkedLyrics.map((doc) => `<article class="track-lyrics-inline" data-track-lyrics-inline="${doc.id}"><div class="lyrics-wrap"><textarea data-inline-lyrics-body="${doc.id}" data-lyrics-tools placeholder="Слова, строки, идеи…">${escapeHTML(doc.body || '')}</textarea><div class="lyrics-gutter" aria-hidden="true"></div></div><div class="resize-bar" data-resize-bar title="Потяните, чтобы изменить высоту"></div><footer><button class="text-button" data-project-lyrics="${doc.id}" type="button">Открыть полностью</button><button class="button button-primary" data-save-inline-lyrics="${doc.id}" type="button">Сохранить</button></footer></article>`).join('')
+      : `<article class="track-lyrics-inline"><div class="lyrics-wrap"><textarea id="track-lyrics-draft" data-lyrics-tools placeholder="Слова, строки, идеи… Текст создастся при сохранении.">${escapeHTML(lyricsDraft(id))}</textarea><div class="lyrics-gutter" aria-hidden="true"></div></div><div class="resize-bar" data-resize-bar title="Потяните, чтобы изменить высоту"></div><footer><button class="button button-primary" id="track-lyrics-draft-save" type="button">Сохранить текст</button></footer></article>`;
     const container = $('#track-workspace');
     container.innerHTML = `
       <div class="track-workspace-toolbar">
@@ -2746,7 +2855,12 @@
 
         <div class="track-workspace-grid">
           <section class="panel track-workspace-lyrics">
-            <header class="panel-header"><div><span class="eyebrow">Материал</span><h3>Текст</h3></div>${project ? '<button class="text-button" id="track-add-lyrics" type="button">+ Добавить</button>' : ''}</header>
+            <header class="panel-header"><div><span class="eyebrow">Материал</span><h3>Текст</h3></div>
+              <div class="lyrics-tools" role="group" aria-label="Помощники для текста">
+                <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="syllables"><span>слоги</span></label>
+                <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="rhymes"><span>рифмы</span></label>
+                ${project ? '<button class="text-button" id="track-add-lyrics" type="button">+ Добавить</button>' : ''}
+              </div></header>
             <div class="track-workspace-list track-workspace-lyrics-list">${project ? lyricRows : '<p class="track-workspace-empty">Сначала сохраните трек.</p>'}</div>
           </section>
 
@@ -2808,6 +2922,7 @@
     });
     bindRolloutJump(form);
     bindResizeBars(form);
+    bindLyricsTools(form);
     const stageButtons = $$('[data-track-stage]', form);
     const refreshStageRail = (status) => {
       const activeIndex = stageOrder.indexOf(status);
