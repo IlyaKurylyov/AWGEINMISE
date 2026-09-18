@@ -858,8 +858,10 @@
       wrap.innerHTML = '<div class="ask-box" role="dialog" aria-modal="true" aria-labelledby="ask-title">'
         + '<strong id="ask-title">' + escapeHTML(title) + '</strong>'
         + (text ? '<p>' + escapeHTML(text).replace(/\n/g, '<br>') + '</p>' : '')
+        // Все варианты — кнопки одного размера, иначе «Своя дата» читается
+        // как второсортный выбор. Текстом — только отказ (quiet).
         + '<div class="ask-actions">' + actions.map((action) => '<button type="button" class="'
-          + (action.primary ? 'button button-primary' : (action.danger ? 'button button-danger' : 'text-button'))
+          + (action.primary ? 'button button-primary' : (action.danger ? 'button button-danger' : (action.quiet ? 'text-button' : 'button')))
           + '" data-ask="' + escapeHTML(action.id) + '">' + escapeHTML(action.label) + '</button>').join('')
         + '</div></div>';
       const done = (id) => { wrap.remove(); document.removeEventListener('keydown', onKey); resolve(id); };
@@ -876,7 +878,7 @@
   // Простой «да / нет» на базе askDialog — замена системному confirm().
   async function askYesNo(title, text = '', yesLabel = 'Да', danger = false) {
     const answer = await askDialog({ title, text, actions: [
-      { id: 'no', label: 'Отмена' },
+      { id: 'no', label: 'Отмена', quiet: true },
       { id: 'yes', label: yesLabel, primary: !danger, danger },
     ] });
     return answer === 'yes';
@@ -1076,6 +1078,12 @@
     const draft = template.stages.map((stage) => ({ offset: stage.day }));
     const fitted = fitOffsets(draft, daysUntil(project.release_at));
     const pinnedTitles = pinned.map((stage) => stage.title);
+    // Отметка «сделано» берётся из задач этапа: они при сборке не трогаются,
+    // и закрытый этап не должен снова стать открытым.
+    const stageDone = (title) => {
+      const owned = STAGE_TASKS.filter((row) => row.stage === title).map((row) => row.title);
+      return owned.length > 0 && owned.every((task) => state.tasks.some((row) => row.project_id === project.id && row.title === task && row.is_done));
+    };
     const rows = template.stages.filter((stage) => !pinnedTitles.includes(stage.title)).map((stage, index) => ({
       artist_id: state.artist.id,
       project_id: project.id,
@@ -1083,6 +1091,7 @@
       stage_date: isoDate(addDays(project.release_at, draft[template.stages.indexOf(stage)].offset)),
       day_offset: draft[template.stages.indexOf(stage)].offset,
       repeat_rule: stage.repeat,
+      is_done: stageDone(stage.title),
       sort_order: index,
     }));
     const { error } = await db.from('release_stages').insert(rows);
@@ -1299,8 +1308,20 @@
     // Сброс — это бывшая «пересборка»: шаблон один, спрашивать нечего.
     const reset = $('[data-rollout-reset]', host);
     if (reset) reset.addEventListener('click', async () => {
-      const ok = await askYesNo('Собрать план заново по шаблону?',
-        'Ручные даты и добавленные этапы будут потеряны. Закреплённые останутся на месте.', 'Собрать заново');
+      // Не «ручные даты будут потеряны», а по именам: что удалится,
+      // сколько дат пересчитается, что останется.
+      const mine = (state.stages || []).filter((stage) => stage.project_id === project.id);
+      const templateTitles = ROLLOUT_TEMPLATES.single.stages.map((stage) => stage.title);
+      const custom = mine.filter((stage) => !stage.is_pinned && !templateTitles.includes(stage.title));
+      const pinned = mine.filter((stage) => stage.is_pinned);
+      const recount = templateTitles.filter((title) => !pinned.some((stage) => stage.title === title)).length;
+      const names = (list) => list.map((stage) => '«' + stage.title + '»').join(', ');
+      const lines = [];
+      if (custom.length) lines.push('Удалятся свои этапы: ' + names(custom) + '.');
+      lines.push('Даты ' + recount + ' ' + plural(recount, 'этапа', 'этапов', 'этапов') + ' шаблона встанут заново'
+        + (project.release_at ? ' от дня Х (' + shortDate(project.release_at) + ')' : '') + '.');
+      if (pinned.length) lines.push('Останутся на месте (закреплены): ' + names(pinned) + '.');
+      const ok = await askYesNo('Собрать план заново по шаблону?', lines.join('\n'), 'Собрать заново');
       if (ok) buildFiveWeeks(project, reset);
     });
     $$('[data-stage-pin]', host).forEach((button) => button.addEventListener('click', () => {
@@ -1604,10 +1625,10 @@
       + '<label class="field"><span>Повтор</span><select name="repeat_rule">'
       + Object.keys(REPEAT_LABEL).map((key) => '<option value="' + key + '"' + (stage && stage.repeat_rule === key ? ' selected' : '') + '>' + REPEAT_LABEL[key] + '</option>').join('')
       + '</select></label>'
-      + '<label class="field"><span>Отметки</span><span class="stage-flags">'
-      + '<label><input type="checkbox" name="is_done"' + (stage && stage.is_done ? ' checked' : '') + '> сделано</label>'
-      + '<label><input type="checkbox" name="is_pinned"' + (stage && stage.is_pinned ? ' checked' : '') + '> не сдвигать при переносе дня Х</label>'
-      + '</span></label>'
+      + '<div class="field"><span>Отметки</span><div class="stage-flags">'
+      + '<label><input type="checkbox" name="is_done"' + (stage && stage.is_done ? ' checked' : '') + '> Сделано</label>'
+      + '<label><input type="checkbox" name="is_pinned"' + (stage && stage.is_pinned ? ' checked' : '') + '> Не сдвигать при переносе дня Х</label>'
+      + '</div></div>'
       + '<div class="drawer-actions">' + (isNew ? '<span></span>' : '<button class="button button-danger" type="button" id="stage-delete">Удалить</button>')
       + '<button class="button button-primary" type="submit">Сохранить</button></div></form>');
 
@@ -2385,8 +2406,8 @@
             + followers.length + ' ' + plural(followers.length, 'этап', 'этапа', 'этапов') + ' плана: сдвинуть их на столько же или оставить на месте?'
           : '',
         actions: followers.length
-          ? [{ id: 'no', label: 'Отмена' }, { id: 'one', label: 'Только день Х' }, { id: 'all', label: 'День Х и ' + followers.length + ' ' + plural(followers.length, 'этап', 'этапа', 'этапов'), primary: true }]
-          : [{ id: 'no', label: 'Отмена' }, { id: 'one', label: 'Перенести', primary: true }],
+          ? [{ id: 'no', label: 'Отмена', quiet: true }, { id: 'one', label: 'Только день Х' }, { id: 'all', label: 'День Х и ' + followers.length + ' ' + plural(followers.length, 'этап', 'этапа', 'этапов'), primary: true }]
+          : [{ id: 'no', label: 'Отмена', quiet: true }, { id: 'one', label: 'Перенести', primary: true }],
       });
       if (!answer || answer === 'no') return;
       shift = answer === 'all';

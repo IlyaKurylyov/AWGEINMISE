@@ -1935,14 +1935,15 @@ html[data-theme="light"] .rollout-cap.is-hover { background: rgba(73,82,71,.07);
 
 .rollout-foot { display: flex; align-items: center; justify-content: space-between; gap: 22px; flex-wrap: wrap; border-top: 1px solid var(--line); padding: 16px 18px; }
 .rollout-reset { font-size: 11px; }
-.rollout-count b { display: block; font: 500 42px/1 'Oswald', sans-serif; color: var(--amber); font-variant-numeric: tabular-nums; }
-.rollout-count span { display: block; color: var(--muted); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
+.rollout-count { display: flex; align-items: baseline; gap: 12px; }
+.rollout-count b { font: 500 42px/1 'Oswald', sans-serif; color: var(--amber); font-variant-numeric: tabular-nums; }
+.rollout-count span { color: var(--muted); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
 /* Просроченное спрашивает, а не выносит приговор: этап мог быть сделан
    и просто не отмечен, а раньше это стоило четырёх действий через шторку. */
-.rollout-ask { border-top: 1px solid var(--line); }
-.rollout-ask-head { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 11px 18px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; }
-.rollout-ask-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--line); }
-.rollout-ask-row:last-child { border-bottom: 0; }
+/* Просроченные — списком без полосок: строки разделяет только отступ. */
+.rollout-ask { padding: 0 0 8px; }
+.rollout-ask-head { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 4px 18px 10px; color: var(--muted); font-size: 13px; }
+.rollout-ask-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 8px 18px; }
 .rollout-ask-row strong { display: block; font: 500 17px 'Oswald', sans-serif; letter-spacing: .02em; }
 .rollout-ask-row small { display: block; color: var(--red); font-size: 13px; }
 .rollout-ask-pair { display: flex; gap: 8px; }
@@ -2033,9 +2034,10 @@ html[data-theme="light"] .ask-box { box-shadow: 0 24px 60px rgba(60,53,42,.35); 
 .plan-del { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 16px; cursor: pointer; }
 .plan-del:hover { color: var(--red); }
 .plan-warn { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; padding: 11px 13px; border: 1px solid var(--red); color: var(--red); font-size: 13px; }
-.stage-flags { display: grid; gap: 8px; text-transform: none; letter-spacing: 0; }
-.stage-flags label { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 15px; font-weight: 400; }
-.stage-flags input { accent-color: var(--green); }
+.stage-flags { display: grid; gap: 10px; margin-top: 8px; }
+.stage-flags label { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 15px; font-weight: 400; letter-spacing: 0; text-transform: none; cursor: pointer; }
+/* Чекбокс не поле ввода: снимаем растяжку и рамку, которые .field даёт всем input. */
+.stage-flags input { width: 18px; height: 18px; min-height: 0; margin: 0; padding: 0; border: 0; box-shadow: none; background: none; accent-color: var(--green); flex: none; }
 /* Строка с открытым поповером должна быть выше соседних, иначе их кнопки
    проступают сквозь него. */
 .autopost-dest.has-pop { z-index: 20; }
