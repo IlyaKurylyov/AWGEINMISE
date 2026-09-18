@@ -1745,6 +1745,16 @@ html[data-theme="light"] .secretary-note { background: rgba(169,111,36,.12); }
 .lyrics-gutter b { min-width: 22px; text-align: right; color: var(--muted); font: 500 12px/1.5 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; opacity: .75; }
 .lyrics-gutter i { width: 8px; height: 8px; margin-top: 8px; border-radius: 50%; background: transparent; flex: none; }
 .lyrics-mirror { position: absolute; left: 0; top: 0; visibility: hidden; pointer-events: none; white-space: pre-wrap; overflow-wrap: break-word; box-sizing: border-box; }
+/* Плеер бита в шапке «Текст» и счётчик тактов рядом. */
+.lyrics-beat { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border: 1px solid rgba(112, 238, 121, .35); border-radius: 999px; color: var(--muted); background: transparent; font: 500 12px/1.4 'IBM Plex Mono', monospace; cursor: pointer; }
+.lyrics-beat span { font-size: 11px; }
+.lyrics-beat:hover, .lyrics-beat.is-playing { color: var(--green); border-color: var(--green); }
+.lyrics-beat.is-loading { opacity: .55; pointer-events: none; animation: icon-loading-pulse 1s ease-in-out infinite; }
+.lyrics-beat-counter { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font: 500 12px/1.4 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+.lyrics-beat-counter b { color: var(--green); font-weight: 600; }
+.lyrics-beat-counter b:empty { display: none; }
+.beat-bpm-row .field > span { align-items: flex-end; }
+.beat-bpm-row .button { width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Полоса-ручка под полем: широкая, с засечкой, тянет высоту вниз. Родной
    уголок отключён — он мелкий и обещает две оси там, где есть одна. */
 .resize-bar { height: 14px; margin: 2px 0 0; display: grid; place-items: center; cursor: ns-resize; touch-action: none; user-select: none; }

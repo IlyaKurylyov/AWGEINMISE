@@ -212,6 +212,7 @@
     booting: false,
   };
   let activeWorkspaceFlush = null;
+  let lyricsBeat = null; // { audio, beatId } — бит, включённый в шапке «Текст»; живёт между перерисовками экрана трека
 
   const THEME_STORAGE_KEY = 'inmise-artist-theme';
 
@@ -309,6 +310,7 @@
   async function goView(view) {
     if (!VIEW_TITLES[view]) return;
     const currentView = $('.view.is-active')?.dataset.viewPanel;
+    if (currentView === 'track' && view !== 'track') stopLyricsBeat();
     if (currentView === 'track' && view !== 'track' && activeWorkspaceFlush) {
       const flush = activeWorkspaceFlush;
       activeWorkspaceFlush = null;
@@ -793,7 +795,7 @@
     await loadArtist();
     const artistId = state.artist.id;
     const results = await Promise.allSettled([
-      safeQuery(db.from('beats').select('id,title,seller,seller_link,price,audio_url,storage_path,publication_status,public_preview_path,private_master_path,cover_url,currency,published_at,created_at,updated_at').eq('artist_id', state.artist.id).order('created_at', { ascending: false })),
+      safeQuery(db.from('beats').select('id,title,seller,seller_link,price,bpm,audio_url,storage_path,publication_status,public_preview_path,private_master_path,cover_url,currency,published_at,created_at,updated_at').eq('artist_id', state.artist.id).order('created_at', { ascending: false })),
       safeQuery(db.from('artist_projects').select('*').eq('artist_id', artistId).order('updated_at', { ascending: false })),
       safeQuery(db.from('lyrics_documents').select('*').eq('artist_id', artistId).order('updated_at', { ascending: false })),
       safeQuery(db.from('artist_private_links').select('*').eq('artist_id', artistId).order('sort_order').order('created_at')),
@@ -1854,6 +1856,115 @@
     });
   }
 
+  // Плеер бита в шапке «Текст»: артист пишет под бит и видит номер такта.
+  // Такт считаем от начала файла по BPM бита в размере 4/4. Если BPM
+  // не указан — показываем только время и кнопку «указать BPM».
+  // Сам звук хранится снаружи (lyricsBeat): сохранение бита перерисовывает
+  // экран трека, а музыка при этом обрываться не должна.
+  const formatClock = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+
+  function stopLyricsBeat() {
+    if (lyricsBeat) lyricsBeat.audio.pause();
+    lyricsBeat = null;
+  }
+
+  function bindLyricsBeat(form) {
+    const button = $('[data-lyrics-beat]', form);
+    const counter = $('[data-lyrics-beat-counter]', form);
+    const select = $('[name="beat_id"]', form);
+    if (!button || !counter || !select) return;
+    const icon = $('span', button);
+    const bar = $('[data-beat-bar]', counter);
+    const time = $('[data-beat-time]', counter);
+    const bpmButton = $('[data-beat-bpm]', counter);
+    let timer = 0;
+
+    const currentBeat = () => state.beats.find((beat) => beat.id === select.value) || null;
+    const tick = () => {
+      const beat = lyricsBeat && state.beats.find((item) => item.id === lyricsBeat.beatId);
+      if (!beat) return;
+      const seconds = lyricsBeat.audio.currentTime;
+      bar.textContent = beat.bpm ? `такт ${Math.floor(seconds * beat.bpm / 240) + 1}` : '';
+      time.textContent = formatClock(seconds);
+      bpmButton.hidden = !!beat.bpm;
+    };
+    const setPlaying = (on) => {
+      clearInterval(timer);
+      icon.textContent = on ? 'Ⅱ' : '▶';
+      button.classList.toggle('is-playing', on);
+      counter.hidden = false;
+      tick();
+      if (on) timer = setInterval(tick, 100);
+    };
+    const reset = () => {
+      clearInterval(timer);
+      icon.textContent = '▶';
+      button.classList.remove('is-playing');
+      counter.hidden = true;
+    };
+    const syncVisibility = () => { button.hidden = !currentBeat(); };
+
+    // После перерисовки подхватываем уже играющий бит, если он тот же.
+    if (lyricsBeat && lyricsBeat.beatId === select.value) {
+      lyricsBeat.audio.onended = () => setPlaying(false);
+      setPlaying(!lyricsBeat.audio.paused);
+    } else {
+      stopLyricsBeat();
+    }
+    syncVisibility();
+    select.addEventListener('change', () => {
+      if (lyricsBeat && select.value !== lyricsBeat.beatId) { stopLyricsBeat(); reset(); }
+      syncVisibility();
+    });
+
+    button.addEventListener('click', async () => {
+      const beat = currentBeat();
+      if (!beat) return;
+      if (lyricsBeat && lyricsBeat.beatId === beat.id) {
+        if (lyricsBeat.audio.paused) { await lyricsBeat.audio.play(); setPlaying(true); } else { lyricsBeat.audio.pause(); setPlaying(false); }
+        return;
+      }
+      stopLyricsBeat(); reset();
+      button.disabled = true;
+      button.classList.add('is-loading');
+      try {
+        const url = await getBeatAudio(beat);
+        if (!url) { toast('У бита нет доступного аудиофайла.', 'error'); return; }
+        const audio = new Audio(url);
+        audio.onended = () => setPlaying(false);
+        lyricsBeat = { audio, beatId: beat.id };
+        await audio.play();
+        setPlaying(true);
+      } catch (error) {
+        toast(error.message || 'Не удалось включить бит.', 'error');
+      } finally {
+        button.disabled = false;
+        button.classList.remove('is-loading');
+      }
+    });
+    bpmButton.addEventListener('click', () => { if (lyricsBeat) openBeatEditor(lyricsBeat.beatId); });
+  }
+
+  // «Тап» в редакторе бита: нажимаете в ритм, темп считается по средней
+  // паузе между последними восемью нажатиями. Пауза дольше двух секунд —
+  // начинаем заново.
+  function bindTapTempo(form) {
+    const button = $('[data-tap-tempo]', form);
+    const input = $('[name="bpm"]', form);
+    if (!button || !input) return;
+    let taps = [];
+    button.addEventListener('click', () => {
+      const now = performance.now();
+      if (taps.length && now - taps[taps.length - 1] > 2000) taps = [];
+      taps.push(now);
+      if (taps.length > 8) taps.shift();
+      if (taps.length < 2) { button.textContent = 'Ещё… в ритм'; return; }
+      const bpm = Math.round(60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1)));
+      input.value = Math.min(300, Math.max(40, bpm));
+      button.textContent = `≈ ${input.value} BPM · ещё тап`;
+    });
+  }
+
   // Полоса-ручка под полем: тянет высоту соседа сверху. Только по вертикали —
   // ширину задаёт колонка, и тянуть вширь тут нечего. Работает и пальцем.
   function bindResizeBars(root) {
@@ -2566,6 +2677,7 @@
           <label class="field"><span>Название</span><input name="title" value="${escapeHTML(beat?.title || '')}" required></label>
           <div class="form-grid two"><label class="field"><span>Раздел</span><select name="publication_status"><option value="private" ${status === 'private' ? 'selected' : ''}>Личные биты</option><option value="draft" ${status === 'draft' ? 'selected' : ''}>На продажу — черновик</option><option value="published" ${status === 'published' ? 'selected' : ''}>На витрине</option><option value="sold" ${status === 'sold' ? 'selected' : ''}>Продан</option><option value="archived" ${status === 'archived' ? 'selected' : ''}>Архив</option></select></label><label class="field"><span>Цена, ₽</span><input name="price" type="number" min="0" step="100" value="${escapeHTML(beat?.price ?? '')}"></label></div>
           <label class="field"><span>Ссылка для покупки</span><input name="seller_link" type="url" value="${escapeHTML(beat?.seller_link || '')}" placeholder="https://t.me/..."></label>
+          <div class="form-grid two beat-bpm-row"><label class="field"><span>Темп, BPM</span><input name="bpm" type="number" min="40" max="300" inputmode="numeric" value="${escapeHTML(beat?.bpm ?? '')}" placeholder="например, 140"></label><div class="field"><span>Не знаете темп?</span><button class="button" type="button" data-tap-tempo>Тап — нажимайте в ритм</button></div></div>
           <label class="field"><span>${beat ? 'Новый аудиофайл (необязательно)' : 'Аудиофайл'}</span><input name="audio" type="file" accept="audio/*" ${beat ? '' : 'required'}></label>
         </div>
         <div class="drawer-actions">${beat ? '<button class="button button-danger" id="delete-beat" type="button">Удалить</button>' : '<span></span>'}<button class="button button-primary" type="submit">${beat ? 'Сохранить' : 'Загрузить бит'}</button></div>
@@ -2578,6 +2690,7 @@
     const form = $('#beat-editor-form');
     form.addEventListener('submit', (event) => saveBeat(event, beat));
     $('#delete-beat')?.addEventListener('click', () => deleteBeat(beat));
+    bindTapTempo(form);
   }
 
   async function saveBeat(event, beat) {
@@ -2590,6 +2703,7 @@
       title: String(data.get('title') || '').trim(),
       publication_status: status,
       price: data.get('price') ? Number(data.get('price')) : null,
+      bpm: data.get('bpm') ? Math.min(300, Math.max(40, Math.round(Number(data.get('bpm'))))) : null,
       seller_link: String(data.get('seller_link') || '').trim() || null,
       seller: state.artist.name,
       currency: 'RUB',
@@ -2654,7 +2768,7 @@
   }
 
   async function refreshBeats() {
-    state.beats = await safeQuery(db.from('beats').select('id,title,seller,seller_link,price,audio_url,storage_path,publication_status,public_preview_path,private_master_path,cover_url,currency,published_at,created_at,updated_at').eq('artist_id', state.artist.id).order('created_at', { ascending: false }));
+    state.beats = await safeQuery(db.from('beats').select('id,title,seller,seller_link,price,bpm,audio_url,storage_path,publication_status,public_preview_path,private_master_path,cover_url,currency,published_at,created_at,updated_at').eq('artist_id', state.artist.id).order('created_at', { ascending: false }));
     renderBeats(); renderDashboard(); $('#nav-beats-count').textContent = state.beats.length;
     if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
   }
@@ -2859,6 +2973,8 @@
               <div class="lyrics-tools" role="group" aria-label="Помощники для текста">
                 <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="syllables"><span>слоги</span></label>
                 <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="rhymes"><span>рифмы</span></label>
+                <button class="lyrics-beat" type="button" data-lyrics-beat hidden title="Включить бит трека"><span>▶</span> бит</button>
+                <span class="lyrics-beat-counter" data-lyrics-beat-counter hidden><b data-beat-bar></b><span data-beat-time></span><button class="text-button" type="button" data-beat-bpm hidden>указать BPM</button></span>
                 ${project ? '<button class="text-button" id="track-add-lyrics" type="button">+ Добавить</button>' : ''}
               </div></header>
             <div class="track-workspace-list track-workspace-lyrics-list">${project ? lyricRows : '<p class="track-workspace-empty">Сначала сохраните трек.</p>'}</div>
@@ -2923,6 +3039,7 @@
     bindRolloutJump(form);
     bindResizeBars(form);
     bindLyricsTools(form);
+    bindLyricsBeat(form);
     const stageButtons = $$('[data-track-stage]', form);
     const refreshStageRail = (status) => {
       const activeIndex = stageOrder.indexOf(status);
