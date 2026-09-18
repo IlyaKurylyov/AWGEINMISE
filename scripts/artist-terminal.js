@@ -1041,6 +1041,7 @@
   // Меньше четырёх недель — шаблон не помещается, даты расставляются руками.
   const ROLLOUT_MIN_DAYS = 28;
   const shortDate = (value) => new Date(value).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  const longDate = (value) => new Date(value).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
   const isoDate = (value) => new Date(value).toISOString().slice(0, 10);
   const addDays = (value, days) => { const d = new Date(value); d.setDate(d.getDate() + days); return d; };
 
@@ -1161,7 +1162,6 @@
       }
       return 100;
     })();
-    const todayEdge = todayPct > 88 ? ' is-end' : (todayPct < 12 ? ' is-start' : '');
 
     const stageClass = (stage) => {
       if (stage.is_done) return 'is-done';
@@ -1206,8 +1206,7 @@
       + '<div class="rollout-row">' + caps + '</div>'
       + '<div class="rollout-noderow"><span class="rollout-bar"><i style="width:' + todayPct + '%"></i>' + bands + '</span>'
       + '<div class="rollout-row rollout-nodes">' + nodeCells + '</div>'
-      + (dated ? '<span class="rollout-today' + todayEdge + '" style="left:' + todayPct + '%">'
-        + '<b>сегодня · ' + shortDate(new Date()) + '</b></span>' : '')
+      + (dated ? '<span class="rollout-today" style="left:' + todayPct + '%" title="сегодня · ' + shortDate(new Date()) + '"></span>' : '')
       + '</div>'
       + '<div class="rollout-row rollout-gaps">' + gapCells + '</div>'
       + '</div>';
@@ -1286,7 +1285,6 @@
           + plural(Math.abs(left), 'день', 'дня', 'дней') + (left >= 0 ? ' до выхода' : ' назад вышел') + '</span>')
       + '</div><div class="rollout-foot-main"><strong>' + escapeHTML(project.title || 'Без названия') + '</strong>'
       + '<small>' + (project.release_at ? shortDate(project.release_at) : 'дня Х ещё нет')
-      + '<button class="rollout-editdate" type="button" data-rollout-date aria-label="Изменить дату выхода"></button>'
       + ' · ' + PROJECT_PHASE[projectPhase(project)].toLowerCase() + '</small></div></div>'
       + askBlock + depot;
     bindRollout(host, project);
@@ -1304,8 +1302,6 @@
         'Ручные даты и добавленные этапы будут потеряны. Закреплённые останутся на месте.', 'Собрать заново');
       if (ok) buildFiveWeeks(project, reset);
     });
-    const editDate = $('[data-rollout-date]', host);
-    if (editDate) editDate.addEventListener('click', () => offerReleaseDate(project));
     $$('[data-stage-pin]', host).forEach((button) => button.addEventListener('click', () => {
       toggleStagePin(button.dataset.stagePin, button);
     }));
@@ -1653,6 +1649,23 @@
         }
         state.stages = await safeQuery(db.from('release_stages').select('*').eq('artist_id', state.artist.id).order('sort_order'));
         closeDrawer(true);
+        // Кружок дня Х — теперь единственный путь к дате выхода на баре:
+        // его дата и есть дата релиза, остальные этапы спрашиваем как обычно.
+        if (isRelease && delta) {
+          const previousReleaseAt = project.release_at;
+          const iso = new Date(stageDate + 'T12:00:00').toISOString();
+          const { error: dateError } = await db.from('artist_projects').update({ release_at: iso })
+            .eq('id', project.id).eq('artist_id', state.artist.id);
+          if (dateError) toast(dateError.message || 'Не удалось перенести дату выхода.', 'error');
+          else {
+            project.release_at = iso;
+            state.projects = state.projects.map((row) => (row.id === project.id ? { ...row, release_at: iso } : row));
+            await shiftStagesForRelease(project, previousReleaseAt);
+            await syncProjectStatus(project);
+            renderCalendar();
+            if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
+          }
+        }
         toast(stage ? (shiftFollowers ? 'Этап и ' + followers.length + ' следующих сдвинуты.' : 'Этап обновлён.') : 'Этап добавлен.');
         renderRollout();
         renderDashboardCalendar();
@@ -2688,21 +2701,17 @@
       </div>
       <form class="track-workspace-form" id="project-form">
         <section class="panel track-workspace-hero">
-          <label class="cover-upload track-workspace-cover" id="project-cover-label">${cover ? `<img src="${escapeHTML(cover)}" alt="Обложка">` : '<span>+ Обложка</span>'}<input name="cover" type="file" accept="image/*" hidden></label>
+          <label class="cover-upload track-workspace-cover" id="project-cover-label" title="Обложка">${cover ? `<img src="${escapeHTML(cover)}" alt="Обложка">` : '<span>+</span>'}<input name="cover" type="file" accept="image/*" hidden></label>
           <div class="track-workspace-title" ${project ? `draggable="true" data-track-project-drag="${project.id}" title="Перетащите трек на нужную стадию"` : ''}>
             <input class="track-title-input" name="title" value="${escapeHTML(project?.title || '')}" required placeholder="Название трека">
+            <button class="track-release-date" type="button" data-track-setdate title="Изменить дату выхода">${project?.release_at ? 'выход ' + longDate(project.release_at) : 'дата выхода не назначена'}</button>
+            <input name="status" value="${selectedStatus}" hidden>
+            <input name="release_at" type="datetime-local" value="${toLocalInput(project?.release_at)}" hidden>
           </div>
           <div class="track-workspace-actions">
             <button class="button button-primary track-save-button" type="submit">${project && !isPristineDraft(project) ? 'Сохранить трек' : 'Создать трек'}</button>
           </div>
           <div class="track-status-row">
-            <div class="track-status-line">
-              <span class="track-status-chip is-static phase-${projectPhase(project)}">${PROJECT_PHASE[projectPhase(project)]}</span>
-              <input name="status" value="${selectedStatus}" hidden>
-              <span class="track-release-date">${project?.release_at ? shortDate(project.release_at) : 'дня Х нет'}</span>
-              <button class="rollout-editdate" type="button" data-track-setdate aria-label="Изменить дату выхода"></button>
-              <input name="release_at" type="datetime-local" value="${toLocalInput(project?.release_at)}" hidden>
-            </div>
             ${trackRollout(project)}
           </div>
         </section>
