@@ -817,6 +817,41 @@
       { view: 'dashboard', project: project.id }));
   }
 
+  // Свой диалог вместо системного confirm(): системный не умеет три кнопки,
+  // не в стиле кабинета и блокирует вкладку. Возвращает id нажатой кнопки,
+  // null — если закрыли мимо или Esc.
+  function askDialog({ title, text = '', actions }) {
+    return new Promise((resolve) => {
+      $$('.ask-backdrop').forEach((node) => node.remove());
+      const wrap = document.createElement('div');
+      wrap.className = 'ask-backdrop';
+      wrap.innerHTML = '<div class="ask-box" role="dialog" aria-modal="true" aria-labelledby="ask-title">'
+        + '<strong id="ask-title">' + escapeHTML(title) + '</strong>'
+        + (text ? '<p>' + escapeHTML(text).replace(/\n/g, '<br>') + '</p>' : '')
+        + '<div class="ask-actions">' + actions.map((action) => '<button type="button" class="'
+          + (action.primary ? 'button button-primary' : (action.danger ? 'button button-danger' : 'text-button'))
+          + '" data-ask="' + escapeHTML(action.id) + '">' + escapeHTML(action.label) + '</button>').join('')
+        + '</div></div>';
+      const done = (id) => { wrap.remove(); document.removeEventListener('keydown', onKey); resolve(id); };
+      const onKey = (event) => { if (event.key === 'Escape') done(null); };
+      document.addEventListener('keydown', onKey);
+      wrap.addEventListener('click', (event) => { if (event.target === wrap) done(null); });
+      $$('[data-ask]', wrap).forEach((button) => button.addEventListener('click', () => done(button.dataset.ask)));
+      document.body.appendChild(wrap);
+      const focus = $('.button-primary', wrap) || $('[data-ask]', wrap);
+      if (focus) focus.focus();
+    });
+  }
+
+  // Простой «да / нет» на базе askDialog — замена системному confirm().
+  async function askYesNo(title, text = '', yesLabel = 'Да', danger = false) {
+    const answer = await askDialog({ title, text, actions: [
+      { id: 'no', label: 'Отмена' },
+      { id: 'yes', label: yesLabel, primary: !danger, danger },
+    ] });
+    return answer === 'yes';
+  }
+
   function syncIdentity() {
     const name = state.artist?.name || 'Артист';
     $('#sidebar-artist').textContent = name;
@@ -1027,23 +1062,37 @@
     const need = templateNeed('single');
     const runway = daysUntil(project.release_at);
     if (runway < need) {
+      // Срок короче шаблона. Не ставим перед фактом — даём три пути:
+      // перенести день Х, ужать план в то, что есть, или назначить свою дату.
       const moved = addDays(new Date(), need);
-      const message = 'До выхода ' + Math.max(0, runway) + ' ' + plural(Math.max(0, runway), 'день', 'дня', 'дней')
-        + ', а плану нужно ' + need + '.\n\nДата выхода будет перенесена на ' + shortDate(moved)
-        + '. Перенести и собрать план?';
-      if (!confirm(message)) return;
-      const iso = moved.toISOString();
-      const { error } = await db.from('artist_projects').update({ release_at: iso })
-        .eq('id', project.id).eq('artist_id', state.artist.id);
-      if (error) return toast(error.message || 'Не удалось перенести дату.', 'error');
-      project.release_at = iso;
-      state.projects = state.projects.map((row) => (row.id === project.id ? { ...row, release_at: iso } : row));
-      toast('Дата выхода перенесена на ' + shortDate(moved) + '.');
+      const answer = await askDialog({
+        title: 'Плану нужно ' + need + ' дней, а до выхода ' + Math.max(0, runway),
+        text: 'Можно перенести день Х на ' + shortDate(moved) + ' и собрать план целиком. '
+          + 'Или оставить дату и ужать этапы в оставшиеся дни. Или назначить свою дату выхода.',
+        actions: [
+          { id: 'custom', label: 'Своя дата' },
+          { id: 'fit', label: 'Оставить и ужать' },
+          { id: 'move', label: 'Перенести на ' + shortDate(moved), primary: true },
+        ],
+      });
+      if (!answer) return;
+      if (answer === 'custom') return offerReleaseDate(project, () => generateRollout(project, 'single', button));
+      if (answer === 'move') {
+        const iso = moved.toISOString();
+        const { error } = await db.from('artist_projects').update({ release_at: iso })
+          .eq('id', project.id).eq('artist_id', state.artist.id);
+        if (error) return toast(error.message || 'Не удалось перенести дату.', 'error');
+        project.release_at = iso;
+        state.projects = state.projects.map((row) => (row.id === project.id ? { ...row, release_at: iso } : row));
+        toast('Дата выхода перенесена на ' + shortDate(moved) + '.');
+      }
+      // 'fit' — generateRollout сам ужмёт офсеты под остаток.
     }
     await generateRollout(project, 'single', button);
     renderCalendar();
     renderDashboard();
   }
+
 
   // В карточке трека — ровно та же ось, что на дашборде, только смотреть.
   function trackRollout(project) {
@@ -1219,8 +1268,10 @@
     if (add) add.addEventListener('click', () => openStageEditor(null, project));
     // Сброс — это бывшая «пересборка»: шаблон один, спрашивать нечего.
     const reset = $('[data-rollout-reset]', host);
-    if (reset) reset.addEventListener('click', () => {
-      if (confirm('Собрать план заново по шаблону? Ручные даты и добавленные этапы будут потеряны, закреплённые останутся.')) buildFiveWeeks(project, reset);
+    if (reset) reset.addEventListener('click', async () => {
+      const ok = await askYesNo('Собрать план заново по шаблону?',
+        'Ручные даты и добавленные этапы будут потеряны. Закреплённые останутся на месте.', 'Собрать заново');
+      if (ok) buildFiveWeeks(project, reset);
     });
     const editDate = $('[data-rollout-date]', host);
     if (editDate) editDate.addEventListener('click', () => offerReleaseDate(project));
@@ -1285,10 +1336,17 @@
     if (!project || !project.release_at || !delta) return;
     const moved = addDays(project.release_at, delta);
     const days = Math.abs(delta);
-    const ok = confirm('«' + title + '» теперь позже дня выхода.\n\nПеренести день Х на ' + days + ' '
-      + plural(days, 'день', 'дня', 'дней') + ' — на ' + shortDate(moved) + '?\n\n'
-      + 'ОК — перенести. Отмена — указать свою дату.');
-    if (!ok) return offerReleaseDate(project);
+    const answer = await askDialog({
+      title: '«' + title + '» теперь позже дня выхода',
+      text: 'День Х сам не двигается. Перенести его на ' + days + ' ' + plural(days, 'день', 'дня', 'дней')
+        + ' — на ' + shortDate(moved) + ' — или назначить свою дату?',
+      actions: [
+        { id: 'custom', label: 'Своя дата' },
+        { id: 'move', label: 'Перенести на ' + shortDate(moved), primary: true },
+      ],
+    });
+    if (answer === 'custom') return offerReleaseDate(project);
+    if (answer !== 'move') return;
     const previousReleaseAt = project.release_at;
     const { error } = await db.from('artist_projects').update({ release_at: moved.toISOString() })
       .eq('id', project.id).eq('artist_id', state.artist.id);
@@ -1347,7 +1405,8 @@
   // поэтому здесь одно действие — разблокировать, и один вопрос.
   async function toggleStagePin(stageId, button) {
     const stage = stageById(stageId);
-    if (!stage || !confirm('Разблокировать этап?')) return;
+    if (!stage) return;
+    if (!(await askYesNo('Разблокировать этап?', 'Он снова будет двигаться вместе с днём Х.', 'Разблокировать'))) return;
     setBusy(button, true, '');
     const { error } = await db.from('release_stages').update({ is_pinned: false })
       .eq('id', stageId).eq('artist_id', state.artist.id);
@@ -1368,7 +1427,7 @@
       && owned.includes(row.title) && !row.is_done);
     if (openTasks.length) {
       const names = openTasks.map((row) => '· ' + row.title).join('\n');
-      if (!confirm('Вместе с этапом будут закрыты задачи:\n\n' + names + '\n\nЗакрыть?')) return;
+      if (!(await askYesNo('Закрыть этап вместе с задачами?', names, 'Закрыть'))) return;
     }
     setBusy(button, true, '…');
     if (openTasks.length) {
@@ -1454,12 +1513,13 @@
     const keptDone = mine.filter((stage) => stage.is_done).length;
     const keptPinned = mine.filter((stage) => !stage.is_done && stage.is_pinned).length;
     const days = Math.abs(delta);
-    let message = 'День Х уехал на ' + days + ' ' + plural(days, 'день', 'дня', 'дней')
-      + (delta > 0 ? ' вперёд' : ' назад') + '.\nСдвинуть ' + movable.length + ' '
-      + plural(movable.length, 'этап', 'этапа', 'этапов') + '?';
-    if (keptDone) message += '\n\nЗакрытых: ' + keptDone + ' — останутся на своих датах.';
-    if (keptPinned) message += '\nЗакреплённых: ' + keptPinned + ' — останутся на месте.';
-    if (!confirm(message)) return;
+    let note = '';
+    if (keptDone) note += 'Закрытых: ' + keptDone + ' — останутся на своих датах.\n';
+    if (keptPinned) note += 'Закреплённых: ' + keptPinned + ' — останутся на месте.';
+    const ok = await askYesNo('День Х уехал на ' + days + ' ' + plural(days, 'день', 'дня', 'дней') + (delta > 0 ? ' вперёд' : ' назад'),
+      (note ? note.trim() + '\n\n' : '') + 'Сдвинуть ' + movable.length + ' ' + plural(movable.length, 'этап', 'этапа', 'этапов') + ' на столько же?',
+      'Сдвинуть');
+    if (!ok) return;
     const updates = movable.map((stage) => ({ id: stage.id, stage_date: isoDate(addDays(stage.stage_date, delta)) }));
     const results = await Promise.all(updates.map((row) => db.from('release_stages')
       .update({ stage_date: row.stage_date }).eq('id', row.id).eq('artist_id', state.artist.id)));
@@ -1533,10 +1593,17 @@
         shiftFollowers = followers.length > 0;
       } else if (followers.length) {
         const days = Math.abs(delta);
-        shiftFollowers = confirm('«' + payload.title + '» сдвигается на ' + days + ' ' + plural(days, 'день', 'дня', 'дней')
-          + (delta > 0 ? ' вперёд' : ' назад') + '.\n\nСдвинуть и ' + followers.length + ' '
-          + plural(followers.length, 'следующий этап', 'следующих этапа', 'следующих этапов') + ' на столько же?\n\n'
-          + 'ОК — сдвинуть и их. Отмена — только этот.');
+        const answer = await askDialog({
+          title: '«' + payload.title + '» сдвигается на ' + days + ' ' + plural(days, 'день', 'дня', 'дней') + (delta > 0 ? ' вперёд' : ' назад'),
+          text: 'После него ещё ' + followers.length + ' ' + plural(followers.length, 'этап', 'этапа', 'этапов')
+            + '. Сдвинуть их на столько же — промежутки останутся прежними — или оставить на месте?',
+          actions: [
+            { id: 'one', label: 'Только этот' },
+            { id: 'all', label: 'И следующие ' + followers.length, primary: true },
+          ],
+        });
+        if (!answer) return;
+        shiftFollowers = answer === 'all';
       }
       setBusy(button, true, 'Сохраняем…');
       try {
@@ -1979,7 +2046,7 @@
   }
 
   // «Запланирован» без даты не попадёт в календарь, поэтому спрашиваем сразу.
-  function offerReleaseDate(project) {
+  function offerReleaseDate(project, onSaved = null) {
     openDrawer('TRACK / РЕЛИЗ', 'Дата релиза', `<form id="release-date-form">
       <p class="drawer-note">Запланируйте дату релиза — и мы рассчитаем все необходимые цели на прогресс-баре.</p>
       <label class="field"><span>Когда выходит</span><input name="release_at" type="datetime-local" required></label>
@@ -2006,7 +2073,8 @@
         project.release_at = releaseAt;
         closeDrawer(true);
         toast('Дата релиза сохранена.');
-        if (!(await fillStageDates(project))) await shiftStagesForRelease(project, previousReleaseAt);
+        if (onSaved) await onSaved();
+        else if (!(await fillStageDates(project))) await shiftStagesForRelease(project, previousReleaseAt);
         renderCalendar(); renderDashboard();
         if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
       } catch (error) { toast(error.message || 'Не удалось сохранить дату.', 'error'); }
@@ -2095,7 +2163,7 @@
   }
 
   async function deleteTask(task) {
-    if (!task || !confirm(`Удалить задачу «${task.title}»?`)) return;
+    if (!(await askYesNo(`Удалить задачу «${task.title}»?`, '', 'Удалить', true))) return;
     try {
       const { error } = await db.from('project_tasks').delete().eq('id', task.id).eq('artist_id', state.artist.id);
       if (error) throw error;
@@ -2151,7 +2219,7 @@
   async function deleteMaterialLink(fileId, button) {
     const file = (state.files || []).find((item) => item.id === fileId);
     if (!file) return;
-    if (!confirm(`Удалить ссылку «${file.original_name}»? Файл в вашем облаке останется.`)) return;
+    if (!(await askYesNo(`Удалить ссылку «${file.original_name}»?`, 'Файл в вашем облаке останется.', 'Удалить', true))) return;
     setPending(button, true);
     const { error } = await db.from('project_files').delete().eq('id', fileId).eq('artist_id', state.artist.id);
     setPending(button, false);
@@ -2402,7 +2470,7 @@
   }
 
   async function deleteBeat(beat) {
-    if (!beat || !confirm(`Удалить бит «${beat.title}»?`)) return;
+    if (!(await askYesNo(`Удалить бит «${beat.title}»?`, '', 'Удалить', true))) return;
     try {
       const { error } = await db.from('beats').delete().eq('id', beat.id).eq('owner_user_id', state.user.id);
       if (error) throw error;
@@ -2831,7 +2899,9 @@
           return;
         }
         const named = latestProject.title && latestProject.title !== 'Без названия' ? ` «${latestProject.title}»` : '';
-        const keep = window.confirm(`Сохранить новый трек${named}?\n\nОК — сохранить, Отмена — удалить черновик.`);
+        const keep = await askDialog({ title: `Сохранить новый трек${named}?`,
+          text: 'Если не сохранять — черновик и его задачи будут удалены.',
+          actions: [{ id: 'drop', label: 'Удалить черновик', danger: true }, { id: 'keep', label: 'Сохранить', primary: true }] }) === 'keep';
         if (keep) {
           state.freshDraftProjectId = null;
           logEvent('release', 'Создан релиз', latestProject.title || 'Без названия', { view: 'track', id: latestProject.id, project: latestProject.id });
@@ -3170,7 +3240,8 @@
   }
 
   async function deleteLyricsDrawer(doc) {
-    if (!doc || !confirm(`Удалить текст «${doc.title}»?`)) return;
+    if (!doc) return;
+    if (!(await askYesNo(`Удалить текст «${doc.title}»?`, '', 'Удалить', true))) return;
     const { error } = await db.from('lyrics_documents').delete().eq('id', doc.id).eq('artist_id', state.artist.id);
     if (error) return toast(error.message, 'error');
     state.lyrics = state.lyrics.filter((item) => item.id !== doc.id);
@@ -3295,7 +3366,7 @@
 
   async function disconnectSocial(platform, button) {
     const label = SOCIAL_PLATFORM_LABEL[platform] || platform;
-    if (!confirm(`Отключить ${label}?`)) return;
+    if (!(await askYesNo(`Отключить ${label}?`, 'Публиковать туда не получится, пока не подключите заново.', 'Отключить', true))) return;
     setBusy(button, true, 'Отключаем…');
     const { data, error } = await db.functions.invoke('social-connect', { body: { action: 'disconnect', platform } });
     setBusy(button, false);
@@ -4090,7 +4161,8 @@
   }
 
   async function deleteLyrics(doc) {
-    if (!doc || !confirm(`Удалить текст «${doc.title}»?`)) return;
+    if (!doc) return;
+    if (!(await askYesNo(`Удалить текст «${doc.title}»?`, '', 'Удалить', true))) return;
     const { error } = await db.from('lyrics_documents').delete().eq('id', doc.id).eq('artist_id', state.artist.id);
     if (error) return toast(error.message, 'error');
     state.lyrics = state.lyrics.filter((item) => item.id !== doc.id); state.activeLyricsId = null; renderLyricsList();
@@ -4166,7 +4238,7 @@
   }
 
   async function deleteLink(id) {
-    if (!confirm('Удалить эту ссылку?')) return;
+    if (!(await askYesNo('Удалить эту ссылку?', '', 'Удалить', true))) return;
     const { error } = await db.from('artist_private_links').delete().eq('id', id).eq('artist_id', state.artist.id); if (error) return toast(error.message, 'error'); state.links = state.links.filter((item) => item.id !== id); renderLinks();
   }
 

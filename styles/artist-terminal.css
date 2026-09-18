@@ -1935,6 +1935,16 @@ html[data-theme="light"] .rollout-mini.is-go:hover { color: #f2efe6; }
 .track-status-chip:hover { border-color: var(--green); }
 .track-release-date { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 
+/* Диалог вопроса: без рамки, отделяется от фона тенью и затемнением. */
+.ask-backdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 20px; background: rgba(6,8,6,.66); backdrop-filter: blur(3px); animation: viewIn .16s ease-out; }
+.ask-box { width: min(460px, 100%); background: var(--panel); padding: 24px 24px 20px; box-shadow: 0 24px 60px rgba(0,0,0,.55); }
+.ask-box strong { display: block; font: 500 22px/1.2 'Oswald', sans-serif; letter-spacing: .03em; color: var(--text); }
+.ask-box p { margin: 12px 0 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+.ask-actions { display: flex; flex-wrap: wrap; gap: 8px 14px; justify-content: flex-end; align-items: center; margin-top: 22px; }
+.ask-actions .text-button { padding: 8px 4px; }
+html[data-theme="light"] .ask-backdrop { background: rgba(60,53,42,.5); }
+html[data-theme="light"] .ask-box { box-shadow: 0 24px 60px rgba(60,53,42,.35); }
+
 .plan-picks { display: grid; gap: 9px; margin: 14px 0 4px; }
 .plan-pick { display: block; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel-2); padding: 13px 15px; cursor: pointer; font: inherit; }
 .plan-pick:hover { border-color: var(--green); }
