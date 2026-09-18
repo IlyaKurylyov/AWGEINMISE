@@ -678,14 +678,14 @@ html[data-theme="light"] .pipeline-board .pipeline-column.is-dragover, html[data
 .track-workspace-form { display: grid; gap: 16px; }
 /* Шапка трека — карточка альбома: обложка слева держит композицию, название
    прижато к её нижнему краю, под ним дата. Черты нет — держит обложка. */
-.track-workspace-hero { display: grid; grid-template-columns: 148px minmax(0,1fr) auto; gap: 16px 20px; align-items: end; padding: 14px 16px 6px; }
+.track-workspace-hero { display: grid; grid-template-columns: 148px minmax(0,1fr) auto; gap: 16px 20px; align-items: start; padding: 14px 16px 6px; }
 .track-workspace-cover { width: 148px; height: 148px; border-style: solid; font: 500 34px 'Oswald', sans-serif; }
-.track-workspace-title { min-width: 0; display: flex; flex-direction: column; gap: 6px; align-self: end; padding-bottom: 6px; }
+.track-workspace-title { min-width: 0; display: flex; flex-direction: column; gap: 6px; align-self: start; padding-top: 4px; }
 .track-workspace-title[draggable="true"] { cursor: grab; }
 .track-workspace-title[draggable="true"]:active { cursor: grabbing; }
 .track-title-input { width: 100%; border: 0; padding: 2px 0; color: #e0e3d8; background: transparent; outline: 0; font: 500 clamp(26px,3vw,40px)/1 'Oswald', sans-serif; letter-spacing: .035em; text-transform: uppercase; }
 .track-title-input:focus { box-shadow: inset 0 -1px 0 var(--green); }
-.track-workspace-actions { display: grid; gap: 6px; justify-items: stretch; align-self: end; padding-bottom: 6px; }
+.track-workspace-actions { display: grid; gap: 6px; justify-items: stretch; align-self: start; }
 .track-save-button { min-width: 154px; min-height: 42px; }
 .track-delete-button { min-width: 180px; justify-self: start; }
 .track-status-row { grid-column: 1 / -1; display: grid; gap: 3px; }
@@ -1868,6 +1868,9 @@ html[data-theme="light"] .rollout-cap.is-hover { background: rgba(73,82,71,.07);
 .rollout-node.is-release { width: 22px; height: 22px; border-color: var(--amber); box-shadow: 0 0 0 4px rgba(213,154,77,.16); }
 
 /* интервал стоит в стыке колонок — ровно посередине между соседними узлами */
+/* Подписи внутри абсолютные, поэтому ряду нужна своя высота — иначе он
+   нулевой, а подписи вылезают за низ оси и рождают прокрутку. */
+.rollout-gaps { min-height: 20px; }
 .rollout-gaps > span { position: relative; }
 .rollout-gaps i { position: absolute; left: 0; top: 0; transform: translateX(-50%); font-style: normal; white-space: nowrap; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .rollout-gaps > span:first-child i { display: none; }
@@ -1934,7 +1937,7 @@ html[data-theme="light"] .rollout-mini.is-go:hover { color: #f2efe6; }
 .project-mini-count { flex: none; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 
 .track-rollout { display: block; width: 100%; border: 0; background: transparent; padding: 6px 0 0; margin: 0; cursor: pointer; font: inherit; text-align: left; }
-.track-rollout { overflow-x: auto; }
+.track-rollout { overflow-x: auto; overflow-y: hidden; }
 .track-rollout .rollout-node { cursor: pointer; }
 .track-rollout:hover .rollout-bar { background: var(--line-hi); }
 
