@@ -1752,71 +1752,108 @@
   // слов прямо в тексте: под прозрачным полем лежит подложка с теми же
   // строками и переносами, красим в ней.
   const LYRICS_TOOLS_KEY = 'inmise-lyrics-tools';
-  const RHYME_COLORS = ['rgba(112,238,121,.45)', 'rgba(213,154,77,.5)', 'rgba(125,149,200,.55)', 'rgba(212,85,73,.45)', 'rgba(197,138,217,.5)', 'rgba(95,196,196,.5)', 'rgba(224,179,76,.5)', 'rgba(155,212,90,.45)'];
+  const RHYME_COLORS = ['rgba(112,238,121,.45)', 'rgba(213,154,77,.5)', 'rgba(125,149,200,.55)', 'rgba(212,85,73,.45)', 'rgba(197,138,217,.5)', 'rgba(95,196,196,.5)', 'rgba(224,179,76,.5)', 'rgba(155,212,90,.45)', 'rgba(232,120,160,.45)', 'rgba(240,140,60,.45)', 'rgba(140,120,230,.5)', 'rgba(180,140,90,.5)'];
   const RHYME_WINDOW = 4; // пару ищем в пределах четырёх строк вверх и вниз
   const VOWEL_RE = /[аеиоуэюя]/;
 
   function lyricsToolsState() {
-    try { return JSON.parse(localStorage.getItem(LYRICS_TOOLS_KEY) || '{}') || {}; } catch (_) { return {}; }
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(LYRICS_TOOLS_KEY) || '{}') || {}; } catch (_) { saved = {}; }
+    if (saved.rhymes === true) saved.rhymes = 'ends';
+    return saved;
   }
 
   const countSyllables = (line) => (line.match(/[аеёиоуыэюя]/gi) || []).length;
 
-  // Ключи рифмы слова. Ударения не знаем, поэтому три кандидата:
-  // m — последний слог («окно/давно» → «но», «дом/ком» → «ом»),
-  // f — от предпоследней гласной до конца («бита/копыта» → «ита»),
-  // c — предпоследняя гласная с согласными после неё («удачи/иначе» → «ач»).
-  // start — с какой буквы красить, если ключ совпал.
-  function rhymeKeys(raw) {
+  // Разбор слова на «токены» — куски, которые могут рифмоваться.
+  // Концовки (ударения не знаем, поэтому три кандидата):
+  //   m — последний слог («окно/давно» → «но», «дом/ком» → «ом»),
+  //   f — от предпоследней гласной до конца («бита/копыта» → «ита»),
+  //   c — предпоследняя гласная с согласными после («удачи/иначе» → «ач»).
+  // Слоги (только в режиме «все рифмы»): согласная + гласная,
+  //   «четы / черту / никчемные» → «че». Голые гласные не берём.
+  function wordTokens(raw, wordId, withSyllables) {
     const word = raw.toLowerCase().replace(/ё/g, 'е').replace(/ы/g, 'и');
-    if (word.length < 3) return null;
+    if (word.length < 3) return [];
     const vowels = [];
     for (let i = 0; i < word.length; i += 1) if (VOWEL_RE.test(word[i])) vowels.push(i);
-    if (!vowels.length) return null;
+    if (!vowels.length) return [];
+    const tokens = [];
     const last = vowels[vowels.length - 1];
     const open = last === word.length - 1;
     const mStart = open && last > 0 && !VOWEL_RE.test(word[last - 1]) ? last - 1 : last;
-    const keys = [{ key: 'm:' + word.slice(mStart), start: mStart }];
+    tokens.push({ key: 'm:' + word.slice(mStart), from: mStart, to: word.length, ending: true, wordId });
     if (vowels.length > 1) {
       const prev = vowels[vowels.length - 2];
-      keys.push({ key: 'f:' + word.slice(prev), start: prev });
-      if (last - prev > 1) keys.push({ key: 'c:' + word.slice(prev, last), start: prev });
+      tokens.push({ key: 'f:' + word.slice(prev), from: prev, to: word.length, ending: true, wordId });
+      if (last - prev > 1) tokens.push({ key: 'c:' + word.slice(prev, last), from: prev, to: word.length, ending: true, wordId });
     }
-    return keys;
+    if (withSyllables) {
+      vowels.forEach((v) => {
+        const onset = v > 0 && !VOWEL_RE.test(word[v - 1]) && !/[ьъ]/.test(word[v - 1]) ? word[v - 1] : '';
+        if (onset) tokens.push({ key: 's:' + onset + word[v], from: v - 1, to: v + 1, ending: false, wordId });
+      });
+    }
+    return tokens;
   }
 
-  // Что красить: для каждой строки список { from, to, color }. Слова с общим
-  // ключом склеиваются в группу (union-find), группа — один цвет.
-  function rhymeMarks(lines) {
-    const words = [];
+  // Что красить: для каждой строки список { from, to, color }. Токены с общим
+  // ключом в пределах RHYME_WINDOW строк склеиваются в группу (union-find),
+  // группа — один цвет. Концовка слова красится поверх слогов.
+  function rhymeMarks(lines, mode) {
+    const tokens = [];
+    let wordId = 0;
     lines.forEach((line, lineIndex) => {
       for (const match of line.matchAll(/[а-яёa-z]+/gi)) {
-        const keys = rhymeKeys(match[0]);
-        if (keys) words.push({ line: lineIndex, at: match.index, length: match[0].length, keys, start: -1 });
+        wordTokens(match[0], wordId++, mode === 'all').forEach((token) => {
+          tokens.push({ ...token, line: lineIndex, from: match.index + token.from, to: match.index + token.to, active: false });
+        });
       }
     });
     const byKey = {};
-    words.forEach((word, index) => word.keys.forEach(({ key }) => { (byKey[key] = byKey[key] || []).push(index); }));
-    const parent = words.map((_, index) => index);
+    tokens.forEach((token, index) => { (byKey[token.key] = byKey[token.key] || []).push(index); });
+    const parent = tokens.map((_, index) => index);
     const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
-    words.forEach((word, index) => {
-      word.keys.forEach(({ key, start }) => {
-        const mates = byKey[key].filter((other) => other !== index && Math.abs(words[other].line - word.line) <= RHYME_WINDOW);
-        if (!mates.length) return;
-        word.start = word.start < 0 ? start : Math.min(word.start, start);
-        mates.forEach((other) => { parent[find(other)] = find(index); });
-      });
+    const union = (a, b) => { parent[find(a)] = find(b); };
+    tokens.forEach((token, index) => {
+      const mates = byKey[token.key].filter((other) => tokens[other].wordId !== token.wordId && Math.abs(tokens[other].line - token.line) <= RHYME_WINDOW);
+      if (!mates.length) return;
+      token.active = true;
+      mates.forEach((other) => union(other, index));
+    });
+    // Все концовки одного слова — одно целое, один цвет.
+    tokens.forEach((token, index) => {
+      if (token.ending && index > 0 && tokens[index - 1].ending && tokens[index - 1].wordId === token.wordId) union(index - 1, index);
     });
     const colors = {};
     let next = 0;
-    const marks = lines.map(() => []);
-    words.forEach((word, index) => {
-      if (word.start < 0) return;
+    const colorOf = (index) => {
       const root = find(index);
       if (!(root in colors)) colors[root] = RHYME_COLORS[next++ % RHYME_COLORS.length];
-      marks[word.line].push({ from: word.at + word.start, to: word.at + word.length, color: colors[root] });
+      return colors[root];
+    };
+    // Сначала концовки, потом слоги — и только на свободные клетки. Слог,
+    // чья гласная уже занята концовкой, пропускаем целиком, иначе от него
+    // остаётся одинокая крашеная согласная.
+    const paint = lines.map((line) => new Array(line.length).fill(null));
+    [true, false].forEach((endingPass) => {
+      tokens.forEach((token, index) => {
+        if (!token.active || token.ending !== endingPass) return;
+        const row = paint[token.line];
+        if (!token.ending && row[token.to - 1]) return;
+        const color = colorOf(index);
+        for (let i = token.from; i < token.to; i += 1) if (!row[i]) row[i] = color;
+      });
     });
-    return marks;
+    return paint.map((row) => {
+      const marks = [];
+      row.forEach((color, i) => {
+        const open = marks[marks.length - 1];
+        if (color && open && open.to === i && open.color === color) open.to = i + 1;
+        else if (color) marks.push({ from: i, to: i + 1, color });
+      });
+      return marks;
+    });
   }
 
   function markupLine(line, marks) {
@@ -1835,12 +1872,12 @@
     if (!gutter) return;
     const tools = lyricsToolsState();
     const showSyl = !!tools.syllables;
-    const showRhy = !!tools.rhymes;
+    const showRhy = tools.rhymes === 'ends' || tools.rhymes === 'all';
     wrap.classList.toggle('has-gutter', showSyl);
     wrap.classList.toggle('has-rhymes', showRhy);
     const backdrop = getLyricsBackdrop(textarea);
     const lines = textarea.value.split('\n');
-    const marks = showRhy ? rhymeMarks(lines) : null;
+    const marks = showRhy ? rhymeMarks(lines, tools.rhymes) : null;
     backdrop.innerHTML = lines.map((line, index) => '<div>' + (line ? markupLine(line, marks ? marks[index] : []) : '<br>') + '</div>').join('');
     backdrop.scrollTop = textarea.scrollTop;
     if (!showSyl) { gutter.innerHTML = ''; return; }
@@ -1875,10 +1912,14 @@
   function bindLyricsTools(root) {
     const state = lyricsToolsState();
     $$('[data-lyrics-tool]', root).forEach((input) => {
-      input.checked = !!state[input.dataset.lyricsTool];
+      const isRhymes = input.dataset.lyricsTool === 'rhymes';
+      input.checked = isRhymes ? state.rhymes === input.value : !!state[input.dataset.lyricsTool];
       input.addEventListener('change', () => {
         const next = lyricsToolsState();
-        next[input.dataset.lyricsTool] = input.checked;
+        if (isRhymes) {
+          next.rhymes = input.checked ? input.value : false;
+          $$('[data-lyrics-tool="rhymes"]', root).forEach((other) => { if (other !== input) other.checked = false; });
+        } else next[input.dataset.lyricsTool] = input.checked;
         try { localStorage.setItem(LYRICS_TOOLS_KEY, JSON.stringify(next)); } catch (_) {}
         $$('[data-lyrics-tools]', root).forEach(paintLyrics);
       });
@@ -3011,7 +3052,8 @@
             <header class="panel-header"><div><span class="eyebrow">Материал</span><h3>Текст</h3></div>
               <div class="lyrics-tools" role="group" aria-label="Помощники для текста">
                 <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="syllables"><span>слоги</span></label>
-                <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="rhymes"><span>рифмы</span></label>
+                <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="rhymes" value="ends"><span>рифмы в конце</span></label>
+                <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="rhymes" value="all"><span>все рифмы</span></label>
                 <button class="lyrics-beat" type="button" data-lyrics-beat hidden title="Включить бит трека"><span>▶</span> бит</button>
                 <span class="lyrics-beat-counter" data-lyrics-beat-counter hidden><b data-beat-bar></b><span data-beat-time></span><button class="text-button" type="button" data-beat-bpm hidden>указать BPM</button></span>
                 ${project ? '<button class="text-button" id="track-add-lyrics" type="button">+ Добавить</button>' : ''}
