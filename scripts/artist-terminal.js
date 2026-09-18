@@ -1062,31 +1062,27 @@
     const need = templateNeed('single');
     const runway = daysUntil(project.release_at);
     if (runway < need) {
-      // Срок короче шаблона. Не ставим перед фактом — даём три пути:
-      // перенести день Х, ужать план в то, что есть, или назначить свою дату.
+      // Срок короче шаблона. Два понятных пути: перенести день Х туда, где
+      // план поместится, или назначить свою дату. Кнопки «ужать» нет —
+      // из неё не понять ни на сколько, ни что это значит.
       const moved = addDays(new Date(), need);
       const answer = await askDialog({
         title: 'Плану нужно ' + need + ' дней, а до выхода ' + Math.max(0, runway),
-        text: 'Можно перенести день Х на ' + shortDate(moved) + ' и собрать план целиком. '
-          + 'Или оставить дату и ужать этапы в оставшиеся дни. Или назначить свою дату выхода.',
+        text: 'Перенести день Х на ' + shortDate(moved) + ' — план поместится целиком. Или назначить свою дату выхода.',
         actions: [
           { id: 'custom', label: 'Своя дата' },
-          { id: 'fit', label: 'Оставить и ужать' },
           { id: 'move', label: 'Перенести на ' + shortDate(moved), primary: true },
         ],
       });
       if (!answer) return;
       if (answer === 'custom') return offerReleaseDate(project, () => generateRollout(project, 'single', button));
-      if (answer === 'move') {
-        const iso = moved.toISOString();
-        const { error } = await db.from('artist_projects').update({ release_at: iso })
-          .eq('id', project.id).eq('artist_id', state.artist.id);
-        if (error) return toast(error.message || 'Не удалось перенести дату.', 'error');
-        project.release_at = iso;
-        state.projects = state.projects.map((row) => (row.id === project.id ? { ...row, release_at: iso } : row));
-        toast('Дата выхода перенесена на ' + shortDate(moved) + '.');
-      }
-      // 'fit' — generateRollout сам ужмёт офсеты под остаток.
+      const iso = moved.toISOString();
+      const { error } = await db.from('artist_projects').update({ release_at: iso })
+        .eq('id', project.id).eq('artist_id', state.artist.id);
+      if (error) return toast(error.message || 'Не удалось перенести дату.', 'error');
+      project.release_at = iso;
+      state.projects = state.projects.map((row) => (row.id === project.id ? { ...row, release_at: iso } : row));
+      toast('Дата выхода перенесена на ' + shortDate(moved) + '.');
     }
     await generateRollout(project, 'single', button);
     renderCalendar();
