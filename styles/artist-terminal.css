@@ -443,22 +443,21 @@ html[data-theme="light"] .soon-badge { border-color: #b3afa3; color: #6a6d63; }
 .workspace-content .button { font-size: 14px; }
 
 /* Dense dashboard based on the approved artist-terminal control desk. */
-.dashboard-command { position: relative; display: grid; grid-template-columns: minmax(205px,.72fr) minmax(260px,.95fr) minmax(300px,1.12fr) minmax(150px,.58fr); gap: 8px; align-items: end; margin-bottom: 4px; border: 1px solid var(--line); padding: 10px 14px; background: linear-gradient(180deg, #202620, #151a15); }
+.dashboard-command { position: relative; display: grid; grid-template-columns: minmax(205px,.72fr) minmax(300px,1.4fr) minmax(150px,.58fr); gap: 8px; align-items: end; margin-bottom: 4px; border: 1px solid var(--line); padding: 10px 14px; background: linear-gradient(180deg, #202620, #151a15); }
 .dashboard-identity { min-width: 0; align-self: center; }
 .dashboard-identity .eyebrow { display: block; white-space: nowrap; }
 .dashboard-identity h2 { margin: 2px 0 0; font: 500 25px 'Oswald', sans-serif; letter-spacing: .06em; text-transform: uppercase; }
-.dashboard-search-wrap { position: relative; min-width: 0; align-self: end; }
-.dashboard-search { height: 52px; min-height: 52px; display: grid; grid-template-columns: 38px minmax(0,1fr); align-items: center; border: 1px solid #465044; background: #111511; box-shadow: inset 0 2px 8px rgba(0,0,0,.65); }
-.dashboard-search > span { color: #8d998b; text-align: center; }
-.dashboard-search input { min-width: 0; width: 100%; height: 100%; border: 0; padding: 0 12px 0 0; color: var(--text); background: transparent; outline: 0; }
-.dashboard-search-results { position: absolute; top: calc(100% + 5px); left: 0; right: 0; z-index: 30; border: 1px solid #4b584a; background: #151a15; box-shadow: 0 18px 38px #000; }
-.dashboard-search-results button { width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; border-bottom: 1px solid #343b33; padding: 8px 12px; color: #c3cabf; background: transparent; text-align: left; cursor: pointer; }
-.dashboard-search-results button:hover { background: #202820; color: var(--green); }
-.dashboard-search-results small, .dashboard-search-results p { color: #899386; }
-.dashboard-search-results p { margin: 0; padding: 18px; }
 .dashboard-focus-select { min-width: 0; display: grid; gap: 4px; align-self: end; color: #9baa97; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
 .dashboard-focus-select select { width: 100%; height: 52px; min-height: 52px; border: 1px solid #465044; padding: 0 12px; color: var(--text); background: #111511; box-shadow: inset 0 2px 8px rgba(0,0,0,.65); outline: 0; font: 500 14px 'IBM Plex Mono', monospace; }
 .dashboard-focus-select select:focus { border-color: var(--green); box-shadow: inset 0 2px 8px #000, 0 0 18px rgba(112,238,121,.12); }
+/* Мягкая подсветка поля, когда к нему привели по ссылке «в фокусе». */
+.dashboard-focus-select.is-spotlit select { animation: focus-spotlight 2.2s ease-out; }
+@keyframes focus-spotlight {
+  0% { border-color: var(--green); box-shadow: 0 0 0 4px rgba(112,238,121,.35), 0 0 28px rgba(112,238,121,.3); }
+  60% { border-color: var(--green); box-shadow: 0 0 0 4px rgba(112,238,121,.2), 0 0 20px rgba(112,238,121,.2); }
+  100% { border-color: #465044; box-shadow: inset 0 2px 8px rgba(0,0,0,.65); }
+}
+.rollout-skeleton-note .text-button { font-size: inherit; color: var(--green); text-decoration: underline dotted; text-underline-offset: 3px; }
 .dashboard-start-wrap { position: relative; min-width: 0; align-self: end; }
 .dashboard-start { width: 100%; min-width: 0; height: 52px; min-height: 52px; white-space: nowrap; font-size: 17px; }
 .dashboard-start-menu { position: absolute; top: calc(100% + 7px); right: 0; z-index: 35; width: min(330px, 86vw); border: 1px solid #4b584a; padding: 5px; background: #151a15; box-shadow: 0 20px 44px #000; }
@@ -1039,7 +1038,6 @@ html:not([data-theme="light"]) .task-pipeline-card {
     linear-gradient(145deg, #1d231d, #121712);
 }
 
-html:not([data-theme="light"]) .dashboard-search,
 html:not([data-theme="light"]) .dashboard-focus-select select,
 html:not([data-theme="light"]) .field input,
 html:not([data-theme="light"]) .field textarea,
@@ -1179,13 +1177,11 @@ html[data-theme="light"] .toast.is-error { border-color: #bb918c; color: #7b2d26
 html[data-theme="light"] .dashboard-command,
 html[data-theme="light"] .pipeline-card,
 html[data-theme="light"] .task-pipeline-card { background: linear-gradient(145deg, #f1eee5, #dcd8cd); }
-html[data-theme="light"] .dashboard-search,
 html[data-theme="light"] .pipeline-column,
 html[data-theme="light"] .task-pipeline-column,
 html[data-theme="light"] .dashboard-metrics,
 html[data-theme="light"] .dashboard-upload-picker,
 html[data-theme="light"] .project-context-grid section { background: #efede5; box-shadow: inset 0 2px 8px rgba(70,62,49,.12); }
-html[data-theme="light"] .dashboard-search-results { background: #f2efe6; box-shadow: 0 18px 38px rgba(60,53,42,.2); }
 html[data-theme="light"] .dashboard-focus-select select,
 html[data-theme="light"] .dashboard-focus-meta span,
 html[data-theme="light"] .dashboard-focus-tasks section { background: #efede5; box-shadow: inset 0 2px 8px rgba(70,62,49,.12); }
@@ -1201,7 +1197,6 @@ html[data-theme="light"] .dashboard-focus-task:hover { background: #dfe9dc; }
 html[data-theme="light"] .dashboard-start-menu { border-color: #a8b2a6; background: #f2efe6; box-shadow: 0 18px 38px rgba(60,53,42,.2); }
 html[data-theme="light"] .dashboard-start-menu button { border-color: #d3cec2; color: #4f564e; }
 html[data-theme="light"] .dashboard-start-menu button:hover { color: #245d2b; background: #dfe9dc; }
-html[data-theme="light"] .dashboard-search-results button,
 html[data-theme="light"] .dashboard-upcoming-row,
 html[data-theme="light"] .dashboard-task-row,
 html[data-theme="light"] .dashboard-task,
@@ -1214,7 +1209,6 @@ html[data-theme="light"] .task-pipeline-column > header,
 html[data-theme="light"] .pipeline-add,
 html[data-theme="light"] .dashboard-calendar-weekday,
 html[data-theme="light"] .dashboard-calendar-day { border-color: #d0cbc0; }
-html[data-theme="light"] .dashboard-search-results button:hover,
 html[data-theme="light"] .dashboard-file-row:hover,
 html[data-theme="light"] .dashboard-task-row:hover { background: #dfe9dc; }
 html[data-theme="light"] .dashboard-task-row { background: rgba(244,241,232,.82); }
@@ -1300,16 +1294,11 @@ html[data-theme="light"] .dashboard-focus-select,
 html[data-theme="light"] .panel-header .eyebrow {
   color: #6f8c72;
 }
-html[data-theme="light"] .dashboard-search,
 html[data-theme="light"] .dashboard-focus-select select {
   border-color: #8f958b;
   color: #20261f;
   background: #f7f4ec;
   box-shadow: inset 0 2px 8px rgba(70,62,49,.12);
-}
-html[data-theme="light"] .dashboard-search input::placeholder {
-  color: #697169;
-  opacity: 1;
 }
 html[data-theme="light"] .dashboard-calendar-weekday {
   color: #607463;
@@ -1556,7 +1545,7 @@ html[data-theme="light"] .notes-toolbar-btn:hover {
   .track-row .track-audio { display: none; }
   .calendar-layout, .profile-layout { grid-template-columns: 1fr; }
   .dashboard-layout { grid-template-columns: 1fr; }
-  .dashboard-command { grid-template-columns: minmax(175px,.68fr) minmax(0,.9fr) minmax(220px,1fr) minmax(140px,.58fr); }
+  .dashboard-command { grid-template-columns: minmax(175px,.68fr) minmax(220px,1.2fr) minmax(140px,.58fr); }
   .links-toolbar { grid-template-columns: 1fr minmax(200px,280px) auto; }
   .links-toolbar-copy { grid-column: 1 / -1; }
   .links-grid.is-list .link-card { grid-template-columns: 110px minmax(220px,1fr) auto; }
@@ -1583,7 +1572,7 @@ html[data-theme="light"] .notes-toolbar-btn:hover {
   .dashboard-grid { grid-template-columns: 1fr; }
   .dashboard-command { grid-template-columns: 1fr auto; }
   .dashboard-identity { grid-column: 1 / -1; min-width: 0; }
-  .dashboard-search-wrap, .dashboard-focus-select { min-width: 0; }
+  .dashboard-focus-select { min-width: 0; }
   .dashboard-focus-select { grid-column: 1 / -1; }
   .dashboard-start { width: auto; min-width: 150px; }
   .dashboard-focus-meta, .dashboard-focus-tasks { grid-template-columns: 1fr; }

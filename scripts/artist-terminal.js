@@ -198,7 +198,6 @@
     secretaryLoaded: false,
     calendarDate: new Date(),
     dashboardDate: new Date(),
-    dashboardSearch: '',
     dashboardProjectId: '',
     dashboardTaskFilter: 'all', // какие задачи показывает список на дашборде: all / overdue / blocked / undated
     activeLyricsId: null,
@@ -1025,7 +1024,6 @@
     renderDashboardProjectSelect();
     renderDashboardCalendar();
     renderDashboardTasks(buckets[state.dashboardTaskFilter], selectedProject, state.dashboardTaskFilter);
-    renderDashboardSearchResults();
     renderRollout();
   }
 
@@ -1241,7 +1239,18 @@
         + '<div class="rollout-noderow"><span class="rollout-bar"></span><div class="rollout-row rollout-nodes">'
         + Array.from({ length: count }, () => '<span><span class="rollout-node"></span></span>').join('')
         + '</div></div></div></div>'
-        + '<p class="rollout-skeleton-note">Выберите трек в фокусе — здесь появится его путь.</p>';
+        + '<p class="rollout-skeleton-note">Выберите трек <button class="text-button" type="button" data-rollout-focus>в фокусе</button> — здесь появится его путь.</p>';
+      // Клик по «в фокусе» ведёт к самому селекту: прокрутка и короткая подсветка поля.
+      $('[data-rollout-focus]', host).addEventListener('click', () => {
+        const select = $('#dashboard-project-select');
+        const field = select.closest('.dashboard-focus-select') || select;
+        field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        field.classList.remove('is-spotlit');
+        void field.offsetWidth; // перезапуск анимации, если кликнули дважды
+        field.classList.add('is-spotlit');
+        setTimeout(() => { select.focus({ preventScroll: true }); }, 450);
+        setTimeout(() => field.classList.remove('is-spotlit'), 2200);
+      });
       return;
     }
 
@@ -2512,29 +2521,6 @@
     if (!bytes) return '—';
     if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} КБ`;
     return `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
-  }
-
-  function renderDashboardSearchResults() {
-    const container = $('#dashboard-search-results');
-    const query = state.dashboardSearch.trim().toLowerCase();
-    if (!query) { container.hidden = true; container.innerHTML = ''; return; }
-    const results = [
-      ...state.projects.filter((item) => item.title.toLowerCase().includes(query)).map((item) => ({ type: 'project', id: item.id, title: item.title, label: 'Проект' })),
-      ...state.beats.filter((item) => item.title.toLowerCase().includes(query)).map((item) => ({ type: 'beat', id: item.id, title: item.title, label: 'Бит' })),
-      ...state.lyrics.filter((item) => item.title.toLowerCase().includes(query) || item.body?.toLowerCase().includes(query)).map((item) => ({ type: 'lyrics', id: item.id, title: item.title, label: 'Текст' })),
-      ...state.files.filter((item) => item.original_name.toLowerCase().includes(query)).map((item) => ({ type: 'file', id: item.id, title: item.original_name, label: 'Файл' })),
-    ].slice(0, 8);
-    container.hidden = false;
-    container.innerHTML = results.length ? results.map((item) => `<button data-search-type="${item.type}" data-search-id="${item.id}" type="button"><span>${escapeHTML(item.title)}</span><small>${item.label}</small></button>`).join('') : '<p>Ничего не найдено.</p>';
-    $$('[data-search-type]', container).forEach((button) => button.addEventListener('click', () => openSearchResult(button.dataset.searchType, button.dataset.searchId)));
-  }
-
-  function openSearchResult(type, id) {
-    $('#dashboard-search-results').hidden = true;
-    if (type === 'project') return openProjectEditor(id);
-    if (type === 'beat') return goView('beats');
-    if (type === 'lyrics') { goView('lyrics'); return openLyrics(id); }
-    if (type === 'file') return downloadProjectFile(id);
   }
 
   function openTaskEditor(initialStatus = 'idea', initialProjectId = '', taskId = null) {
@@ -5153,8 +5139,6 @@
       state.dashboardTaskFilter = state.dashboardTaskFilter === next ? 'all' : next; // второй клик — снять фильтр
       renderDashboard();
     }));
-    $('#dashboard-search').addEventListener('input', (event) => { state.dashboardSearch = event.currentTarget.value; renderDashboardSearchResults(); });
-    $('#dashboard-search').addEventListener('keydown', (event) => { if (event.key === 'Escape') { event.currentTarget.value = ''; state.dashboardSearch = ''; renderDashboard(); } });
     $('#new-lyrics').addEventListener('click', () => openLyrics());
     $('#new-link').addEventListener('click', () => openLinkEditor());
     $('#links-category-filter').addEventListener('change', (event) => { state.linksCategory = event.currentTarget.value; renderLinks(); });
