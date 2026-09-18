@@ -535,7 +535,9 @@ html[data-theme="light"] .cal-badge { color: #f2efe6; }
 .dashboard-upcoming-cover { width: 35px; height: 35px; display: grid; place-items: center; border: 1px solid #313831; color: #5d6c5d; background: #090b09; }
 .dashboard-upcoming-row strong, .dashboard-upcoming-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dashboard-upcoming-row small, .dashboard-upcoming-row time { color: #5b655b; font-size: 9px; }
-.dashboard-task-list { min-height: 0; overflow: auto; }
+/* Ограничение по высоте включает прокрутку: иначе панель растёт под
+   содержимое и девятая задача просто уезжает за край. */
+.dashboard-task-list { min-height: 0; max-height: 470px; overflow: auto; }
 .dashboard-task-row { display: grid; grid-template-columns: 34px minmax(0,1fr); align-items: stretch; min-height: 56px; border-bottom: 1px solid #343b33; background: rgba(112,238,121,.025); }
 .dashboard-task-row:hover { background: rgba(112,238,121,.065); }
 .dashboard-task-row label { display: grid; place-items: center; cursor: pointer; }
@@ -1839,6 +1841,8 @@ html[data-theme="light"] .rollout-cap.is-hover { background: rgba(73,82,71,.07);
 .rollout-bar i { display: block; height: 100%; background: var(--green-dim); }
 /* Период повторов на самой линии — штрих, а не отдельная подпись сверху. */
 .rollout-band { position: absolute; top: -2px; height: 8px; background: repeating-linear-gradient(90deg, var(--amber) 0 4px, transparent 4px 9px); opacity: .75; pointer-events: none; }
+/* Закрытая доля периода — сплошная заливка поверх штриха. */
+.rollout-band i { position: absolute; left: 0; top: 0; height: 100%; background: var(--amber); }
 .rollout-nodes { position: relative; z-index: 2; height: 100%; }
 .rollout-nodes > span { display: grid; place-items: center; }
 .rollout-node { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line-hi); background: var(--panel-2); padding: 0; cursor: pointer; }

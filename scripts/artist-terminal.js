@@ -1164,9 +1164,17 @@
     // Этап с повтором — это период, а не точка: тизеры идут раз в два дня
     // до следующего узла. Штрихуем этот отрезок, иначе он выглядит перерывом.
     const step = count > 1 ? 100 / count : 0;
-    const bands = stages.map((stage, index) => (stage.repeat_rule !== 'once' && index < count - 1
-      ? '<span class="rollout-band" style="left:' + centerPct(index) + '%; width:' + step + '%" title="'
-        + escapeHTML(REPEAT_LABEL[stage.repeat_rule] || '') + '"></span>' : '')).join('');
+    const bands = stages.map((stage, index) => {
+      if (stage.repeat_rule === 'once' || index >= count - 1) return '';
+      // Доля закрытых задач этапа заливает штрих: один тизер из двух — половина.
+      const owned = STAGE_TASKS.filter((row) => row.stage === stage.title).map((row) => row.title);
+      const closed = owned.filter((title) => state.tasks.some((row) => row.project_id === stage.project_id
+        && row.title === title && row.is_done)).length;
+      const share = owned.length ? Math.round((closed / owned.length) * 100) : (stage.is_done ? 100 : 0);
+      return '<span class="rollout-band" style="left:' + centerPct(index) + '%; width:' + step + '%" title="'
+        + escapeHTML(REPEAT_LABEL[stage.repeat_rule] || '') + (owned.length ? ' · ' + closed + ' из ' + owned.length : '') + '">'
+        + (share ? '<i style="width:' + share + '%"></i>' : '') + '</span>';
+    }).join('');
     return '<div class="rollout-axis" style="--rollout-count:' + count + '">'
       + '<div class="rollout-row">' + caps + '</div>'
       + '<div class="rollout-noderow"><span class="rollout-bar"><i style="width:' + todayPct + '%"></i>' + bands + '</span>'
@@ -1746,7 +1754,7 @@
     const container = $('#dashboard-tasks');
     if (!container) return;
     const sorted = [...tasks].sort((a, b) => Number(a.is_done) - Number(b.is_done) || new Date(a.due_at || '2999-12-31') - new Date(b.due_at || '2999-12-31'));
-    container.innerHTML = sorted.length ? sorted.slice(0, 8).map((task) => {
+    container.innerHTML = sorted.length ? sorted.map((task) => {
       const project = projectById(task.project_id);
       const blockers = task.is_done ? [] : taskBlockers(task);
       const note = blockers.length
