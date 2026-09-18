@@ -1829,7 +1829,7 @@ html[data-theme="light"] .secretary-log-release { color: #3f6d94; }
 html[data-theme="light"] .secretary-hour { background: rgba(73,82,71,.045); }
 
 /* --- Путь релиза на дашборде --- */
-.dashboard-rollout-panel { grid-column: 1 / -1; min-width: 0; }
+.dashboard-rollout-panel { position: relative; grid-column: 1 / -1; min-width: 0; }
 .rollout-head-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .rollout-progress { color: var(--muted); font-size: 15px; }
 /* Пустышка бара при «Все проекты»: линия и кружки без дат и названий. */
@@ -1881,9 +1881,6 @@ html[data-theme="light"] .rollout-stage-wrap { background: rgba(73,82,71,.035); 
 .dashboard-task-row.is-blocked input[type="checkbox"] { pointer-events: none; }
 .dashboard-task-row.is-blocked label { cursor: not-allowed; }
 .dashboard-task-row.is-blocked small { color: var(--amber); }
-.rollout-cap { transition: background-color .15s ease; border-radius: 2px; }
-.rollout-cap.is-hover { background: rgba(255,255,255,.05); }
-html[data-theme="light"] .rollout-cap.is-hover { background: rgba(73,82,71,.07); }
 .rollout-cap.is-late b, .rollout-cap.is-late .rollout-cap-date { color: var(--red); }
 .rollout-cap.is-done b { color: var(--green); }
 .rollout-cap.is-release b { color: var(--amber); font-weight: 500; }
@@ -1902,12 +1899,11 @@ html[data-theme="light"] .rollout-cap.is-hover { background: rgba(73,82,71,.07);
 .rollout-node { transition: transform .15s ease, border-color .15s ease; }
 .rollout-node:hover, .rollout-node:focus-visible { border-color: var(--green); outline: none; transform: scale(1.25); }
 /* Пояснение к этапу: всплывает над узлом, у краёв прижимается внутрь оси. */
-.rollout-hint { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); z-index: 12; width: 262px; max-width: 78vw; border: 1px solid var(--line-hi); background: var(--panel-2); box-shadow: var(--shadow, 0 14px 34px rgba(0,0,0,.4)); padding: 12px 14px; text-align: left; cursor: default; }
-.rollout-hint.is-start { left: 0; transform: none; }
-.rollout-hint.is-end { left: auto; right: 0; transform: none; }
+.rollout-hint { position: absolute; z-index: 12; width: 262px; max-width: 78vw; border: 1px solid var(--line-hi); background: var(--panel-2); box-shadow: var(--shadow, 0 14px 34px rgba(0,0,0,.4)); padding: 12px 14px; text-align: left; cursor: default; }
 .rollout-hint strong { display: block; font: 500 16px 'Oswald', sans-serif; letter-spacing: .02em; color: var(--text); }
 .rollout-hint p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
-.rollout-hint-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.rollout-hint-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.rollout-hint-foot .text-button { font-size: 16px; padding: 2px 0; }
 .rollout-node.is-done { border-color: var(--green); background: var(--green); }
 .rollout-node.is-late { border-color: var(--red); }
 .rollout-node.is-release { width: 22px; height: 22px; border-color: var(--amber); box-shadow: 0 0 0 4px rgba(213,154,77,.16); }

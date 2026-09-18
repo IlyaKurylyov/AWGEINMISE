@@ -1342,19 +1342,10 @@
     $$('[data-stage-move]', host).forEach((button) => button.addEventListener('click', () => {
       moveStageToToday(button.dataset.stageMove, button);
     }));
-    const axis = $('.rollout-axis', host);
-    if (axis) {
-      const capAt = (index) => $('.rollout-cap[data-col="' + index + '"]', axis);
-      $$('.rollout-nodes > span', axis).forEach((cell) => {
-        const cap = capAt(cell.dataset.col);
-        cell.addEventListener('mouseenter', () => { if (cap) cap.classList.add('is-hover'); });
-        cell.addEventListener('mouseleave', () => { if (cap) cap.classList.remove('is-hover'); });
-      });
-      $$('.rollout-cap', axis).forEach((cap) => {
-        cap.addEventListener('mouseenter', () => cap.classList.add('is-hover'));
-        cap.addEventListener('mouseleave', () => cap.classList.remove('is-hover'));
-      });
-    }
+    // Пояснение живёт вне прокручиваемой полосы (иначе её край его режет),
+    // поэтому при прокрутке полосы под ним уезжает узел — закрываем.
+    const wrap = $('.rollout-stage-wrap', host);
+    if (wrap) wrap.addEventListener('scroll', closeStageHint);
     $$('[data-stage]', host).forEach((button) => button.addEventListener('click', (event) => {
       event.stopPropagation();
       const stage = stageById(button.dataset.stage);
@@ -1417,20 +1408,29 @@
   // задан зависимостями, и это единственное место, где можно это рассказать.
   function openStageHint(node, stage, project) {
     closeStageHint();
-    const cell = node.parentElement;
-    const total = cell.parentElement.children.length;
-    const index = Number(cell.dataset.col);
-    const side = index === 0 ? ' is-start' : (index === total - 1 ? ' is-end' : '');
+    const host = node.closest('.dashboard-rollout-panel') || node.closest('.panel') || document.body;
     const key = String(stage.title || '').trim().toLowerCase();
     const hint = STAGE_HINTS[key] || 'Свой этап плана. Дата и повтор настраиваются в правке.';
     const box = document.createElement('div');
-    box.className = 'rollout-hint' + side;
+    box.className = 'rollout-hint';
     box.innerHTML = '<strong>' + escapeHTML(stage.title) + '</strong>'
       + '<p>' + escapeHTML(hint) + '</p>'
       + '<div class="rollout-hint-foot"><span>' + shortDate(stage.stage_date)
       + (stage.repeat_rule !== 'once' ? ' · ' + REPEAT_LABEL[stage.repeat_rule] : '') + '</span>'
       + '<button class="text-button" type="button" data-hint-edit>изменить</button></div>';
-    cell.appendChild(box);
+    host.appendChild(box);
+    // Над узлом, по центру; у краёв панели прижимаем внутрь. Если сверху
+    // не помещается — под узлом.
+    const hostRect = host.getBoundingClientRect();
+    const nodeRect = node.getBoundingClientRect();
+    const width = box.offsetWidth;
+    const height = box.offsetHeight;
+    const centerX = nodeRect.left + nodeRect.width / 2 - hostRect.left;
+    const left = Math.max(8, Math.min(hostRect.width - width - 8, centerX - width / 2));
+    let top = nodeRect.top - hostRect.top - 10 - height;
+    if (top < 4) top = nodeRect.bottom - hostRect.top + 10;
+    box.style.left = Math.round(left) + 'px';
+    box.style.top = Math.round(top) + 'px';
     $('[data-hint-edit]', box).addEventListener('click', (event) => {
       event.stopPropagation();
       closeStageHint();
