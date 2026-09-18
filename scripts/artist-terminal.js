@@ -908,7 +908,9 @@
     updateSecretaryBadge();
   }
 
-  const WHEEL_COLORS = ['#c91c78', '#1fa8a9', '#d9c53f', '#5c3593', '#2f9e6b', '#e0672b', '#2758a8', '#a8296b'];
+  // Классическое колесо: спокойные насыщенные цвета через один, белые
+  // разделители, тёмный обод и ступица. Без VHS-эффектов — они были не к месту.
+  const WHEEL_COLORS = ['#c5473f', '#2f8a4c', '#d9a441', '#3b6fb6', '#8a4fb0', '#d8742c', '#2a9d8f', '#b83a7a'];
   let wheelSpinning = false;
 
   function drawWheel(tasks) {
@@ -916,8 +918,11 @@
     const ctx = canvas.getContext('2d');
     const size = canvas.width;
     const center = size / 2;
-    const radius = size / 2 - 4;
+    const rim = 10;
+    const radius = size / 2 - rim;
     const sliceAngle = (2 * Math.PI) / tasks.length;
+    // Соседние сегменты не должны совпадать по цвету, в том числе последний с первым.
+    const palette = tasks.length % WHEEL_COLORS.length === 1 && tasks.length > 1 ? WHEEL_COLORS.slice(0, -1) : WHEEL_COLORS;
     ctx.clearRect(0, 0, size, size);
     tasks.forEach((task, index) => {
       const start = index * sliceAngle;
@@ -926,22 +931,50 @@
       ctx.moveTo(center, center);
       ctx.arc(center, center, radius, start, end);
       ctx.closePath();
-      ctx.fillStyle = WHEEL_COLORS[index % WHEEL_COLORS.length];
+      ctx.fillStyle = palette[index % palette.length];
       ctx.fill();
+      ctx.strokeStyle = '#f5f2e8';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    });
+    // Подписи — после всех сегментов, чтобы разделители их не перечёркивали.
+    tasks.forEach((task, index) => {
+      const start = index * sliceAngle;
       ctx.save();
       ctx.translate(center, center);
       ctx.rotate(start + sliceAngle / 2);
       ctx.textAlign = 'right';
-      ctx.font = '600 15px "IBM Plex Mono", monospace';
-      const label = task.title.length > 22 ? `${task.title.slice(0, 21)}…` : task.title;
-      ctx.fillStyle = 'rgba(224,111,192,.75)';
-      ctx.fillText(label, radius - 15, 5);
-      ctx.fillStyle = 'rgba(31,168,169,.75)';
-      ctx.fillText(label, radius - 13, 5);
-      ctx.fillStyle = '#f2f4ef';
-      ctx.fillText(label, radius - 14, 5);
+      ctx.textBaseline = 'middle';
+      ctx.font = '500 17px "IBM Plex Mono", monospace';
+      const label = task.title.length > 22 ? task.title.slice(0, 21) + '…' : task.title;
+      ctx.shadowColor = 'rgba(0,0,0,.45)';
+      ctx.shadowBlur = 4;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(label, radius - 26, 0);
       ctx.restore();
     });
+    // Обод и ступица.
+    ctx.beginPath();
+    ctx.arc(center, center, radius + rim / 2, 0, 2 * Math.PI);
+    ctx.strokeStyle = '#1c1f1b';
+    ctx.lineWidth = rim;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(center, center, radius + rim / 2 - 1, 0, 2 * Math.PI);
+    ctx.strokeStyle = 'rgba(255,255,255,.18)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(center, center, size * 0.065, 0, 2 * Math.PI);
+    ctx.fillStyle = '#f5f2e8';
+    ctx.fill();
+    ctx.strokeStyle = '#1c1f1b';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(center, center, size * 0.02, 0, 2 * Math.PI);
+    ctx.fillStyle = '#1c1f1b';
+    ctx.fill();
   }
 
   function openWheel() {
@@ -955,6 +988,7 @@
         : 'Нет незавершённых задач для колеса.', 'error');
     }
     state.wheelTasks = pendingTasks;
+    wheelSpinning = false; // окно могли закрыть посреди вращения — иначе флаг залипает
     const canvas = $('#wheel-canvas');
     canvas.style.transition = 'none';
     canvas.style.transform = 'rotate(0deg)';
@@ -983,9 +1017,15 @@
     const extraSpins = 6 * 360;
     const landingDeg = ((270 - winnerCenterDeg) % 360 + 360) % 360;
     const targetRotation = extraSpins + landingDeg + randomJitter;
-    canvas.style.transition = 'transform 4.5s cubic-bezier(0.12, 0.67, 0.1, 1)';
+    const duration = 4500;
+    canvas.style.transition = 'transform ' + duration + 'ms cubic-bezier(0.12, 0.67, 0.1, 1)';
     canvas.style.transform = `rotate(${targetRotation}deg)`;
+    // Результат показываем по концу анимации, но transitionend в некоторых
+    // браузерах не приходит — страхуемся таймером; что сработает первым.
+    let finished = false;
     const onEnd = () => {
+      if (finished) return;
+      finished = true;
       canvas.removeEventListener('transitionend', onEnd);
       wheelSpinning = false;
       const winner = tasks[winnerIndex];
@@ -993,6 +1033,7 @@
       $('#wheel-result').hidden = false;
     };
     canvas.addEventListener('transitionend', onEnd);
+    setTimeout(onEnd, duration + 150);
   }
 
   function renderDashboard() {
