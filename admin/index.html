@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles/artist-terminal.css?v=20260918-20">
+  <link rel="stylesheet" href="/styles/artist-terminal.css?v=20260919-2">
   <script>
     (() => {
       try {
@@ -153,10 +153,11 @@
               <button class="dashboard-wheel-trigger" id="dashboard-wheel-trigger" type="button" title="Случайная задача" aria-label="Случайная задача"><span class="wheel-trigger-disc" aria-hidden="true"></span><span class="wheel-trigger-hub" aria-hidden="true"></span><i class="wheel-trigger-pointer" aria-hidden="true"></i></button>
               <header class="panel-header"><div><span class="eyebrow">Работа</span><h3 class="dashboard-tasks-heading">Задачи</h3></div><button class="text-button" id="dashboard-new-task" type="button">+ Задача</button></header>
               <div class="dashboard-task-list" id="dashboard-tasks"></div>
-              <div class="dashboard-metrics">
-                <div><span>Всего</span><strong id="stat-total">0</strong></div>
-                <div><span>Просрочено</span><strong id="stat-overdue">0</strong></div>
-                <div><span>Ждут других</span><strong id="stat-blocked">0</strong></div>
+              <div class="dashboard-metrics" role="group" aria-label="Фильтр задач">
+                <button type="button" data-task-filter="all"><span>Всего</span><strong id="stat-total">0</strong></button>
+                <button type="button" data-task-filter="overdue"><span>Просрочено</span><strong id="stat-overdue">0</strong></button>
+                <button type="button" data-task-filter="blocked"><span>Ждут других</span><strong id="stat-blocked">0</strong></button>
+                <button type="button" data-task-filter="undated"><span>Без дат</span><strong id="stat-undated">0</strong></button>
               </div>
             </article>
 
@@ -287,6 +288,6 @@
     </div>
   </div>
 
-  <script src="/scripts/artist-terminal.js?v=20260918-20"></script>
+  <script src="/scripts/artist-terminal.js?v=20260919-2"></script>
 </body>
 </html>

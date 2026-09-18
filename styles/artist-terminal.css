@@ -575,9 +575,14 @@ html[data-theme="light"] .cal-badge { color: #f2efe6; }
 .dashboard-task-row strong { font: 500 16px 'IBM Plex Mono', monospace; }
 .dashboard-task-row small { color: #8d998b; font-size: 12px; }
 .dashboard-task-row.is-done strong { color: #899386; text-decoration: line-through; }
-.dashboard-metrics { display: grid; grid-template-columns: repeat(3,1fr); border-top: 1px solid var(--line); background: #111511; }
-.dashboard-metrics div { padding: 11px; border-right: 1px solid var(--line); text-align: center; }
-.dashboard-metrics div:last-child { border-right: 0; }
+.dashboard-metrics { display: grid; grid-template-columns: repeat(4,1fr); border-top: 1px solid var(--line); background: #111511; }
+/* Каждое число — фильтр списка: кнопка, но выглядит как ячейка. */
+.dashboard-metrics button { min-width: 0; padding: 11px 6px; border: 0; border-right: 1px solid var(--line); text-align: center; color: inherit; background: transparent; font: inherit; cursor: pointer; }
+.dashboard-metrics button:last-child { border-right: 0; }
+.dashboard-metrics button:hover { background: rgba(112,238,121,.06); }
+.dashboard-metrics button.is-active { background: #1a211a; box-shadow: inset 0 -2px var(--green); }
+.dashboard-metrics button.is-active span { color: var(--text); }
+html[data-theme="light"] .dashboard-metrics button.is-active { background: #e3e0d4; }
 .dashboard-metrics span, .dashboard-metrics strong { display: block; }
 .dashboard-metrics span { color: #839081; font-size: 8px; text-transform: uppercase; }
 .dashboard-metrics strong { margin-top: 3px; color: var(--green); font: 500 22px 'Oswald', sans-serif; }

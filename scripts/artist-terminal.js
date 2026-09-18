@@ -200,6 +200,7 @@
     dashboardDate: new Date(),
     dashboardSearch: '',
     dashboardProjectId: '',
+    dashboardTaskFilter: 'all', // какие задачи показывает список на дашборде: all / overdue / blocked / undated
     activeLyricsId: null,
     lyricsReturnProjectId: '',
     activeLyricsFilter: 'all',
@@ -999,20 +1000,29 @@
     // Панель стоит под списком задач и подводит итог именно ему, по тому же
     // фильтру. Раньше «Готовность» считалась по выбранному релизу, а два
     // соседних числа — по всем сразу, и три числа жили по разным правилам.
+    // Каждое число — ещё и фильтр: клик показывает в списке только эти
+    // задачи, повторный клик возвращает всё.
     const today = dayStart(new Date()).getTime();
     const openTasks = dashboardTasks.filter((task) => !task.is_done);
-    const overdue = openTasks.filter((task) => task.due_at && dayStart(task.due_at).getTime() < today).length;
-    const blocked = openTasks.filter((task) => taskBlockers(task).length).length;
+    const buckets = {
+      all: dashboardTasks,
+      overdue: openTasks.filter((task) => task.due_at && dayStart(task.due_at).getTime() < today),
+      blocked: openTasks.filter((task) => taskBlockers(task).length),
+      undated: openTasks.filter((task) => !task.due_at),
+    };
+    if (!buckets[state.dashboardTaskFilter]) state.dashboardTaskFilter = 'all';
 
     $('#stat-total').textContent = String(openTasks.length).padStart(2, '0');
-    $('#stat-overdue').textContent = String(overdue).padStart(2, '0');
-    $('#stat-blocked').textContent = String(blocked).padStart(2, '0');
-    $('#stat-overdue').classList.toggle('is-alert', overdue > 0);
-    $('#stat-blocked').classList.toggle('is-waiting', blocked > 0);
+    $('#stat-overdue').textContent = String(buckets.overdue.length).padStart(2, '0');
+    $('#stat-blocked').textContent = String(buckets.blocked.length).padStart(2, '0');
+    $('#stat-undated').textContent = String(buckets.undated.length).padStart(2, '0');
+    $('#stat-overdue').classList.toggle('is-alert', buckets.overdue.length > 0);
+    $('#stat-blocked').classList.toggle('is-waiting', buckets.blocked.length > 0);
+    $$('[data-task-filter]').forEach((button) => button.classList.toggle('is-active', button.dataset.taskFilter === state.dashboardTaskFilter));
 
     renderDashboardProjectSelect();
     renderDashboardCalendar();
-    renderDashboardTasks(dashboardTasks, selectedProject);
+    renderDashboardTasks(buckets[state.dashboardTaskFilter], selectedProject, state.dashboardTaskFilter);
     renderDashboardSearchResults();
     renderRollout();
   }
@@ -1044,7 +1054,10 @@
   const ROLLOUT_MIN_DAYS = 28;
   const shortDate = (value) => new Date(value).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
   const longDate = (value) => new Date(value).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-  const isoDate = (value) => new Date(value).toISOString().slice(0, 10);
+  // Дата без времени по местным часам. toISOString() считает по Гринвичу:
+  // после полуночи по Москве «сегодня» выходило вчерашним, и новый этап
+  // сразу оказывался просроченным. Строку «ГГГГ-ММ-ДД» отдаём как есть.
+  const isoDate = (value) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : localDateKey(value));
   const addDays = (value, days) => { const d = new Date(value); d.setDate(d.getDate() + days); return d; };
 
   async function generateRollout(target, templateKey = 'single', button) {
@@ -1382,12 +1395,7 @@
     if (error) return toast(error.message || 'Не удалось перенести дату.', 'error');
     project.release_at = moved.toISOString();
     state.projects = state.projects.map((row) => (row.id === project.id ? { ...row, release_at: project.release_at } : row));
-    // Нулевой этап — сам день Х — тоже переезжает на новую дату.
-    const releaseStage = (state.stages || []).filter((row) => row.project_id === project.id && row.day_offset === 0)[0];
-    if (releaseStage) {
-      await db.from('release_stages').update({ stage_date: isoDate(moved) }).eq('id', releaseStage.id).eq('artist_id', state.artist.id);
-      state.stages = state.stages.map((row) => (row.id === releaseStage.id ? { ...row, stage_date: isoDate(moved) } : row));
-    }
+    await syncReleaseStage(project);
     toast('День Х перенесён на ' + shortDate(moved) + '.');
     logEvent('release', 'День Х перенесён за этапом', project.title || '', { view: 'dashboard', project: project.id });
     renderCalendar(); renderDashboard();
@@ -1446,28 +1454,47 @@
     renderRollout();
   }
 
+  // Задачи этапа, которые ещё не в нужном состоянии: открытые — если этап
+  // закрывают, закрытые — если открывают обратно.
+  function stageTasksToFlip(stage, isDone) {
+    const owned = STAGE_TASKS.filter((row) => row.stage === stage.title).map((row) => row.title);
+    return state.tasks.filter((row) => row.project_id === stage.project_id
+      && owned.includes(row.title) && !!row.is_done !== isDone);
+  }
+
+  // Этап и его задачи — одно целое: закрыл этап — задачи закрылись,
+  // открыл обратно — открылись. Иначе бар говорит «сделано», а список задач
+  // висит, и наоборот.
+  async function flipStageTasks(stage, isDone) {
+    const tasks = stageTasksToFlip(stage, isDone);
+    if (!tasks.length) return 0;
+    const ids = tasks.map((row) => row.id);
+    const workflow_status = isDone ? 'uploaded' : 'doing';
+    const { error } = await db.from('project_tasks')
+      .update({ is_done: isDone, workflow_status })
+      .in('id', ids).eq('artist_id', state.artist.id);
+    if (error) throw error;
+    state.tasks = state.tasks.map((row) => (ids.includes(row.id) ? { ...row, is_done: isDone, workflow_status } : row));
+    renderTasksView();
+    return ids.length;
+  }
+
   async function setStageDone(stageId, button) {
     const stage = stageById(stageId);
     if (!stage) return;
     // У этапа есть свои задачи — закрываем их заодно, иначе этап окажется
     // закрытым, а его задачи так и останутся висеть в списке.
-    const owned = STAGE_TASKS.filter((row) => row.stage === stage.title).map((row) => row.title);
-    const openTasks = state.tasks.filter((row) => row.project_id === stage.project_id
-      && owned.includes(row.title) && !row.is_done);
+    const openTasks = stageTasksToFlip(stage, true);
     if (openTasks.length) {
       const names = openTasks.map((row) => '· ' + row.title).join('\n');
       if (!(await askYesNo('Закрыть этап вместе с задачами?', names, 'Закрыть'))) return;
     }
     setBusy(button, true, '…');
-    if (openTasks.length) {
-      const ids = openTasks.map((row) => row.id);
-      const { error: taskError } = await db.from('project_tasks')
-        .update({ is_done: true, workflow_status: 'uploaded' })
-        .in('id', ids).eq('artist_id', state.artist.id);
-      if (taskError) { setBusy(button, false); return toast(taskError.message || 'Не удалось закрыть задачи.', 'error'); }
-      state.tasks = state.tasks.map((row) => (ids.includes(row.id)
-        ? { ...row, is_done: true, workflow_status: 'uploaded' } : row));
-      renderTasksView();
+    try {
+      await flipStageTasks(stage, true);
+    } catch (taskError) {
+      setBusy(button, false);
+      return toast(taskError.message || 'Не удалось закрыть задачи.', 'error');
     }
     const { error } = await db.from('release_stages').update({ is_done: true })
       .eq('id', stageId).eq('artist_id', state.artist.id);
@@ -1533,12 +1560,26 @@
     return true;
   }
 
+  // Кружок дня Х на баре — это этап с нулевым смещением. Его дата обязана
+  // совпадать с датой выхода: иначе календарь показывает одно, бар — другое.
+  // Двигаем без вопросов: вопрос про остальные этапы задаёт shiftStagesForRelease.
+  async function syncReleaseStage(project) {
+    if (!project || !project.release_at) return;
+    const stage = (state.stages || []).filter((row) => row.project_id === project.id && row.day_offset === 0)[0];
+    const date = isoDate(project.release_at);
+    if (!stage || stage.stage_date === date) return;
+    const { error } = await db.from('release_stages').update({ stage_date: date }).eq('id', stage.id).eq('artist_id', state.artist.id);
+    if (error) return toast(error.message || 'Не удалось перенести день Х на баре.', 'error');
+    state.stages = state.stages.map((row) => (row.id === stage.id ? { ...row, stage_date: date } : row));
+  }
+
   async function shiftStagesForRelease(project, previousReleaseAt) {
     if (!project || !project.release_at || !previousReleaseAt) return;
+    await syncReleaseStage(project);
     const delta = Math.round((dayStart(project.release_at) - dayStart(previousReleaseAt)) / 86400000);
     if (!delta) return;
     const mine = (state.stages || []).filter((stage) => stage.project_id === project.id);
-    const movable = mine.filter((stage) => !stage.is_done && !stage.is_pinned);
+    const movable = mine.filter((stage) => !stage.is_done && !stage.is_pinned && stage.day_offset !== 0);
     if (!movable.length) return;
     const keptDone = mine.filter((stage) => stage.is_done).length;
     const keptPinned = mine.filter((stage) => !stage.is_done && stage.is_pinned).length;
@@ -1550,6 +1591,16 @@
       (note ? note.trim() + '\n\n' : '') + 'Сдвинуть ' + movable.length + ' ' + plural(movable.length, 'этап', 'этапа', 'этапов') + ' на столько же?',
       'Сдвинуть');
     if (!ok) return;
+    await applyStageShift(project, movable, delta);
+  }
+
+  // Этапы, которые едут за днём Х: незакрытые, незакреплённые, не сам день Х.
+  function stagesFollowingRelease(project) {
+    return (state.stages || []).filter((stage) => stage.project_id === project.id
+      && !stage.is_done && !stage.is_pinned && stage.day_offset !== 0 && stage.stage_date);
+  }
+
+  async function applyStageShift(project, movable, delta) {
     const updates = movable.map((stage) => ({ id: stage.id, stage_date: isoDate(addDays(stage.stage_date, delta)) }));
     const results = await Promise.all(updates.map((row) => db.from('release_stages')
       .update({ stage_date: row.stage_date }).eq('id', row.id).eq('artist_id', state.artist.id)));
@@ -1651,6 +1702,13 @@
         }
         state.stages = await safeQuery(db.from('release_stages').select('*').eq('artist_id', state.artist.id).order('sort_order'));
         closeDrawer(true);
+        // Галочка «сделано» — те же задачи, что и у кнопки «сделал».
+        const flipped = stage && !!stage.is_done !== payload.is_done ? await flipStageTasks(stage, payload.is_done) : 0;
+        if (flipped) {
+          toast((payload.is_done ? 'Закрыто задач: ' : 'Открыто задач: ') + flipped + '.');
+          await syncProjectStatus(project);
+          renderDashboard();
+        }
         // Кружок дня Х — теперь единственный путь к дате выхода на баре:
         // его дата и есть дата релиза, остальные этапы спрашиваем как обычно.
         if (isRelease && delta) {
@@ -2207,7 +2265,9 @@
     bindCalendarDnD(container);
   }
 
-  function renderDashboardTasks(tasks, selectedProject = null) {
+  const TASK_FILTER_EMPTY = { overdue: 'Просроченных нет.', blocked: 'Никто никого не ждёт.', undated: 'Все задачи с датами.' };
+
+  function renderDashboardTasks(tasks, selectedProject = null, filter = 'all') {
     const container = $('#dashboard-tasks');
     if (!container) return;
     const sorted = [...tasks].sort((a, b) => Number(a.is_done) - Number(b.is_done) || new Date(a.due_at || '2999-12-31') - new Date(b.due_at || '2999-12-31'));
@@ -2221,7 +2281,7 @@
         <label><input type="checkbox" data-dashboard-task-check="${task.id}" ${task.is_done ? 'checked' : ''} ${blockers.length ? 'disabled' : ''}><span></span></label>
         <button data-open-task="${task.id}" type="button"><strong>${escapeHTML(task.title)}</strong><small>${escapeHTML(note)}</small></button>
       </article>`;
-    }).join('') : `<div class="empty-list">${selectedProject ? 'У этого релиза задач пока нет.' : 'Задач пока нет.'}</div>`;
+    }).join('') : `<div class="empty-list">${TASK_FILTER_EMPTY[filter] || (selectedProject ? 'У этого релиза задач пока нет.' : 'Задач пока нет.')}</div>`;
     $$('[data-dashboard-task-check]', container).forEach((input) => input.addEventListener('change', () => toggleTask(input.dataset.dashboardTaskCheck, input.checked)));
     bindTaskButtons(container);
     bindTaskDragSources(container);
@@ -2324,10 +2384,33 @@
   async function moveProjectToCalendar(id, dateKey) {
     const project = state.projects.find((item) => item.id === id);
     if (!project || !dateKey) return;
+    const releaseAt = dateKeyToISO(dateKey);
     const previousReleaseAt = project.release_at;
+    if (previousReleaseAt && isoDate(previousReleaseAt) === isoDate(releaseAt)) return;
+    // Спрашиваем до записи. «Отмена» значит, что ничего не поменялось —
+    // ни в календаре, ни на баре. Раньше дата писалась сразу, а вопрос
+    // был только про остальные этапы, и отмена оставляла календарь и бар
+    // в разных датах.
+    const delta = previousReleaseAt ? Math.round((dayStart(releaseAt) - dayStart(previousReleaseAt)) / 86400000) : 0;
+    const followers = previousReleaseAt ? stagesFollowingRelease(project) : [];
+    let shift = false;
+    if (previousReleaseAt) {
+      const days = Math.abs(delta);
+      const answer = await askDialog({
+        title: 'Перенести день Х на ' + shortDate(releaseAt) + '?',
+        text: followers.length
+          ? 'Это на ' + days + ' ' + plural(days, 'день', 'дня', 'дней') + (delta > 0 ? ' позже' : ' раньше') + '. Ещё '
+            + followers.length + ' ' + plural(followers.length, 'этап', 'этапа', 'этапов') + ' плана: сдвинуть их на столько же или оставить на месте?'
+          : '',
+        actions: followers.length
+          ? [{ id: 'no', label: 'Отмена' }, { id: 'one', label: 'Только день Х' }, { id: 'all', label: 'День Х и ' + followers.length + ' ' + plural(followers.length, 'этап', 'этапа', 'этапов'), primary: true }]
+          : [{ id: 'no', label: 'Отмена' }, { id: 'one', label: 'Перенести', primary: true }],
+      });
+      if (!answer || answer === 'no') return;
+      shift = answer === 'all';
+    }
     const previousStatus = project.status;
     const nextStatus = ['scheduled', 'released', 'archived'].includes(project.status) ? project.status : 'scheduled';
-    const releaseAt = dateKeyToISO(dateKey);
     project.release_at = releaseAt;
     project.status = nextStatus;
     renderDashboard();
@@ -2336,8 +2419,12 @@
       const { data, error } = await db.from('artist_projects').update({ release_at: releaseAt, status: nextStatus }).eq('id', id).eq('artist_id', state.artist.id).select().single();
       if (error) throw error;
       Object.assign(project, data);
-      toast('Релиз добавлен в календарь.');
-      if (!(await fillStageDates(project))) await shiftStagesForRelease(project, previousReleaseAt);
+      toast(previousReleaseAt ? 'День Х перенесён на ' + shortDate(releaseAt) + '.' : 'Релиз добавлен в календарь.');
+      if (!(await fillStageDates(project))) {
+        await syncReleaseStage(project);
+        if (shift && delta) await applyStageShift(project, followers, delta);
+      }
+      await syncProjectStatus(project);
       renderDashboard();
       renderCalendar();
     } catch (error) {
@@ -5058,6 +5145,11 @@
     }));
     $('#dashboard-project-select').addEventListener('change', (event) => { state.dashboardProjectId = event.currentTarget.value; renderDashboard(); });
     $('#dashboard-new-task').addEventListener('click', () => openTaskEditor('idea', state.dashboardProjectId || ''));
+    $$('[data-task-filter]').forEach((button) => button.addEventListener('click', () => {
+      const next = button.dataset.taskFilter;
+      state.dashboardTaskFilter = state.dashboardTaskFilter === next ? 'all' : next; // второй клик — снять фильтр
+      renderDashboard();
+    }));
     $('#dashboard-search').addEventListener('input', (event) => { state.dashboardSearch = event.currentTarget.value; renderDashboardSearchResults(); });
     $('#dashboard-search').addEventListener('keydown', (event) => { if (event.key === 'Escape') { event.currentTarget.value = ''; state.dashboardSearch = ''; renderDashboard(); } });
     $('#new-lyrics').addEventListener('click', () => openLyrics());
