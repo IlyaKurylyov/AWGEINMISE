@@ -350,30 +350,28 @@ html[data-theme="light"] .soon-badge { border-color: #b3afa3; color: #6a6d63; }
 
 @keyframes wheel-disc-spin { to { transform: rotate(360deg); } }
 
-/* Окно колеса — обычная панель кабинета, без телевизора. */
-.wheel-backdrop { position: fixed; inset: 0; z-index: 199; background: rgba(0,0,0,.6); }
+/* Колесо висит прямо на затемнённом фоне, без квадратной подложки. */
+.wheel-backdrop { position: fixed; inset: 0; z-index: 199; background: rgba(6,8,6,.82); backdrop-filter: blur(5px); }
 .wheel-modal {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
   z-index: 200; display: flex; flex-direction: column; align-items: center; gap: 18px;
-  width: min(52vw, 78vh, 640px);
-  border: 1px solid var(--line-hi);
-  padding: 34px 28px 26px;
-  background: linear-gradient(145deg, #1a1f1a, #111511);
-  box-shadow: 0 30px 90px rgba(0,0,0,.55);
+  width: min(52vw, 72vh, 600px);
+  padding: 16px 0 0;
+  color: #f2f4ef;
 }
+.wheel-modal .eyebrow { color: #a9b3a6; }
 .wheel-modal:not([hidden]) { animation: wheel-modal-in .22s ease-out 1; }
 @keyframes wheel-modal-in {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(.96); }
   100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
-.wheel-modal-close { position: absolute; top: 10px; right: 10px; z-index: 2; }
+.wheel-modal-close { position: fixed; top: 18px; right: 18px; z-index: 2; }
 .wheel-stage { position: relative; width: 100%; }
 .wheel-pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); z-index: 2; width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 26px solid var(--amber); filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
 .wheel-canvas { display: block; width: 100%; aspect-ratio: 1; border-radius: 50%; box-shadow: 0 18px 50px rgba(0,0,0,.5); }
 .wheel-result { text-align: center; }
 .wheel-result strong { display: block; margin-top: 4px; font: 500 24px 'Oswald', sans-serif; letter-spacing: .02em; }
 .wheel-spin-button { min-width: 180px; }
-html[data-theme="light"] .wheel-modal { border-color: #c6c1b6; background: linear-gradient(160deg, #f2efe6, #e2ded3); }
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 100; width: min(620px, 100%); border-left: 1px solid #454c43; padding: 0; background: linear-gradient(145deg, #181b18, #0c0e0c); box-shadow: -22px 0 70px #000; overflow: auto; }
 .drawer > header { position: sticky; top: 0; z-index: 2; min-height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 15px; border-bottom: 1px solid var(--line); padding: 14px 22px; background: rgba(16,18,16,.94); backdrop-filter: blur(8px); }
 .drawer > header h2 { margin: 2px 0 0; font: 500 25px 'Oswald', sans-serif; }
