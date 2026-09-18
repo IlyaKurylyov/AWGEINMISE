@@ -1213,6 +1213,7 @@
       + '<div class="rollout-noderow"><span class="rollout-bar"><i style="width:' + todayPct + '%"></i>' + bands + '</span>'
       + '<div class="rollout-row rollout-nodes">' + nodeCells + '</div>'
       + (dated ? '<span class="rollout-today" style="left:' + todayPct + '%" title="сегодня · ' + shortDate(new Date()) + '"></span>' : '')
+      + (readonly ? '' : '<button class="rollout-add" type="button" data-rollout-add title="Добавить этап" aria-label="Добавить этап">+</button>')
       + '</div>'
       + '<div class="rollout-row rollout-gaps">' + gapCells + '</div>'
       + '</div>';
@@ -1278,16 +1279,14 @@
       + '<div><span class="eyebrow">Путь релиза</span><h3>' + escapeHTML(project.title || 'Без названия') + '</h3></div>'
       + '<div class="rollout-head-actions">'
       + (doneCount ? '<span class="rollout-progress">' + doneCount + ' из ' + stages.length + '</span>' : '')
-      + '<button class="text-button" type="button" data-rollout-add>+ этап</button>'
-      + '<button class="text-button" type="button" data-rollout-reset>сбросить к шаблону</button></div></header>'
+      + '</div></header>'
       + '<div class="rollout-stage-wrap">' + rolloutAxis(stages) + '</div>'
+      // Название и дата уже на баре — в подвале только дни до выхода и сброс.
       + '<div class="rollout-foot"><div class="rollout-count">'
       + (left === null ? '<b>—</b><span>дата не назначена</span>'
         : '<b>' + Math.abs(left) + '</b><span>'
           + plural(Math.abs(left), 'день', 'дня', 'дней') + (left >= 0 ? ' до выхода' : ' назад вышел') + '</span>')
-      + '</div><div class="rollout-foot-main"><strong>' + escapeHTML(project.title || 'Без названия') + '</strong>'
-      + '<small>' + (project.release_at ? shortDate(project.release_at) : 'дня Х ещё нет')
-      + ' · ' + PROJECT_PHASE[projectPhase(project)].toLowerCase() + '</small></div></div>'
+      + '</div><button class="button rollout-reset" type="button" data-rollout-reset>Сбросить к шаблону</button></div>'
       + askBlock;
     bindRollout(host, project);
   }
