@@ -1271,8 +1271,8 @@
     const askBlock = lateList.length
       ? '<div class="rollout-ask"><div class="rollout-ask-head">'
         + '<span>' + lateList.length + ' ' + plural(lateList.length, 'этап', 'этапа', 'этапов')
-        + ' ' + plural(lateList.length, 'прошёл', 'прошли', 'прошли') + ', но не ' + plural(lateList.length, 'отмечен', 'отмечены', 'отмечены') + '</span>'
-        + '<span>система не решает за вас</span></div>'
+        + ' ' + plural(lateList.length, 'прошёл', 'прошли', 'прошли') + ', но не ' + plural(lateList.length, 'отмечен', 'отмечены', 'отмечены')
+        + ' — система не решает за вас</span></div>'
         + lateList.map((stage) => {
           const ago = Math.abs(daysUntil(stage.stage_date));
           return '<div class="rollout-ask-row"><div><strong>' + escapeHTML(stage.title) + '</strong>'

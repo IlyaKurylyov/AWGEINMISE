@@ -1942,7 +1942,7 @@ html[data-theme="light"] .rollout-cap.is-hover { background: rgba(73,82,71,.07);
    и просто не отмечен, а раньше это стоило четырёх действий через шторку. */
 /* Просроченные — списком без полосок: строки разделяет только отступ. */
 .rollout-ask { padding: 0 0 8px; }
-.rollout-ask-head { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 4px 18px 10px; color: var(--muted); font-size: 13px; }
+.rollout-ask-head { padding: 4px 18px 10px; color: var(--muted); font-size: 13px; }
 .rollout-ask-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 8px 18px; }
 .rollout-ask-row strong { display: block; font: 500 17px 'Oswald', sans-serif; letter-spacing: .02em; }
 .rollout-ask-row small { display: block; color: var(--red); font-size: 13px; }
