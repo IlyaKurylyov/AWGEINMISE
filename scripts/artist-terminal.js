@@ -141,14 +141,15 @@
   }
   // Статус трека больше не выбирают руками — он следует за закрытыми задачами.
   // Права закрыты или ничего — «Запланирован». Вокал записан — «В работе».
-  // Тронута дистрибуция, тизеры или день Х — «Продвижение». Всё — «Готово».
+  // Тронута дистрибуция или тизеры — «Продвижение». День Х закрыт — «Готово»:
+  // релиз вышел, даже если тизер остался неотмеченным.
   const PROJECT_PHASE = { planned: 'Запланирован', working: 'В работе', promo: 'Продвижение', done: 'Готово' };
   const PROMO_STAGES = ['Дистрибуция и питч', 'Пресейв и тизеры', 'День Х — во все площадки'];
   function projectPhase(project) {
     if (!project) return 'planned';
     const closed = (title) => (state.tasks || []).some((task) => task.project_id === project.id
       && task.title === title && task.is_done);
-    if (STAGE_TASKS.every((task) => closed(task.title))) return 'done';
+    if (closed('Выложить во все площадки') || STAGE_TASKS.every((task) => closed(task.title))) return 'done';
     if (STAGE_TASKS.some((task) => PROMO_STAGES.includes(task.stage) && closed(task.title))) return 'promo';
     if (closed('Записать вокал')) return 'working';
     return 'planned';
@@ -1248,8 +1249,7 @@
         field.classList.remove('is-spotlit');
         void field.offsetWidth; // перезапуск анимации, если кликнули дважды
         field.classList.add('is-spotlit');
-        setTimeout(() => { select.focus({ preventScroll: true }); }, 450);
-        setTimeout(() => field.classList.remove('is-spotlit'), 2200);
+        field.addEventListener('animationend', () => field.classList.remove('is-spotlit'), { once: true });
       });
       return;
     }
@@ -3199,7 +3199,7 @@
           <label class="cover-upload track-workspace-cover" id="project-cover-label" title="Обложка">${cover ? `<img src="${escapeHTML(cover)}" alt="Обложка">` : '<span>+</span>'}<input name="cover" type="file" accept="image/*" hidden></label>
           <div class="track-workspace-title" ${project ? `draggable="true" data-track-project-drag="${project.id}" title="Перетащите трек на нужную стадию"` : ''}>
             <input class="track-title-input" name="title" value="${escapeHTML(project?.title || '')}" required placeholder="Название трека">
-            <button class="track-release-date" type="button" data-track-setdate title="Изменить дату выхода">${project?.release_at ? 'выход ' + longDate(project.release_at) : 'дата выхода не назначена'}</button>
+            <button class="track-release-date" type="button" data-track-setdate title="Изменить дату релиза">${project?.release_at ? 'релиз ' + longDate(project.release_at) : 'дата релиза не назначена'}</button>
             <input name="status" value="${selectedStatus}" hidden>
             <input name="release_at" type="datetime-local" value="${toLocalInput(project?.release_at)}" hidden>
           </div>
