@@ -1731,20 +1731,25 @@ html[data-theme="light"] .secretary-note { background: rgba(169,111,36,.12); }
 .lyrics-body, .lyrics-body-autogrow { resize: vertical; min-height: 220px; }
 /* Уголок для растягивания рисуем сами: родной у браузера почти невидим.
    Он поверх родного и не ловит мышь, так что тянуть можно как обычно. */
-/* Помощники для текста: гаттер справа от поля — слоги числом, рифмы точкой.
-   Зеркало невидимое, нужно только чтобы мерить высоту строк с переносом. */
+/* Помощники для текста. Слоги — числа в колонке справа. Рифмы — подложка
+   под прозрачным полем с теми же шрифтом и переносами, в ней крашены
+   хвосты слов. Фон поля живёт в переменной, чтобы подложка взяла его же. */
 .lyrics-tools { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .lyrics-tool { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; cursor: pointer; user-select: none; }
 .lyrics-tool input { margin: 0; accent-color: var(--green); }
 .lyrics-tool:has(input:checked) { color: var(--green); }
-.lyrics-wrap { position: relative; display: flex; min-height: 0; }
-.lyrics-wrap textarea { flex: 1 1 auto; min-width: 0; }
+.lyrics-wrap { --lyrics-bg: #080b08; position: relative; display: flex; min-height: 0; }
+html[data-theme="light"] .lyrics-wrap { --lyrics-bg: #f8f6ef; }
+.lyrics-wrap textarea { position: relative; z-index: 1; flex: 1 1 auto; min-width: 0; }
 .lyrics-wrap.has-gutter textarea { padding-right: 64px; }
-.lyrics-gutter { position: absolute; top: 1px; right: 1px; bottom: 1px; width: 60px; overflow: hidden; padding: 12px 10px 12px 0; box-sizing: border-box; pointer-events: none; }
-.lyrics-gutter > span { display: flex; align-items: flex-start; justify-content: flex-end; gap: 8px; box-sizing: border-box; }
+.lyrics-wrap.has-rhymes textarea { background: transparent; }
+html[data-theme="light"] .lyrics-wrap.has-rhymes textarea { background: transparent; } /* правило темы сильнее, повторяем с её весом */
+.lyrics-backdrop { position: absolute; left: 0; top: 0; z-index: 0; overflow: hidden; box-sizing: border-box; border: 0 solid transparent; color: transparent; white-space: pre-wrap; overflow-wrap: break-word; pointer-events: none; }
+.lyrics-wrap.has-rhymes .lyrics-backdrop { background: var(--lyrics-bg); }
+.lyrics-backdrop mark { color: transparent; border-radius: 3px; }
+.lyrics-gutter { position: absolute; top: 1px; right: 1px; bottom: 1px; z-index: 2; width: 60px; overflow: hidden; padding: 12px 10px 12px 0; box-sizing: border-box; pointer-events: none; }
+.lyrics-gutter > span { display: flex; align-items: flex-start; justify-content: flex-end; box-sizing: border-box; }
 .lyrics-gutter b { min-width: 22px; text-align: right; color: var(--muted); font: 500 12px/1.5 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; opacity: .75; }
-.lyrics-gutter i { width: 8px; height: 8px; margin-top: 8px; border-radius: 50%; background: transparent; flex: none; }
-.lyrics-mirror { position: absolute; left: 0; top: 0; visibility: hidden; pointer-events: none; white-space: pre-wrap; overflow-wrap: break-word; box-sizing: border-box; }
 /* Плеер бита в шапке «Текст» и счётчик тактов рядом. */
 .lyrics-beat { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border: 1px solid rgba(112, 238, 121, .35); border-radius: 999px; color: var(--muted); background: transparent; font: 500 12px/1.4 'IBM Plex Mono', monospace; cursor: pointer; }
 .lyrics-beat span { font-size: 11px; }

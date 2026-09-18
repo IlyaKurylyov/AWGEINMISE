@@ -1748,10 +1748,13 @@
   }
 
   // Помощники для текста: слоги и рифмы. Считаются из самого текста, без
-  // словарей. Живут в гаттере справа от поля — в textarea буквы красить
-  // нельзя, а колонка чисел и точек читается не хуже.
+  // словарей. Слоги — числом в колонке справа. Рифмы — подкрашенные хвосты
+  // слов прямо в тексте: под прозрачным полем лежит подложка с теми же
+  // строками и переносами, красим в ней.
   const LYRICS_TOOLS_KEY = 'inmise-lyrics-tools';
-  const RHYME_COLORS = ['#70ee79', '#d59a4d', '#7d95c8', '#d45549', '#c58ad9', '#5fc4c4', '#e0b34c', '#9bd45a'];
+  const RHYME_COLORS = ['rgba(112,238,121,.45)', 'rgba(213,154,77,.5)', 'rgba(125,149,200,.55)', 'rgba(212,85,73,.45)', 'rgba(197,138,217,.5)', 'rgba(95,196,196,.5)', 'rgba(224,179,76,.5)', 'rgba(155,212,90,.45)'];
+  const RHYME_WINDOW = 4; // пару ищем в пределах четырёх строк вверх и вниз
+  const VOWEL_RE = /[аеиоуэюя]/;
 
   function lyricsToolsState() {
     try { return JSON.parse(localStorage.getItem(LYRICS_TOOLS_KEY) || '{}') || {}; } catch (_) { return {}; }
@@ -1759,78 +1762,114 @@
 
   const countSyllables = (line) => (line.match(/[аеёиоуыэюя]/gi) || []).length;
 
-  // Ключ рифмы — хвост последнего слова от последней гласной («дом/ком» → «ом»).
-  // Если слово кончается на гласную, берём и согласную перед ней
-  // («окно/давно» → «но», «бита/копыта» → «та»). Ударений мы не знаем,
-  // поэтому это слух на глазок: точные рифмы ловит, иногда ловит лишнее.
-  function rhymeKey(line) {
-    const words = line.toLowerCase().replace(/[^а-яё\s-]/g, ' ').trim().split(/\s+/);
-    const word = (words[words.length - 1] || '').replace(/ё/g, 'е').replace(/ы/g, 'и');
-    const vowels = [...word.matchAll(/[аеиоуэюя]/g)].map((m) => m.index);
-    if (!vowels.length) return '';
+  // Ключи рифмы слова. Ударения не знаем, поэтому три кандидата:
+  // m — последний слог («окно/давно» → «но», «дом/ком» → «ом»),
+  // f — от предпоследней гласной до конца («бита/копыта» → «ита»),
+  // c — предпоследняя гласная с согласными после неё («удачи/иначе» → «ач»).
+  // start — с какой буквы красить, если ключ совпал.
+  function rhymeKeys(raw) {
+    const word = raw.toLowerCase().replace(/ё/g, 'е').replace(/ы/g, 'и');
+    if (word.length < 3) return null;
+    const vowels = [];
+    for (let i = 0; i < word.length; i += 1) if (VOWEL_RE.test(word[i])) vowels.push(i);
+    if (!vowels.length) return null;
     const last = vowels[vowels.length - 1];
-    const tail = word.slice(last);
-    if (last !== word.length - 1) return tail;
-    const before = word[last - 1] || '';
-    return (/[аеиоуэюя]/.test(before) ? '' : before) + tail;
+    const open = last === word.length - 1;
+    const mStart = open && last > 0 && !VOWEL_RE.test(word[last - 1]) ? last - 1 : last;
+    const keys = [{ key: 'm:' + word.slice(mStart), start: mStart }];
+    if (vowels.length > 1) {
+      const prev = vowels[vowels.length - 2];
+      keys.push({ key: 'f:' + word.slice(prev), start: prev });
+      if (last - prev > 1) keys.push({ key: 'c:' + word.slice(prev, last), start: prev });
+    }
+    return keys;
   }
 
-  function paintLyricsGutter(textarea) {
+  // Что красить: для каждой строки список { from, to, color }. Слова с общим
+  // ключом склеиваются в группу (union-find), группа — один цвет.
+  function rhymeMarks(lines) {
+    const words = [];
+    lines.forEach((line, lineIndex) => {
+      for (const match of line.matchAll(/[а-яёa-z]+/gi)) {
+        const keys = rhymeKeys(match[0]);
+        if (keys) words.push({ line: lineIndex, at: match.index, length: match[0].length, keys, start: -1 });
+      }
+    });
+    const byKey = {};
+    words.forEach((word, index) => word.keys.forEach(({ key }) => { (byKey[key] = byKey[key] || []).push(index); }));
+    const parent = words.map((_, index) => index);
+    const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+    words.forEach((word, index) => {
+      word.keys.forEach(({ key, start }) => {
+        const mates = byKey[key].filter((other) => other !== index && Math.abs(words[other].line - word.line) <= RHYME_WINDOW);
+        if (!mates.length) return;
+        word.start = word.start < 0 ? start : Math.min(word.start, start);
+        mates.forEach((other) => { parent[find(other)] = find(index); });
+      });
+    });
+    const colors = {};
+    let next = 0;
+    const marks = lines.map(() => []);
+    words.forEach((word, index) => {
+      if (word.start < 0) return;
+      const root = find(index);
+      if (!(root in colors)) colors[root] = RHYME_COLORS[next++ % RHYME_COLORS.length];
+      marks[word.line].push({ from: word.at + word.start, to: word.at + word.length, color: colors[root] });
+    });
+    return marks;
+  }
+
+  function markupLine(line, marks) {
+    let html = '';
+    let cursor = 0;
+    marks.forEach(({ from, to, color }) => {
+      html += escapeHTML(line.slice(cursor, from)) + '<mark style="background:' + color + '">' + escapeHTML(line.slice(from, to)) + '</mark>';
+      cursor = to;
+    });
+    return html + escapeHTML(line.slice(cursor));
+  }
+
+  function paintLyrics(textarea) {
     const wrap = textarea.closest('.lyrics-wrap');
     const gutter = wrap && wrap.querySelector('.lyrics-gutter');
     if (!gutter) return;
     const tools = lyricsToolsState();
     const showSyl = !!tools.syllables;
     const showRhy = !!tools.rhymes;
-    wrap.classList.toggle('has-gutter', showSyl || showRhy);
-    if (!showSyl && !showRhy) { gutter.innerHTML = ''; return; }
-
+    wrap.classList.toggle('has-gutter', showSyl);
+    wrap.classList.toggle('has-rhymes', showRhy);
+    const backdrop = getLyricsBackdrop(textarea);
     const lines = textarea.value.split('\n');
-    // Группы рифм: одинаковый ключ в окне из восьми строк — один цвет.
-    const groups = {};
-    let nextColor = 0;
-    const colorOf = lines.map(() => '');
-    if (showRhy) {
-      lines.forEach((line, index) => {
-        const key = rhymeKey(line);
-        if (!key) return;
-        for (let back = 1; back <= 8 && index - back >= 0; back += 1) {
-          if (rhymeKey(lines[index - back]) === key) {
-            if (!groups[key]) groups[key] = RHYME_COLORS[nextColor++ % RHYME_COLORS.length];
-            colorOf[index] = groups[key]; colorOf[index - back] = groups[key];
-            break;
-          }
-        }
-      });
-    }
-
-    // Высота каждой логической строки с учётом переноса — через зеркало
-    // той же ширины и того же шрифта.
-    const mirror = getLyricsMirror(textarea);
-    gutter.innerHTML = lines.map((line, index) => {
-      mirror.textContent = line || ' ';
-      const height = mirror.getBoundingClientRect().height;
-      const syl = showSyl && line.trim() ? countSyllables(line) : '';
-      const dot = showRhy && colorOf[index] ? '<i style="background:' + colorOf[index] + '"></i>' : (showRhy ? '<i></i>' : '');
-      return '<span style="height:' + height + 'px">' + dot + '<b>' + syl + '</b></span>';
-    }).join('');
+    const marks = showRhy ? rhymeMarks(lines) : null;
+    backdrop.innerHTML = lines.map((line, index) => '<div>' + (line ? markupLine(line, marks ? marks[index] : []) : '<br>') + '</div>').join('');
+    backdrop.scrollTop = textarea.scrollTop;
+    if (!showSyl) { gutter.innerHTML = ''; return; }
+    // Высота строки с переносом берётся из подложки — там та же разметка.
+    const rows = backdrop.children;
+    gutter.innerHTML = lines.map((line, index) => '<span style="height:' + rows[index].offsetHeight + 'px"><b>' + (line.trim() ? countSyllables(line) : '') + '</b></span>').join('');
     gutter.scrollTop = textarea.scrollTop;
   }
 
-  function getLyricsMirror(textarea) {
+  // Подложка под полем: тот же шрифт, отступы и ширина, чтобы переносы
+  // совпадали буква в букву. Полоса прокрутки поля съедает ширину текста —
+  // подложке добавляем её в правый отступ.
+  function getLyricsBackdrop(textarea) {
     const wrap = textarea.closest('.lyrics-wrap');
-    let mirror = wrap.querySelector('.lyrics-mirror');
-    if (!mirror) {
-      mirror = document.createElement('div');
-      mirror.className = 'lyrics-mirror';
-      mirror.setAttribute('aria-hidden', 'true');
-      wrap.appendChild(mirror);
+    let backdrop = wrap.querySelector('.lyrics-backdrop');
+    if (!backdrop) {
+      backdrop = document.createElement('div');
+      backdrop.className = 'lyrics-backdrop';
+      backdrop.setAttribute('aria-hidden', 'true');
+      wrap.insertBefore(backdrop, textarea);
     }
     const cs = getComputedStyle(textarea);
-    ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth']
-      .forEach((prop) => { mirror.style[prop] = cs[prop]; });
-    mirror.style.width = textarea.clientWidth + 'px';
-    return mirror;
+    ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'wordSpacing', 'tabSize', 'paddingTop', 'paddingLeft', 'paddingBottom', 'borderTopWidth', 'borderLeftWidth', 'borderRightWidth', 'borderBottomWidth']
+      .forEach((prop) => { backdrop.style[prop] = cs[prop]; });
+    const scrollbar = textarea.offsetWidth - textarea.clientWidth - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth);
+    backdrop.style.paddingRight = (parseFloat(cs.paddingRight) + Math.max(0, scrollbar)) + 'px';
+    backdrop.style.width = textarea.offsetWidth + 'px';
+    backdrop.style.height = textarea.offsetHeight + 'px';
+    return backdrop;
   }
 
   function bindLyricsTools(root) {
@@ -1841,15 +1880,15 @@
         const next = lyricsToolsState();
         next[input.dataset.lyricsTool] = input.checked;
         try { localStorage.setItem(LYRICS_TOOLS_KEY, JSON.stringify(next)); } catch (_) {}
-        $$('[data-lyrics-tools]', root).forEach(paintLyricsGutter);
+        $$('[data-lyrics-tools]', root).forEach(paintLyrics);
       });
     });
     $$('[data-lyrics-tools]', root).forEach((textarea) => {
-      const repaint = () => paintLyricsGutter(textarea);
+      const repaint = () => paintLyrics(textarea);
       textarea.addEventListener('input', repaint);
       textarea.addEventListener('scroll', () => {
-        const gutter = textarea.closest('.lyrics-wrap').querySelector('.lyrics-gutter');
-        if (gutter) gutter.scrollTop = textarea.scrollTop;
+        const wrap = textarea.closest('.lyrics-wrap');
+        wrap.querySelectorAll('.lyrics-gutter, .lyrics-backdrop').forEach((node) => { node.scrollTop = textarea.scrollTop; });
       });
       if (window.ResizeObserver) new ResizeObserver(repaint).observe(textarea);
       repaint();
