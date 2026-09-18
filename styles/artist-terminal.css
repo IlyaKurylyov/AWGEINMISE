@@ -152,6 +152,10 @@ html[data-theme="light"] .soon-badge { border-color: #b3afa3; color: #6a6d63; }
 .status-chip { display: inline-flex !important; align-items: center; min-height: 24px; border: 1px solid #384039; padding: 2px 8px; color: #8b9788 !important; font-size: 9px !important; letter-spacing: .07em; text-transform: uppercase; }
 .status-chip.published, .status-chip.released, .status-chip.ready { border-color: #35623a; color: #75d77b !important; }
 .status-chip.draft, .status-chip.demo, .status-chip.mix, .status-chip.master, .status-chip.scheduled, .status-chip.planned { border-color: #6a5331; color: #cca466 !important; }
+/* Фазы трека: считаются по задачам, руками не ставятся. */
+.status-chip.phase-planned { border-color: #384039; color: #8b9788 !important; }
+.status-chip.phase-working, .status-chip.phase-promo { border-color: #6a5331; color: #cca466 !important; }
+.status-chip.phase-done { border-color: #35623a; color: #75d77b !important; }
 .timeline-row { grid-template-columns: 58px minmax(0,1fr); gap: 14px; }
 .timeline-date { border-right: 1px solid #2b302a; color: #cbd2c7; font: 500 19px 'Oswald', sans-serif; }
 .empty-list { padding: 34px 18px; color: #555e55; text-align: center; }
@@ -1937,6 +1941,10 @@ html[data-theme="light"] .rollout-mini.is-go:hover { color: #f2efe6; }
 .track-status-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
 .track-status-chip { border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; font-size: 13px; padding: 5px 9px; }
 .track-status-chip:hover { border-color: var(--green); }
+.track-status-chip.is-static { cursor: default; text-transform: uppercase; font-size: 11px; letter-spacing: .08em; color: var(--muted); }
+.track-status-chip.is-static:hover { border-color: var(--line); }
+.track-status-chip.phase-working, .track-status-chip.phase-promo { color: var(--amber); border-color: var(--amber); }
+.track-status-chip.phase-done { color: var(--green); border-color: var(--green); }
 .track-release-date { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 
 /* Диалог вопроса: без рамки, отделяется от фона тенью и затемнением. */

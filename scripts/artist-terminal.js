@@ -139,9 +139,35 @@
     return spec.needs.filter((needTitle) => state.tasks.some((row) => row.project_id === task.project_id
       && row.title === needTitle && !row.is_done));
   }
-  // Закрытая дефолтная задача продвигает трек по этапам. Назад не откатываем:
-  // если этап уже дальше, закрытие более раннней задачи ничего не меняет.
-  const TASK_STAGE_ADVANCE = { 'записать вокал': 'demo', 'свести': 'scheduled' };
+  // Статус трека больше не выбирают руками — он следует за закрытыми задачами.
+  // Права закрыты или ничего — «Запланирован». Вокал записан — «В работе».
+  // Тронута дистрибуция, тизеры или день Х — «Продвижение». Всё — «Готово».
+  const PROJECT_PHASE = { planned: 'Запланирован', working: 'В работе', promo: 'Продвижение', done: 'Готово' };
+  const PROMO_STAGES = ['Дистрибуция и питч', 'Пресейв и тизеры', 'День Х — во все площадки'];
+  function projectPhase(project) {
+    if (!project) return 'planned';
+    const closed = (title) => (state.tasks || []).some((task) => task.project_id === project.id
+      && task.title === title && task.is_done);
+    if (STAGE_TASKS.every((task) => closed(task.title))) return 'done';
+    if (STAGE_TASKS.some((task) => PROMO_STAGES.includes(task.stage) && closed(task.title))) return 'promo';
+    if (closed('Записать вокал')) return 'working';
+    return 'planned';
+  }
+
+  // В базе статус остаётся — по нему работают фильтры календаря. Но теперь
+  // он подтягивается за фазой и датой сам, а не выбирается в селекте.
+  async function syncProjectStatus(project) {
+    if (!project || project.status === 'archived') return;
+    const phase = projectPhase(project);
+    const dayPassed = project.release_at && dayStart(project.release_at).getTime() <= dayStart(new Date()).getTime();
+    const next = (phase === 'done' || dayPassed) ? 'released' : (project.release_at ? 'scheduled' : 'idea');
+    if (project.status === next) return;
+    const { error } = await db.from('artist_projects').update({ status: next })
+      .eq('id', project.id).eq('artist_id', state.artist.id);
+    if (error) return console.warn('[artist-terminal] syncProjectStatus:', error);
+    project.status = next;
+    state.projects = state.projects.map((row) => (row.id === project.id ? { ...row, status: next } : row));
+  }
   const DEFAULT_LYRICS_CATEGORIES = ['На альбом', 'Ипишка', 'В работе'];
   const LINK_CATEGORIES = { social: 'Соцсети', distribution: 'Дистрибуция', cloud: 'Облако', reference: 'Референсы', other: 'Другое' };
   const LINKS_VIEW_STORAGE_KEY = 'inmise-artist-links-view';
@@ -785,6 +811,7 @@
       }
     });
     await reconcileReleased();
+    for (const project of state.projects) await syncProjectStatus(project);
     renderEverything();
     setSystemStatus('Система онлайн');
   }
@@ -1260,7 +1287,7 @@
       + '</div><div class="rollout-foot-main"><strong>' + escapeHTML(project.title || 'Без названия') + '</strong>'
       + '<small>' + (project.release_at ? shortDate(project.release_at) : 'дня Х ещё нет')
       + '<button class="rollout-editdate" type="button" data-rollout-date aria-label="Изменить дату выхода"></button>'
-      + ' · этап «' + (PROJECT_STATUS[project.status] || project.status) + '»</small></div></div>'
+      + ' · ' + PROJECT_PHASE[projectPhase(project)].toLowerCase() + '</small></div></div>'
       + askBlock + depot;
     bindRollout(host, project);
   }
@@ -1449,6 +1476,7 @@
     setBusy(button, false);
     if (error) return toast(error.message || 'Не удалось отметить этап.', 'error');
     state.stages = state.stages.map((row) => (row.id === stageId ? { ...row, is_done: true } : row));
+    await syncProjectStatus(projectById(stage.project_id));
     logEvent('release', 'Этап закрыт', stage.title || '', { view: 'dashboard', project: stage.project_id });
     renderRollout();
     renderDashboardCalendar();
@@ -2030,24 +2058,7 @@
   }
 
   // Трек едет по этапам сам, когда закрывают ключевую задачу.
-  async function advanceProjectStage(task) {
-    const target = TASK_STAGE_ADVANCE[String(task.title || '').trim().toLowerCase()];
-    if (!target) return;
-    const project = state.projects.find((item) => item.id === task.project_id);
-    if (!project) return;
 
-    const order = Object.keys(PROJECT_STATUS);
-    // Легаси-статус master соответствует этапу «Сведение».
-    const current = project.status === 'master' ? 'mix' : (project.status || 'idea');
-    if (order.indexOf(target) <= order.indexOf(current)) return;
-
-    const { error } = await db.from('artist_projects').update({ status: target }).eq('id', project.id).eq('artist_id', state.artist.id);
-    if (error) return toast(error.message || 'Не удалось обновить этап трека.', 'error');
-    project.status = target;
-    toast(`«${project.title || 'Трек'}» → ${PROJECT_STATUS[target]}`);
-    logEvent('release', `Этап: ${PROJECT_STATUS[target]}`, project.title || '', { view: 'track', id: project.id, project: project.id });
-    if (target === 'scheduled' && !project.release_at) offerReleaseDate(project);
-  }
 
   // «Запланирован» без даты не попадёт в календарь, поэтому спрашиваем сразу.
   function offerReleaseDate(project, onSaved = null) {
@@ -2079,6 +2090,7 @@
         toast('Дата релиза сохранена.');
         if (onSaved) await onSaved();
         else if (!(await fillStageDates(project))) await shiftStagesForRelease(project, previousReleaseAt);
+        await syncProjectStatus(project);
         renderCalendar(); renderDashboard();
         if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
       } catch (error) { toast(error.message || 'Не удалось сохранить дату.', 'error'); }
@@ -2105,6 +2117,12 @@
     if (allDone) toast('Этап «' + stage.title + '» закрыт.');
   }
 
+  // Любое закрытие задачи может сменить фазу — подтягиваем статус в базе.
+  async function syncProjectFromTasks(task) {
+    const project = task && projectById(task.project_id);
+    if (project) await syncProjectStatus(project);
+  }
+
   async function toggleTask(id, isDone) {
     const previous = state.tasks.find((task) => task.id === id)?.is_done;
     const task = state.tasks.find((item) => item.id === id);
@@ -2127,8 +2145,7 @@
       const { error } = await db.from('project_tasks').update({ is_done: isDone, workflow_status: workflowStatus }).eq('id', id).eq('artist_id', state.artist.id);
       if (error) throw error;
       logEvent('task', isDone ? 'Задача закрыта' : 'Задача снова открыта', task?.title || '', { view: 'tasks', id, project: task?.project_id });
-      if (isDone && task?.project_id) await advanceProjectStage(task);
-      if (task?.project_id) await syncStageFromTasks(task);
+      if (task?.project_id) { await syncStageFromTasks(task); await syncProjectFromTasks(task); }
       renderDashboard(); renderTasksView(); renderCalendar();
       if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
     } catch (error) {
@@ -2504,7 +2521,7 @@
       const coverMarkup = cover
         ? `<img class="project-cover-bg" src="${escapeHTML(cover)}" alt="" aria-hidden="true"><img class="project-cover-fg" src="${escapeHTML(cover)}" alt="">`
         : '<span>NO COVER</span>';
-      return `<article class="project-card" data-open-project="${project.id}"><div class="project-cover">${coverMarkup}</div><div class="project-body"><span class="eyebrow">${formatDate(project.release_at)}</span><h3>${escapeHTML(project.title)}</h3><p class="project-stage-copy">${PROJECT_STATUS_HINT[project.status] || ''}</p><div class="project-meta"><span>${project.beat_id ? 'Бит выбран' : 'Без бита'}</span><span class="status-chip ${project.status}">${PROJECT_STATUS[project.status] || project.status}</span></div></div></article>`;
+      return `<article class="project-card" data-open-project="${project.id}"><div class="project-cover">${coverMarkup}</div><div class="project-body"><span class="eyebrow">${formatDate(project.release_at)}</span><h3>${escapeHTML(project.title)}</h3><div class="project-meta"><span>${project.beat_id ? 'Бит выбран' : 'Без бита'}</span><span class="status-chip phase-${projectPhase(project)}">${PROJECT_PHASE[projectPhase(project)]}</span></div></div></article>`;
     }));
     container.innerHTML = cards.join('');
     bindProjectButtons(container);
@@ -2680,7 +2697,8 @@
           </div>
           <div class="track-status-row">
             <div class="track-status-line">
-              <select class="track-status-chip" name="status" aria-label="Статус релиза">${Object.entries(PROJECT_STATUS).map(([value,label]) => `<option value="${value}" ${selectedStatus === value ? 'selected' : ''}>${label}</option>`).join('')}</select>
+              <span class="track-status-chip is-static phase-${projectPhase(project)}">${PROJECT_PHASE[projectPhase(project)]}</span>
+              <input name="status" value="${selectedStatus}" hidden>
               <span class="track-release-date">${project?.release_at ? shortDate(project.release_at) : 'дня Х нет'}</span>
               <button class="rollout-editdate" type="button" data-track-setdate aria-label="Изменить дату выхода"></button>
               <input name="release_at" type="datetime-local" value="${toLocalInput(project?.release_at)}" hidden>
@@ -3009,6 +3027,7 @@
         logEvent('release', 'Создан релиз', saved.title || 'Без названия', { view: 'track', id: saved.id, project: saved.id });
       }
       if (!(await fillStageDates(saved))) await shiftStagesForRelease(saved, previousReleaseAt);
+      await syncProjectStatus(projectById(saved.id) || saved);
       await renderProjects(); renderDashboard(); renderCalendar();
       activeWorkspaceFlush = null;
       state.activeProjectId = null;
