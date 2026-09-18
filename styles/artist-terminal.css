@@ -1843,6 +1843,10 @@ html[data-theme="light"] .secretary-hour { background: rgba(73,82,71,.045); }
 .dashboard-rollout-panel { grid-column: 1 / -1; min-width: 0; }
 .rollout-head-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .rollout-progress { color: var(--muted); font-size: 15px; }
+/* Пустышка бара при «Все проекты»: линия и кружки без дат и названий. */
+.rollout-axis.rollout-skeleton { min-width: 0; opacity: .55; }
+.rollout-skeleton .rollout-node { cursor: default; }
+.rollout-skeleton-note { margin: 0; padding: 0 18px 18px; color: var(--muted); font-size: 13px; }
 .rollout-empty { padding: 18px; }
 .rollout-empty p { margin: 0 0 14px; color: var(--muted); font-size: 15px; max-width: 70ch; }
 .rollout-empty-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
@@ -2028,12 +2032,6 @@ html[data-theme="light"] .ask-box { box-shadow: 0 24px 60px rgba(60,53,42,.35); 
 .plan-del { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 16px; cursor: pointer; }
 .plan-del:hover { color: var(--red); }
 .plan-warn { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; padding: 11px 13px; border: 1px solid var(--red); color: var(--red); font-size: 13px; }
-.rollout-depot { border-top: 1px solid var(--line); }
-.rollout-depot-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 18px; border-top: 1px solid var(--line); }
-.rollout-depot-row:first-child { border-top: 0; }
-.rollout-depot-row strong { display: block; font: 500 18px 'Oswald', sans-serif; letter-spacing: .02em; }
-.rollout-depot-row small { display: block; color: var(--muted); font-size: 14px; }
-.rollout-depot-row .text-button { font-size: 15px; }
 .stage-flags { display: grid; gap: 8px; text-transform: none; letter-spacing: 0; }
 .stage-flags label { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 15px; font-weight: 400; }
 .stage-flags input { accent-color: var(--green); }

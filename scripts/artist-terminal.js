@@ -1144,15 +1144,6 @@
   }
 
   // Релиз для пути: выбранный в фокусе, иначе ближайший по дате выхода.
-  function rolloutProject() {
-    const selected = selectedDashboardProject();
-    if (selected) return selected;
-    const dated = state.projects
-      .filter((project) => project.release_at && project.status !== 'archived')
-      .sort((a, b) => new Date(a.release_at) - new Date(b.release_at));
-    return dated[0] || null;
-  }
-
   // Одна и та же ось рисуется и на дашборде, и в карточке трека, чтобы они
   // не разъезжались. Без дат этапы всё равно стоят на линии — план виден
   // до того, как назначен день Х.
@@ -1230,20 +1221,17 @@
   function renderRollout() {
     const host = $('#dashboard-rollout');
     if (!host) return;
-    const project = rolloutProject();
-    const undated = state.projects.filter((item) => !item.release_at && !['released', 'archived'].includes(item.status));
-    const depot = undated.length
-      ? '<div class="rollout-depot">' + undated.map((item) => '<div class="rollout-depot-row">'
-        + '<div><strong>' + escapeHTML(item.title || 'Без названия') + '</strong><small>даты нет — путь не считается</small></div>'
-        + '<button class="text-button" type="button" data-rollout-setdate="' + item.id + '">Поставить дату</button>'
-        + '</div>').join('') + '</div>'
-      : '';
-
+    // Бар показывает только трек, выбранный в фокусе. «Все проекты» —
+    // пустая линия без дат и названий: видно, что бар здесь есть, и всё.
+    const project = selectedDashboardProject();
     if (!project) {
-      host.innerHTML = '<header class="panel-header"><div><span class="eyebrow">План выпуска</span><h3>Путь релиза</h3></div>'
-        + '</header>'
-        + '<p class="track-workspace-empty">Ни у одного релиза нет даты выхода. Поставьте дату — путь построится сам.</p>' + depot;
-      bindRollout(host, project);
+      const count = 6;
+      host.innerHTML = '<header class="panel-header"><div><span class="eyebrow">План выпуска</span><h3>Путь релиза</h3></div></header>'
+        + '<div class="rollout-stage-wrap"><div class="rollout-axis rollout-skeleton" style="--rollout-count:' + count + '">'
+        + '<div class="rollout-noderow"><span class="rollout-bar"></span><div class="rollout-row rollout-nodes">'
+        + Array.from({ length: count }, () => '<span><span class="rollout-node"></span></span>').join('')
+        + '</div></div></div></div>'
+        + '<p class="rollout-skeleton-note">Выберите трек в фокусе — здесь появится его путь.</p>';
       return;
     }
 
@@ -1257,8 +1245,7 @@
         // вместо шаблона предлагаем расставить даты руками.
         + '<div class="rollout-empty"><p>Плана выпуска ещё нет. Соберём его на пять недель: '
         + 'права, дистрибуция, сведение, тизеры, день Х.</p><div class="rollout-empty-actions">'
-        + '<button class="button button-primary" type="button" data-rollout-build>Собрать план</button></div></div>'
-        + depot;
+        + '<button class="button button-primary" type="button" data-rollout-build>Собрать план</button></div></div>';
       bindRollout(host, project);
       return;
     }
@@ -1301,7 +1288,7 @@
       + '</div><div class="rollout-foot-main"><strong>' + escapeHTML(project.title || 'Без названия') + '</strong>'
       + '<small>' + (project.release_at ? shortDate(project.release_at) : 'дня Х ещё нет')
       + ' · ' + PROJECT_PHASE[projectPhase(project)].toLowerCase() + '</small></div></div>'
-      + askBlock + depot;
+      + askBlock;
     bindRollout(host, project);
   }
 
@@ -1325,10 +1312,6 @@
     }));
     $$('[data-stage-move]', host).forEach((button) => button.addEventListener('click', () => {
       moveStageToToday(button.dataset.stageMove, button);
-    }));
-    $$('[data-rollout-setdate]', host).forEach((button) => button.addEventListener('click', () => {
-      const target = projectById(button.dataset.rolloutSetdate);
-      if (target) offerReleaseDate(target);
     }));
     const axis = $('.rollout-axis', host);
     if (axis) {
