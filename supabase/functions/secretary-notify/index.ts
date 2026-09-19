@@ -18,6 +18,7 @@ const EVENT_TITLES: Record<string, string> = {
   publish_failed: "Публикация не прошла",
   weekly_digest: "Сводка за неделю",
   tasks_unplanned: "Задачи без сроков",
+  task_reminder: "Напоминание по задаче",
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -123,6 +124,25 @@ async function collectDue(admin: any, artistId: string, rules: any[]) {
     }
   }
 
+  // Напоминание, выставленное у самой задачи: «за день» или «утром в срок».
+  // Правил артиста не требует — идёт во все подтверждённые каналы.
+  {
+    const { data: reminders } = await admin.from("project_tasks")
+      .select("id, title, due_at, remind_rule, assignee_name").eq("artist_id", artistId)
+      .eq("is_done", false).neq("remind_rule", "none").not("due_at", "is", null);
+    for (const task of reminders || []) {
+      const left = dayDiff(task.due_at);
+      const hit = (task.remind_rule === "day_before" && left === 1) || (task.remind_rule === "on_day" && left === 0);
+      if (!hit) continue;
+      const who = task.assignee_name ? ` (делает ${task.assignee_name})` : "";
+      due.push({
+        type: "task_reminder",
+        key: `${task.id}:${task.remind_rule}`,
+        line: `«${task.title}»${who} — ${left === 0 ? "срок сегодня" : "срок завтра"}.`,
+      });
+    }
+  }
+
   if (enabled("publish_failed").length) {
     const since = new Date(Date.now() - 36 * 3600 * 1000).toISOString();
     const { data: fails } = await admin.from("social_post_targets")
@@ -167,7 +187,7 @@ Deno.serve(async (request) => {
       const { data: channels } = await admin.from("notification_channels").select("*").eq("verified", true);
       const { data: rules } = await admin.from("notification_rules").select("*").eq("enabled", true);
       const { data: prefs } = await admin.from("notification_prefs").select("*");
-      const artistIds = Array.from(new Set((rules || []).map((rule) => rule.artist_id)));
+      const artistIds = Array.from(new Set([...(rules || []).map((rule) => rule.artist_id), ...(channels || []).map((channel) => channel.artist_id)]));
       const report: Array<{ artist: string; sent: number; skipped: number; failed: string[] }> = [];
 
       for (const artistId of artistIds) {
@@ -186,7 +206,10 @@ Deno.serve(async (request) => {
         const failed: string[] = [];
 
         for (const item of due) {
-          for (const rule of artistRules.filter((r) => r.event_type === item.type)) {
+          const routes = item.type === "task_reminder"
+            ? artistChannels.map((channel) => ({ event_type: item.type, channel_kind: channel.kind, timing: "daily" }))
+            : artistRules.filter((r) => r.event_type === item.type);
+          for (const rule of routes) {
             const channel = artistChannels.find((c) => c.kind === rule.channel_kind);
             if (!channel) continue;
 

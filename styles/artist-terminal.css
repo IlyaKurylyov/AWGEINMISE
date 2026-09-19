@@ -616,6 +616,49 @@ html[data-theme="light"] .pipeline-board .pipeline-column.is-dragover, html[data
 .dashboard-tasks-panel .text-button:hover,
 .dashboard-pipeline-panel .text-button:hover { border-color: #5b705a; color: var(--green); }
 
+/* Вкладка «Задачи»: список по релизам вместо трёх колонок. */
+.tasks-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 12px 18px; }
+.tasks-tabs { display: flex; gap: 4px; }
+.tasks-tabs button { border: 1px solid var(--line-hi); padding: 8px 14px; color: var(--muted); background: transparent; font: inherit; font-size: 14px; cursor: pointer; }
+.tasks-tabs button b { margin-left: 6px; color: var(--text); font-weight: 500; }
+.tasks-tabs button[aria-selected="true"] { color: var(--green); border-color: var(--green); }
+.tasks-release-filter { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
+.tasks-release-filter select { min-height: 38px; border: 1px solid var(--line-hi); padding: 0 10px; color: var(--text); background: var(--panel-2); font: inherit; font-size: 14px; }
+.task-group > header { display: flex; align-items: baseline; gap: 12px; padding: 18px 18px 6px; }
+.task-group > header strong { font: 500 18px 'Oswald', sans-serif; letter-spacing: .02em; }
+.task-group > header span { color: var(--muted); font-size: 13px; }
+.task-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; padding: 10px 18px; }
+.task-row label { padding-top: 2px; }
+.task-row input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: var(--green); cursor: pointer; }
+.task-row-main { display: block; width: 100%; padding: 0; border: 0; color: inherit; background: transparent; text-align: left; font: inherit; cursor: pointer; }
+.task-row-main strong { display: block; font-size: 16px; font-weight: 500; }
+.task-row-main small { display: block; margin-top: 2px; color: var(--muted); font-size: 13px; }
+.task-row-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; color: var(--muted); font-size: 12px; }
+.task-row-meta em { font-style: normal; }
+.task-row-meta em.is-late { color: var(--red); }
+.task-row-meta em.is-wait { color: var(--amber); }
+.task-row.is-done .task-row-main strong { color: var(--muted); text-decoration: line-through; }
+.task-row.is-blocked .task-row-main strong { color: var(--muted); }
+.task-row-main:hover strong { color: var(--green); }
+/* Редактор задачи: разделы без рамок, заголовок раздела — как eyebrow. */
+.task-section { margin: 18px 0 0; padding: 0; border: 0; min-width: 0; }
+.task-section legend { padding: 0; margin-bottom: 10px; color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.task-section .drawer-note { margin-top: 8px; }
+.task-materials { margin-top: 26px; }
+.task-materials > header { margin-bottom: 10px; }
+.task-materials > header h3 { margin: 2px 0 0; font: 500 18px 'Oswald', sans-serif; letter-spacing: .02em; }
+.task-material { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 8px 0; }
+.task-material-kind { color: var(--muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; padding-top: 3px; }
+.task-material p { margin: 0; white-space: pre-wrap; font-size: 14px; }
+.task-material a { color: var(--green); word-break: break-all; }
+.task-material small { display: block; color: var(--muted); font-size: 12px; }
+.task-material .text-button { font-size: 14px; text-align: left; }
+.task-materials-add { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 10px; }
+.task-materials-add .text-button { font-size: 14px; cursor: pointer; }
+.task-material-form { display: grid; gap: 8px; margin-top: 12px; }
+.task-material-form input, .task-material-form textarea { width: 100%; min-height: 40px; border: 1px solid var(--line-hi); padding: 8px 10px; color: var(--text); background: var(--panel-2); font: inherit; font-size: 14px; }
+.task-material-form-actions { display: flex; justify-content: flex-end; align-items: center; gap: 14px; }
+@media (max-width: 720px) { .task-material { grid-template-columns: minmax(0, 1fr) auto; } .task-material-kind { grid-column: 1 / -1; } }
 .task-pipeline-board { display: grid; grid-template-columns: repeat(3,minmax(190px,1fr)); gap: 8px; padding: 9px; overflow-x: auto; }
 .task-pipeline-board-full { min-height: calc(100vh - 235px); }
 .view[data-view-panel="tasks"] > .panel { border: 0; background: transparent; box-shadow: none; }
