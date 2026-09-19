@@ -616,60 +616,68 @@ html[data-theme="light"] .pipeline-board .pipeline-column.is-dragover, html[data
 .dashboard-tasks-panel .text-button:hover,
 .dashboard-pipeline-panel .text-button:hover { border-color: #5b705a; color: var(--green); }
 
-/* «Автоматизировать задачи»: шаблон прямо на баре, задачи — колонками под кружками. */
+/* «Автоматизировать задачи»: шаблон прямо на баре, задачи — колонками под кружками.
+   В покое всё — текст; поле появляется при наведении и правке. */
 .section-toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .tk-layout:has(.tpl) { grid-template-columns: 1fr; }
 .tpl { position: relative; padding: 16px 24px 20px; }
-.tpl-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+.tpl-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 10px; }
 .tpl-head .text-button { font-size: 14px; }
 .tpl-head-right { display: inline-flex; align-items: center; gap: 16px; margin-left: auto; }
-.tpl-pick { min-height: 34px; border: 1px solid var(--line-hi); padding: 0 10px; color: var(--text); background: var(--panel-2); font: inherit; font-size: 13px; }
-.tpl-title-row { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; margin-bottom: 4px; }
-.tpl-title { flex: 0 1 320px; min-width: 0; padding: 4px 8px; border: 1px solid var(--line); color: var(--text); background: rgba(0,0,0,.18); font: 500 24px/1.2 'Oswald', sans-serif; letter-spacing: .02em; outline: 0; }
-.tpl-title:focus { border-color: var(--green); }
-html[data-theme="light"] .tpl-title { border-color: #c6c1b6; background: #f7f4ec; }
+/* текст, который правится на месте */
+.tpl-text { display: inline-block; min-width: 2ch; padding: 0 2px; border-bottom: 1px solid transparent; outline: 0; cursor: text; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tpl-text:hover { border-bottom-color: var(--line-hi); }
+.tpl-text:focus { border-bottom-color: var(--green); }
+.tpl-text:empty::before { content: attr(data-placeholder); color: var(--muted); }
+/* число «за N дн.» — тоже как текст, без стрелок */
+.tpl-num { width: 3.2ch; padding: 0 1px; border: 0; border-bottom: 1px solid transparent; color: var(--text); background: transparent; font: inherit; text-align: center; outline: 0; -moz-appearance: textfield; }
+.tpl-num::-webkit-inner-spin-button, .tpl-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.tpl-num:hover { border-bottom-color: var(--line-hi); }
+.tpl-num:focus { border-bottom-color: var(--green); }
+/* выпадающий список без рамки — как слово с треугольником */
+.tpl-text-select { max-width: 100%; padding: 0 14px 0 2px; border: 0; color: var(--muted); background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0h8L4 6z' fill='%23a0a894'/%3E%3C/svg%3E") no-repeat right center; font: inherit; cursor: pointer; appearance: none; -webkit-appearance: none; }
+.tpl-text-select:hover { color: var(--text); }
+.tpl-pick { color: var(--text); font-size: 14px; }
+.tpl-title-row { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 2px; }
+.tpl-title { margin: 0; font: 500 26px/1.2 'Oswald', sans-serif; letter-spacing: .02em; }
 .tpl-title-static { margin: 0; font: 500 26px/1.2 'Oswald', sans-serif; letter-spacing: .02em; }
 .tpl-title-static small { margin-left: 10px; color: var(--muted); font: 400 12px 'IBM Plex Mono', monospace; letter-spacing: .08em; text-transform: uppercase; }
-.tpl-default { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; cursor: pointer; }
-.tpl-default input { width: 16px; height: 16px; margin: 0; accent-color: var(--green); }
-.tpl-total { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.tpl-quiet { padding: 0; border: 0; color: var(--muted); background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
+.tpl-quiet:hover { color: var(--red); }
+.tpl-total { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; white-space: nowrap; }
 .tpl-total input { width: 64px; min-height: 34px; border: 1px solid var(--line-hi); padding: 0 6px; color: var(--text); background: var(--panel-2); font: inherit; font-size: 15px; text-align: center; }
-.tpl-hint { margin: 4px 0 6px; color: var(--muted); font-size: 12px; }
+.tpl-hint { margin: 2px 0 6px; color: var(--muted); font-size: 12px; }
+/* бар шаблона */
 .tpl-bar { margin: 0 -24px; border-top: 0; }
 .tpl-bar .rollout-axis, .tpl-grid { min-width: 900px; }
-.tpl-bar .rollout-cap { align-self: end; padding: 0 5px; }
-/* имя этапа — маленькое утопленное поле над кружком, срок — под ним */
-.rollout-cap-field { display: block; width: 100%; padding: 4px 6px; border: 1px solid var(--line); color: var(--text); background: rgba(0,0,0,.18); font: inherit; font-size: 13px; line-height: 1.3; text-align: center; outline: 0; }
-.rollout-cap-field::placeholder { color: var(--muted); }
-.rollout-cap-field:focus { border-color: var(--green); }
-html[data-theme="light"] .rollout-cap-field { border-color: #c6c1b6; background: #f7f4ec; }
-.rollout-cap.is-release .rollout-cap-field { color: var(--amber); }
-.rollout-cap-days { display: inline-flex; align-items: center; justify-content: center; gap: 4px; margin-top: 3px; color: var(--muted); font-size: 12px; white-space: nowrap; }
-.rollout-cap-days input { width: 44px; min-height: 24px; border: 1px solid var(--line); padding: 0 2px; color: var(--text); background: rgba(0,0,0,.18); font: inherit; font-size: 12px; text-align: center; outline: 0; }
-.rollout-cap-days input:focus { border-color: var(--green); }
-html[data-theme="light"] .rollout-cap-days input { border-color: #c6c1b6; background: #f7f4ec; }
+.tpl-bar .rollout-cap { position: relative; align-self: end; padding: 0 8px; }
+.tpl-cap-name { display: block; font-size: 13px; line-height: 1.3; color: var(--text); font-weight: 400; }
+.rollout-cap.is-release .tpl-cap-name { color: var(--amber); font-weight: 500; }
+.tpl-cap-meta { display: flex; justify-content: center; align-items: baseline; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+.tpl-cap-meta .tpl-text-select { font-size: 11px; opacity: 0; }
+.rollout-cap:hover .tpl-cap-meta .tpl-text-select, .tpl-cap-meta .tpl-text-select:focus { opacity: 1; }
+.tpl-cap-meta .tpl-text-select:has(option:checked:not([value="once"])) { opacity: 1; }
+.tpl-cap-del { position: absolute; top: -4px; right: -2px; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; color: var(--muted); background: transparent; font: 500 14px/1 'IBM Plex Mono', monospace; cursor: pointer; opacity: 0; }
+.rollout-cap:hover .tpl-cap-del, .tpl-cap-del:focus-visible { opacity: 1; }
+.tpl-cap-del:hover { color: var(--red); }
 .rollout-gap-lead { color: var(--muted); opacity: .8; }
-/* колонки задач под кружками — та же сетка, что у кружков */
-.tpl-grid { display: grid; grid-template-columns: repeat(var(--rollout-count, 6), minmax(0, 1fr)); gap: 0; padding: 4px 36px 12px 0; } /* правый отступ — как у оси, под «+»: колонки ровно под кружками */
-.tpl-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 0 4px; border-left: 1px solid var(--line); }
-.tpl-col:first-child { border-left: 0; }
-.tpl-task { display: grid; gap: 2px; }
-.tpl-task-line { display: flex; align-items: center; gap: 4px; }
-.tpl-task-title { flex: 1; min-width: 0; padding: 3px 6px; border: 1px solid var(--line); color: var(--text); background: rgba(0,0,0,.18); font: inherit; font-size: 13px; outline: 0; }
-.tpl-task-title::placeholder { color: var(--muted); }
-.tpl-task-title:focus { border-color: var(--green); }
-html[data-theme="light"] .tpl-task-title { border-color: #c6c1b6; background: #f7f4ec; }
-.tpl-task-del { width: 24px; min-height: 24px; height: 24px; padding: 0; font-size: 13px; opacity: .5; }
-.tpl-task-del:hover { opacity: 1; }
-.tpl-needs { padding: 0; border: 0; color: var(--muted); background: transparent; font: inherit; font-size: 11px; line-height: 1.3; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
-.tpl-needs.is-on { color: var(--amber); }
+/* колонки задач под кружками — та же сетка, что у кружков, без полосок */
+.tpl-grid { display: grid; grid-template-columns: repeat(var(--rollout-count, 6), minmax(0, 1fr)); gap: 0; padding: 2px 36px 14px 0; }
+.tpl-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 0 10px; }
+.tpl-task { display: grid; grid-template-columns: 8px minmax(0, 1fr) 18px; gap: 0 6px; align-items: start; }
+.tpl-dot { width: 5px; height: 5px; margin-top: 7px; border-radius: 50%; background: var(--line-hi); }
+.tpl-task-body { min-width: 0; }
+.tpl-task-title { display: block; font-size: 13px; line-height: 1.35; color: var(--text); }
+.tpl-needs { display: block; padding: 0 2px; border: 0; color: var(--amber); background: transparent; font: inherit; font-size: 11px; line-height: 1.3; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.tpl-needs:not(.is-on) { color: var(--muted); opacity: 0; }
+.tpl-task:hover .tpl-needs:not(.is-on), .tpl-needs:focus-visible { opacity: 1; }
 .tpl-needs:hover { color: var(--green); }
-.tpl-add-task { align-self: flex-start; font-size: 12px; }
-.tpl-col-foot { display: flex; flex-direction: column; gap: 4px; margin-top: auto; padding-top: 8px; }
-.tpl-stage-repeat { min-height: 26px; max-width: 100%; border: 1px solid transparent; padding: 0 4px; color: var(--muted); background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
-.tpl-stage-repeat:hover { border-color: var(--line-hi); }
-.tpl-stage-del { align-self: flex-start; font-size: 11px; color: var(--muted); }
-.tpl-stage-del:hover { color: var(--red); }
+.tpl-task-del { width: 18px; height: 18px; padding: 0; border: 0; color: var(--muted); background: transparent; font: 500 14px/1 'IBM Plex Mono', monospace; cursor: pointer; opacity: 0; }
+.tpl-task:hover .tpl-task-del, .tpl-task-del:focus-visible { opacity: 1; }
+.tpl-task-del:hover { color: var(--red); }
+.tpl-add-task { align-self: flex-start; padding: 0 2px; border: 0; color: #7e9d7f; background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
+.tpl-add-task:hover { color: var(--green); }
+@media (hover: none) { .tpl-task-del, .tpl-cap-del, .tpl-needs:not(.is-on), .tpl-cap-meta .tpl-text-select { opacity: 1; } }
 /* окошко «ждёт»: плашки задач, включаются кликом */
 .tpl-needs-pop { position: absolute; z-index: 12; width: 360px; max-width: calc(100% - 16px); border: 1px solid var(--line-hi); background: var(--panel-2); box-shadow: var(--shadow); padding: 12px 14px; }
 .tpl-needs-pop strong { display: block; margin-bottom: 8px; font: 500 15px 'Oswald', sans-serif; letter-spacing: .02em; }
@@ -677,9 +685,10 @@ html[data-theme="light"] .tpl-task-title { border-color: #c6c1b6; background: #f
 .tpl-chip { border: 1px solid var(--line-hi); border-radius: 999px; padding: 4px 10px; color: var(--muted); background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
 .tpl-chip:hover { border-color: var(--green); color: var(--text); }
 .tpl-chip.is-on { border-color: var(--amber); color: var(--amber); }
+.tpl-title-row .tpl-chip.is-on { border-color: var(--green); color: var(--green); cursor: default; }
 .tpl-pop-note { margin: 0; color: var(--muted); font-size: 12px; }
 .tpl-back { display: inline-block; }
-@media (max-width: 720px) { .tpl-head-right { margin-left: 0; } .tpl-total { margin-left: 0; } }
+@media (max-width: 720px) { .tpl-head-right { margin-left: 0; } }
 /* Заливка «до сейчас» мягко пульсирует слева направо — видно, что план живой. */
 .rollout-bar > i { position: relative; overflow: hidden; }
 .rollout-bar > i::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 45%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); transform: translateX(-120%); animation: rollout-pulse 3.2s ease-in-out infinite; }

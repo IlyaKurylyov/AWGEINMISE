@@ -1359,9 +1359,13 @@
 
     const caps = stages.map((stage, index) => '<span class="rollout-cap ' + stageClass(stage) + '" data-col="' + index + '">'
       + (template
-        ? '<input class="rollout-cap-field" data-tcap="' + stage.id + '" value="' + escapeHTML(stage.title) + '" placeholder="' + (stage.day_offset === 0 ? 'День Х' : 'Этап ' + (index + 1)) + '" aria-label="Название этапа">'
-          + (stage.day_offset === 0 ? '<span class="rollout-cap-date">день Х</span>'
-            : '<span class="rollout-cap-days">за <input type="number" min="1" max="365" data-toff="' + stage.id + '" value="' + Math.abs(stage.day_offset) + '" aria-label="За сколько дней до дня Х"> дн.</span>')
+        ? '<b class="tpl-text tpl-cap-name" contenteditable="plaintext-only" spellcheck="false" data-tcap="' + stage.id + '" data-placeholder="' + (stage.day_offset === 0 ? 'День Х' : 'Этап ' + (index + 1)) + '" aria-label="Название этапа">' + escapeHTML(stage.title) + '</b>'
+          + '<span class="rollout-cap-date tpl-cap-meta">'
+          + (stage.day_offset === 0 ? 'день Х'
+            : 'за <input class="tpl-num" type="number" min="1" max="365" data-toff="' + stage.id + '" value="' + Math.abs(stage.day_offset) + '" aria-label="За сколько дней до дня Х"> дн.')
+          + '<select class="tpl-text-select" data-trep="' + stage.id + '" aria-label="Повтор">' + Object.entries(TEMPLATE_REPEAT).map(([value, label]) => '<option value="' + value + '"' + (value === stage.repeat_rule ? ' selected' : '') + '>' + (value === 'once' ? '· один раз' : '· ' + label) + '</option>').join('') + '</select>'
+          + '</span>'
+          + (stage.day_offset === 0 ? '' : '<button class="tpl-cap-del" type="button" data-tdel="' + stage.id + '" aria-label="Удалить этап" title="Удалить этап">×</button>')
         : '<b>' + escapeHTML(stage.title) + '</b><span class="rollout-cap-date">' + capDate(stage) + '</span>')
       + '</span>').join('');
 
@@ -2835,46 +2839,55 @@
     }
     const stages = templateStagesOf(template.id);
     const tasks = templateTasksOf(template.id);
-    const taskTitle = (id) => (tasks.find((row) => row.id === id) || {}).title || '';
+    const taskTitle = (id) => (tasks.find((row) => row.id === id) || {}).title || 'без названия';
     const pick = (state.templates || []).length > 1
-      ? '<select class="tpl-pick" data-tpl-pick aria-label="Шаблон">' + state.templates.map((row) => '<option value="' + row.id + '"' + (row.id === template.id ? ' selected' : '') + '>' + escapeHTML(row.title) + (row.is_default ? ' · основной' : '') + '</option>').join('') + '</select>'
+      ? '<select class="tpl-text-select tpl-pick" data-tpl-pick aria-label="Шаблон">' + state.templates.map((row) => '<option value="' + row.id + '"' + (row.id === template.id ? ' selected' : '') + '>' + escapeHTML(row.title) + (row.is_default ? ' · основной' : '') + '</option>').join('') + '</select>'
       : '';
+    // Задача — строка списка: маркер, название переносится, «ждёт» мелким
+    // под ним, если задано. Крестик и «+ ждёт» — при наведении.
     const taskRow = (task) => {
       const needs = (task.needs || []).filter((id) => tasks.some((row) => row.id === id));
-      return '<div class="tpl-task" data-tt="' + task.id + '">'
-        + '<div class="tpl-task-line"><input class="tpl-task-title" data-tt-title value="' + escapeHTML(task.title) + '" placeholder="Название задачи" aria-label="Задача">'
-        + '<button class="icon-button tpl-task-del" type="button" data-tt-delete aria-label="Удалить задачу">×</button></div>'
-        + '<button class="tpl-needs' + (needs.length ? ' is-on' : '') + '" type="button" data-tt-needs>' + (needs.length ? 'ждёт: ' + needs.map((id) => escapeHTML(taskTitle(id))).join(', ') : '+ ждёт') + '</button>'
-        + '</div>';
+      return '<div class="tpl-task" data-tt="' + task.id + '"><span class="tpl-dot" aria-hidden="true"></span>'
+        + '<div class="tpl-task-body"><span class="tpl-text tpl-task-title" contenteditable="plaintext-only" spellcheck="false" data-tt-title data-placeholder="Название задачи" aria-label="Задача">' + escapeHTML(task.title) + '</span>'
+        + '<button class="tpl-needs' + (needs.length ? ' is-on' : '') + '" type="button" data-tt-needs>' + (needs.length ? 'ждёт: ' + needs.map((id) => escapeHTML(taskTitle(id))).join(', ') : '+ ждёт') + '</button></div>'
+        + '<button class="tpl-task-del" type="button" data-tt-delete aria-label="Удалить задачу">×</button></div>';
     };
-    const columns = stages.map((stage, index) => {
-      const own = tasks.filter((task) => task.stage_id === stage.id);
-      const dayX = stage.day_offset === 0;
-      return '<div class="tpl-col" data-ts="' + stage.id + '">'
-        + own.map(taskRow).join('')
-        + '<button class="text-button tpl-add-task" type="button" data-ts-add-task>+ задача</button>'
-        + '<div class="tpl-col-foot"><select class="tpl-stage-repeat" data-ts-repeat aria-label="Повтор">' + Object.entries(TEMPLATE_REPEAT).map(([value, label]) => '<option value="' + value + '"' + (value === stage.repeat_rule ? ' selected' : '') + '>' + label + '</option>').join('') + '</select>'
-        + (dayX ? '' : '<button class="text-button tpl-stage-del" type="button" data-ts-delete>удалить этап</button>') + '</div>'
-        + '</div>';
-    }).join('');
+    const columns = stages.map((stage) => '<div class="tpl-col" data-ts="' + stage.id + '">'
+      + tasks.filter((task) => task.stage_id === stage.id).map(taskRow).join('')
+      + '<button class="tpl-add-task" type="button" data-ts-add-task>+ задача</button></div>').join('');
     host.innerHTML = '<section class="panel tpl">'
       + '<div class="tpl-head"><button class="text-button tpl-back" type="button" data-tpl-back>← к задачам</button>' + pick
       + '<button class="text-button" type="button" data-tpl-new>+ новый шаблон</button>'
-      + '<span class="tpl-head-right"><label class="tpl-default"><input type="checkbox" data-tpl-default' + (template.is_default ? ' checked' : '') + '> основной для новых релизов</label>'
-      + (!template.is_builtin ? '<button class="text-button" type="button" data-tpl-delete>удалить шаблон</button>' : '') + '</span></div>'
+      + '<span class="tpl-head-right"><label class="tpl-total">На релиз закладываю <input type="number" min="1" max="365" data-tpl-total value="' + (template.total_days || 35) + '"> дн.</label></span></div>'
       + '<div class="tpl-title-row">'
       + (template.is_builtin
         ? '<h2 class="tpl-title-static">' + escapeHTML(template.title) + '<small>наш шаблон</small></h2>'
-        : '<input class="tpl-title" data-tpl-title value="' + escapeHTML(template.title) + '" placeholder="Название шаблона" aria-label="Название шаблона" title="Нажмите, чтобы переименовать">')
-      + '<label class="tpl-total">На релиз закладываю <input type="number" min="1" max="365" data-tpl-total value="' + (template.total_days || 35) + '"> дн.</label>'
+        : '<h2 class="tpl-text tpl-title" contenteditable="plaintext-only" spellcheck="false" data-tpl-title data-placeholder="Название шаблона" aria-label="Название шаблона" title="Нажмите, чтобы переименовать">' + escapeHTML(template.title) + '</h2>')
+      + '<button class="tpl-chip' + (template.is_default ? ' is-on' : '') + '" type="button" data-tpl-default title="' + (template.is_default ? 'Новые релизы собираются по этому шаблону' : 'Сделать основным для новых релизов') + '">' + (template.is_default ? 'основной' : 'сделать основным') + '</button>'
+      + (!template.is_builtin ? '<button class="tpl-quiet" type="button" data-tpl-delete>удалить шаблон</button>' : '')
       + '</div>'
-      + '<p class="tpl-hint">Имя этапа и за сколько дней он начинается — над кружком. Под кружком — его задачи. Время на этап — до начала следующего. Уже созданные релизы не меняются.</p>'
+      + '<p class="tpl-hint">Нажмите на имя или число — оно правится на месте. Время на этап — до начала следующего. Уже созданные релизы не меняются.</p>'
       + '<div class="rollout-stage-wrap tpl-bar">'
       + rolloutAxis(stages.map((stage) => ({ ...stage, stage_date: null, is_done: false, is_pinned: false })), { readonly: true, template: true, totalDays: template.total_days || 35 })
       + '<div class="tpl-grid" style="--rollout-count:' + stages.length + '">' + columns + '</div>'
       + '</div>'
       + '</section>';
     bindTemplateEditor(host, template, stages, tasks);
+  }
+
+  // Текст, который правится на месте: Enter — готово, Escape — как было,
+  // ушёл из поля — сохранилось, если что-то поменялось.
+  function bindInlineText(node, onCommit) {
+    const initial = node.textContent;
+    node.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') { event.preventDefault(); node.blur(); }
+      if (event.key === 'Escape') { node.textContent = initial; node.blur(); }
+    });
+    node.addEventListener('blur', () => {
+      const next = node.textContent.replace(/\s+/g, ' ').trim();
+      if (next !== initial.trim()) onCommit(next);
+      else node.textContent = initial;
+    });
   }
 
   async function templateWrite(query, okMessage = '') {
@@ -2914,7 +2927,6 @@
     const total = template.total_days || 35;
     const stageWhere = (id, query) => query.eq('id', id).eq('artist_id', state.artist.id);
     const taskWhere = (id, query) => query.eq('id', id).eq('artist_id', state.artist.id);
-    const onEnterBlur = (input) => input.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); input.blur(); } });
 
     $('[data-tpl-back]', host).addEventListener('click', () => { state.tasksMode = 'list'; renderTasksView(); });
     $('[data-tpl-pick]', host)?.addEventListener('change', (event) => { state.templateEditId = event.target.value; renderTasksView(); });
@@ -2926,17 +2938,13 @@
       renderTasksView();
       toast('Пустой шаблон создан. Назовите его и заполните этапы.');
     });
-    const titleInput = $('[data-tpl-title]', host);
-    if (titleInput) {
-      titleInput.addEventListener('change', async () => {
-        const next = titleInput.value.trim();
-        if (!next) { titleInput.value = template.title; return; }
-        if (await templateWrite(db.from('release_templates').update({ title: next, updated_at: new Date().toISOString() }).eq('id', template.id).eq('artist_id', state.artist.id))) reload();
-      });
-      onEnterBlur(titleInput);
-    }
-    $('[data-tpl-default]', host).addEventListener('change', async (event) => {
-      if (!event.target.checked) { event.target.checked = true; return toast('Основной шаблон должен быть один — выберите другой основным.'); }
+    const titleNode = $('[data-tpl-title]', host);
+    if (titleNode) bindInlineText(titleNode, async (next) => {
+      if (!next) { titleNode.textContent = template.title; return; }
+      if (await templateWrite(db.from('release_templates').update({ title: next, updated_at: new Date().toISOString() }).eq('id', template.id).eq('artist_id', state.artist.id))) reload();
+    });
+    $('[data-tpl-default]', host).addEventListener('click', async () => {
+      if (template.is_default) return toast('Этот шаблон уже основной. Чтобы сменить — откройте другой и нажмите «сделать основным».');
       await db.from('release_templates').update({ is_default: false }).eq('artist_id', state.artist.id).neq('id', template.id);
       if (await templateWrite(db.from('release_templates').update({ is_default: true }).eq('id', template.id).eq('artist_id', state.artist.id), 'Теперь новые релизы собираются по этому шаблону.')) reload();
     });
@@ -2961,15 +2969,12 @@
         next !== total ? 'Срок ' + next + ' дн.: этапы пересчитаны пропорционально.' : '')) reload();
     });
 
-    // Над кружком: имя и «за N дней».
-    $$('[data-tcap]', host).forEach((input) => {
-      const stage = stages.find((row) => row.id === input.dataset.tcap);
-      input.addEventListener('change', async () => {
-        const next = input.value.trim();
-        if (next === (stage.title || '')) return;
+    // Над кружком: имя, «за N дн.», повтор, крестик.
+    $$('[data-tcap]', host).forEach((node) => {
+      const stage = stages.find((row) => row.id === node.dataset.tcap);
+      bindInlineText(node, async (next) => {
         if (await templateWrite(stageWhere(stage.id, db.from('template_stages').update({ title: next })))) reload();
       });
-      onEnterBlur(input);
     });
     $$('[data-toff]', host).forEach((input) => {
       const stage = stages.find((row) => row.id === input.dataset.toff);
@@ -2979,8 +2984,19 @@
         if (days > total) { input.value = Math.abs(stage.day_offset); return toast('Это дальше срока релиза (' + total + ' дн.). Увеличьте срок вверху.', 'error'); }
         if (await templateWrite(stageWhere(stage.id, db.from('template_stages').update({ day_offset: -days })))) reload();
       });
-      onEnterBlur(input);
+      input.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); input.blur(); } });
     });
+    $$('[data-trep]', host).forEach((select) => select.addEventListener('change', async () => {
+      if (await templateWrite(stageWhere(select.dataset.trep, db.from('template_stages').update({ repeat_rule: select.value })))) reload();
+    }));
+    $$('[data-tdel]', host).forEach((button) => button.addEventListener('click', async () => {
+      const stage = stages.find((row) => row.id === button.dataset.tdel);
+      const own = tasks.filter((task) => task.stage_id === stage.id);
+      const text = own.length ? 'Вместе с ним уйдут ' + own.length + ' ' + plural(own.length, 'задача', 'задачи', 'задач') + ': ' + own.map((task) => '«' + (task.title || 'без названия') + '»').join(', ') + '.' : '';
+      if (!(await askYesNo('Удалить этап «' + stageLabel(stage, stages.indexOf(stage)) + '»?', text, 'Удалить', true))) return;
+      if (own.length) await db.from('template_tasks').delete().in('id', own.map((task) => task.id)).eq('artist_id', state.artist.id);
+      if (await templateWrite(stageWhere(stage.id, db.from('template_stages').delete()))) reload();
+    }));
     // «+» на конце линии: новый этап на неделю раньше самого раннего; нет
     // места — в середину самого широкого промежутка.
     $('[data-tpl-add-node]', host)?.addEventListener('click', async () => {
@@ -3004,16 +3020,6 @@
     // Колонки под кружками.
     $$('[data-ts]', host).forEach((col) => {
       const stage = stages.find((row) => row.id === col.dataset.ts);
-      const own = tasks.filter((task) => task.stage_id === stage.id);
-      $('[data-ts-repeat]', col).addEventListener('change', async (event) => {
-        if (await templateWrite(stageWhere(stage.id, db.from('template_stages').update({ repeat_rule: event.target.value })))) reload();
-      });
-      $('[data-ts-delete]', col)?.addEventListener('click', async () => {
-        const text = own.length ? 'Вместе с ним уйдут ' + own.length + ' ' + plural(own.length, 'задача', 'задачи', 'задач') + ': ' + own.map((task) => '«' + task.title + '»').join(', ') + '.' : '';
-        if (!(await askYesNo('Удалить этап «' + stageLabel(stage, stages.indexOf(stage)) + '»?', text, 'Удалить', true))) return;
-        if (own.length) await db.from('template_tasks').delete().in('id', own.map((task) => task.id)).eq('artist_id', state.artist.id);
-        if (await templateWrite(stageWhere(stage.id, db.from('template_stages').delete()))) reload();
-      });
       $('[data-ts-add-task]', col).addEventListener('click', async () => {
         const { data: row, error } = await db.from('template_tasks').insert({ artist_id: state.artist.id, template_id: template.id, stage_id: stage.id, title: '', sort_order: tasks.length }).select().single();
         if (error) return toast(error.message || 'Не удалось добавить задачу.', 'error');
@@ -3023,13 +3029,9 @@
     });
     $$('[data-tt]', host).forEach((row) => {
       const task = tasks.find((item) => item.id === row.dataset.tt);
-      const titleInput = $('[data-tt-title]', row);
-      titleInput.addEventListener('change', async () => {
-        const next = titleInput.value.trim();
-        if (next === (task.title || '')) return;
+      bindInlineText($('[data-tt-title]', row), async (next) => {
         if (await templateWrite(taskWhere(task.id, db.from('template_tasks').update({ title: next })))) reload();
       });
-      onEnterBlur(titleInput);
       $('[data-tt-delete]', row).addEventListener('click', async () => {
         if (task.title && !(await askYesNo('Удалить задачу «' + task.title + '» из шаблона?', '', 'Удалить', true))) return;
         const waiting = tasks.filter((item) => (item.needs || []).includes(task.id));
