@@ -2903,6 +2903,13 @@
     toast('Следующая «' + task.title + '» — ' + shortDate(next) + '.');
   }
 
+  function formatFileSize(value) {
+    const bytes = Number(value || 0);
+    if (!bytes) return '—';
+    if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} КБ`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
+  }
+
   // Трек едет по этапам сам, когда закрывают ключевую задачу.
 
 
