@@ -2534,13 +2534,10 @@
     return task.workflow_status || (task.is_done ? 'uploaded' : 'idea');
   }
 
-  const TASK_REPEAT_LABEL = { none: 'нет', daily: 'каждый день', every2: 'раз в 2 дня', every3: 'раз в 3 дня', weekly: 'раз в неделю' };
-  const TASK_REPEAT_DAYS = { daily: 1, every2: 2, every3: 3, weekly: 7 };
   const TASK_REMIND_LABEL = { none: 'нет', day_before: 'за день', on_day: 'утром в срок' };
   // Значки для плашек: линии без заливки, цвет — от текста.
   const TASK_ICON = {
     date: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
-    repeat: '<svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
     bell: '<svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
     clip: '<svg viewBox="0 0 24 24"><path d="M21.4 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>',
     link: '<svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>',
@@ -2596,7 +2593,6 @@
       const tags = [];
       tags.push(task.due_at ? '<i class="' + (overdue ? 'is-late' : '') + '">' + TASK_ICON.date + formatDate(task.due_at, { year: undefined }) + '</i>' : '<i>без даты</i>');
       if (task.assignee_name) tags.push('<i><span class="tk-ava">' + escapeHTML(initialOf(task.assignee_name)) + '</span>' + escapeHTML(task.assignee_name) + '</i>');
-      if (task.repeat_rule && task.repeat_rule !== 'none') tags.push('<i>' + TASK_ICON.repeat + TASK_REPEAT_LABEL[task.repeat_rule] + '</i>');
       if (task.remind_rule && task.remind_rule !== 'none') tags.push('<i>' + TASK_ICON.bell + TASK_REMIND_LABEL[task.remind_rule] + '</i>');
       const materials = taskMaterialsOf(task.id).length;
       if (materials) tags.push('<i>' + TASK_ICON.clip + materials + '</i>');
@@ -2638,20 +2634,15 @@
     const today = dayStart(new Date()).getTime();
     const auto = isAutoTask(task);
     const overdue = !task.is_done && task.due_at && dayStart(task.due_at).getTime() < today;
-    const project = projectById(task.project_id);
     const blockers = task.is_done ? [] : taskBlockers(task);
-    const projectOptions = ['<option value="">Без релиза</option>'].concat(state.projects.map((row) => '<option value="' + row.id + '"' + (row.id === task.project_id ? ' selected' : '') + '>' + escapeHTML(row.title || 'Без названия') + '</option>')).join('');
 
+    const dateChip = task.due_at
+      ? '<button class="tk-chip' + (overdue ? ' is-late' : '') + '" type="button" data-task-pop="due">' + TASK_ICON.date + formatDate(task.due_at, { year: undefined }) + (overdue ? ' · просрочено' : '') + '</button>'
+      : '<button class="tk-chip is-empty" type="button" data-task-pop="due">' + TASK_ICON.date + 'срок</button>';
     const chips = [];
     const missing = [];
-    if (task.due_at) chips.push('<button class="tk-chip' + (overdue ? ' is-late' : '') + '" type="button" data-task-pop="due">' + TASK_ICON.date + formatDate(task.due_at, { year: undefined }) + (overdue ? ' · просрочено' : '') + '</button>');
-    else missing.push('<button type="button" data-task-pop="due">срок</button>');
     if (task.assignee_name) chips.push('<button class="tk-chip" type="button" data-task-pop="who"><span class="tk-ava">' + escapeHTML(initialOf(task.assignee_name)) + '</span>' + escapeHTML(task.assignee_name) + (task.promised_at ? ' · к ' + shortDate(task.promised_at) : '') + '</button>');
     else missing.push('<button type="button" data-task-pop="who">кто делает</button>');
-    if (!auto) {
-      if (task.repeat_rule && task.repeat_rule !== 'none') chips.push('<button class="tk-chip" type="button" data-task-pop="repeat">' + TASK_ICON.repeat + TASK_REPEAT_LABEL[task.repeat_rule] + (task.repeat_until ? ' · до ' + shortDate(task.repeat_until) : '') + '</button>');
-      else missing.push('<button type="button" data-task-pop="repeat">повтор</button>');
-    }
     if (task.remind_rule && task.remind_rule !== 'none') chips.push('<button class="tk-chip" type="button" data-task-pop="remind">' + TASK_ICON.bell + 'напомнить ' + TASK_REMIND_LABEL[task.remind_rule] + '</button>');
     else missing.push('<button type="button" data-task-pop="remind">напоминание</button>');
 
@@ -2666,18 +2657,16 @@
     }).join('');
 
     return '<button class="text-button tk-back" type="button" data-task-back>← к списку</button>'
-      + '<div class="tk-card-head"><div>'
+      + '<div class="tk-card-head">'
       + (auto ? '<h2 class="tk-title">' + escapeHTML(task.title) + '</h2>'
         : '<input class="tk-title-input" data-task-title value="' + escapeHTML(task.title) + '" placeholder="Название задачи" aria-label="Название">')
-      + '<select class="tk-release" data-task-project aria-label="Релиз">' + projectOptions + '</select>'
-      + (project && project.release_at ? '<span class="tk-release-date">релиз ' + shortDate(project.release_at) + '</span>' : '')
-      + '</div>'
+      + dateChip
       + '<label class="tk-done' + (blockers.length ? ' is-blocked' : '') + '"><input type="checkbox" data-task-check-card="' + task.id + '"' + (task.is_done ? ' checked' : '') + (blockers.length ? ' disabled' : '') + '> ' + (blockers.length ? 'ждёт: ' + escapeHTML(blockers.join(', ')) : 'сделано') + '</label></div>'
       + (auto ? '<p class="tk-note">Шаг плана выпуска: название и удаление закрыты, по нему держится связь с этапом.</p>' : '')
-      + '<textarea class="tk-desc" data-task-desc rows="1" placeholder="Что нужно сделать?">' + escapeHTML(task.description || '') + '</textarea>'
-      + (chips.length ? '<div class="tk-chips">' + chips.join('') + '</div>' : '')
-      + (missing.length ? '<div class="tk-add"><span>+ добавить:</span>' + missing.join('<span>·</span>') + '</div>' : '')
+      + '<div class="tk-chips">' + chips.join('')
+      + (missing.length ? '<div class="tk-add"><span>+ добавить:</span>' + missing.join('<span>·</span>') + '</div>' : '') + '</div>'
       + '<div class="tk-pop-host" data-task-pop-host></div>'
+      + '<textarea class="tk-desc" data-task-desc rows="3" placeholder="Что нужно сделать?">' + escapeHTML(task.description || '') + '</textarea>'
       + '<div class="tk-mats"><span class="eyebrow">Материалы</span>' + (materials || '')
       + '<div class="tk-mats-add"><button type="button" data-material-add="link">+ ссылка</button><button type="button" data-material-add="note">+ заметка</button><label>+ файл<input type="file" multiple hidden data-material-file></label></div>'
       + '<div data-materials-form></div></div>'
@@ -2714,9 +2703,6 @@
       title.addEventListener('blur', commit);
       title.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); title.blur(); } });
     }
-    $('[data-task-project]', card)?.addEventListener('change', async (event) => {
-      if (await updateTask(task, { project_id: event.target.value || null }, { quiet: true })) rerenderAll();
-    });
 
     // Описание — обычный текст: растёт по содержимому, сохраняется, когда ушли из поля.
     const desc = $('[data-task-desc]', card);
@@ -2743,11 +2729,9 @@
     const option = (map, current) => Object.entries(map).map(([value, label]) => '<option value="' + value + '"' + (value === (current || 'none') ? ' selected' : '') + '>' + label + '</option>').join('');
     const forms = {
       due: { title: 'Срок', clear: task.due_at ? 'Убрать срок' : '', body: '<input name="due_at" type="datetime-local" value="' + toLocalInput(task.due_at) + '">',
-        read: (data) => ({ due_at: data.get('due_at') ? new Date(data.get('due_at')).toISOString() : null }), empty: { due_at: null, repeat_rule: 'none', remind_rule: 'none' } },
+        read: (data) => ({ due_at: data.get('due_at') ? new Date(data.get('due_at')).toISOString() : null }), empty: { due_at: null, remind_rule: 'none' } },
       who: { title: 'Кто делает', clear: task.assignee_name ? 'Делаю сам' : '', body: '<input name="assignee_name" value="' + escapeHTML(task.assignee_name || '') + '" placeholder="Имя"><input name="assignee_contact" value="' + escapeHTML(task.assignee_contact || '') + '" placeholder="Контакт: @телеграм или телефон"><label>Обещал сдать к<input name="promised_at" type="date" value="' + escapeHTML(task.promised_at || '') + '"></label>',
         read: (data) => ({ assignee_name: String(data.get('assignee_name') || '').trim() || null, assignee_contact: String(data.get('assignee_contact') || '').trim() || null, promised_at: data.get('promised_at') || null }), empty: { assignee_name: null, assignee_contact: null, promised_at: null } },
-      repeat: { title: 'Повтор', clear: task.repeat_rule && task.repeat_rule !== 'none' ? 'Без повтора' : '', body: '<select name="repeat_rule">' + option(TASK_REPEAT_LABEL, task.repeat_rule) + '</select><label>До какого дня<input name="repeat_until" type="date" value="' + escapeHTML(task.repeat_until || '') + '"></label><p>Закрыли задачу — следующая появится сама с новым сроком.</p>',
-        read: (data) => ({ repeat_rule: String(data.get('repeat_rule') || 'none'), repeat_until: data.get('repeat_until') || null }), empty: { repeat_rule: 'none', repeat_until: null }, needsDue: true },
       remind: { title: 'Напоминание', clear: task.remind_rule && task.remind_rule !== 'none' ? 'Не напоминать' : '', body: '<select name="remind_rule">' + option(TASK_REMIND_LABEL, task.remind_rule) + '</select><p>Придёт через Секретаря — в Телеграм или на почту, в ваш час рассылки.</p>',
         read: (data) => ({ remind_rule: String(data.get('remind_rule') || 'none') }), empty: { remind_rule: 'none' }, needsDue: true },
     };
@@ -2765,7 +2749,7 @@
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const patch = spec.read(new FormData(form));
-      const active = kind === 'repeat' ? patch.repeat_rule !== 'none' : kind === 'remind' ? patch.remind_rule !== 'none' : false;
+      const active = kind === 'remind' ? patch.remind_rule !== 'none' : false;
       if (spec.needsDue && active && !task.due_at) return toast('Сначала поставьте задаче срок.', 'error');
       if (await updateTask(task, patch, { quiet: true })) rerenderAll();
     });
@@ -2881,28 +2865,6 @@
     finally { setBusy(button, false); }
   }
 
-  // Повтор: закрыли задачу со сроком — создаём следующую на новый срок,
-  // пока не вышли за «до какого дня». Повторное закрытие не плодит копий.
-  async function spawnNextOccurrence(task) {
-    const step = TASK_REPEAT_DAYS[task?.repeat_rule];
-    if (!step || !task.due_at) return;
-    const next = addDays(task.due_at, step);
-    if (task.repeat_until && dayStart(next).getTime() > dayStart(task.repeat_until).getTime()) return;
-    const exists = state.tasks.some((row) => row.id !== task.id && row.title === task.title && (row.project_id || '') === (task.project_id || '')
-      && !row.is_done && row.due_at && dayStart(row.due_at).getTime() === dayStart(next).getTime());
-    if (exists) return;
-    const payload = {
-      artist_id: state.artist.id, project_id: task.project_id || null, title: task.title, description: task.description || null,
-      assignee_name: task.assignee_name || null, assignee_contact: task.assignee_contact || null, promised_at: null,
-      repeat_rule: task.repeat_rule, repeat_until: task.repeat_until || null, remind_rule: task.remind_rule || 'none',
-      due_at: next.toISOString(), workflow_status: 'idea', is_done: false, sort_order: task.sort_order || 0,
-    };
-    const { data, error } = await db.from('project_tasks').insert(payload).select().single();
-    if (error) return toast(error.message || 'Не удалось создать следующий повтор.', 'error');
-    state.tasks = [...state.tasks, data];
-    toast('Следующая «' + task.title + '» — ' + shortDate(next) + '.');
-  }
-
   function formatFileSize(value) {
     const bytes = Number(value || 0);
     if (!bytes) return '—';
@@ -2999,7 +2961,6 @@
       if (error) throw error;
       logEvent('task', isDone ? 'Задача закрыта' : 'Задача снова открыта', task?.title || '', { view: 'tasks', id, project: task?.project_id });
       if (task?.project_id) { await syncStageFromTasks(task); await syncProjectFromTasks(task); }
-      if (isDone && task) await spawnNextOccurrence(task);
       renderDashboard(); renderTasksView(); renderCalendar();
       if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
     } catch (error) {

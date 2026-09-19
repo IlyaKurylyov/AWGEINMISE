@@ -617,7 +617,7 @@ html[data-theme="light"] .pipeline-board .pipeline-column.is-dragover, html[data
 .dashboard-pipeline-panel .text-button:hover { border-color: #5b705a; color: var(--green); }
 
 /* Вкладка «Задачи»: слева карточка-заметка, справа список по релизам. */
-.tk-layout { display: grid; grid-template-columns: minmax(360px, 1.15fr) minmax(300px, 1fr); gap: 16px; align-items: start; }
+.tk-layout { display: grid; grid-template-columns: minmax(360px, 1.6fr) minmax(280px, .85fr); gap: 16px; align-items: start; }
 .tk-list { padding: 0 0 8px; }
 .tk-tabs { display: flex; align-items: center; gap: 4px; padding: 14px 18px 6px; flex-wrap: wrap; }
 .tk-tabs button { border: 1px solid transparent; padding: 7px 12px; color: var(--muted); background: transparent; font: inherit; font-size: 14px; cursor: pointer; }
@@ -648,28 +648,28 @@ html[data-theme="light"] .tk-row.is-active { background: rgba(35,139,53,.09); }
 .tk-back { display: none; margin-bottom: 12px; font-size: 14px; }
 .tk-empty { padding: 30px 6px; color: var(--muted); font-size: 14px; }
 .tk-empty p { margin: 0; }
-.tk-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.tk-card-head > div { min-width: 0; flex: 1; }
+.tk-card-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.tk-card-head .tk-title, .tk-card-head .tk-title-input { flex: 1 1 200px; min-width: 0; }
+.tk-card-head .tk-done { margin-left: auto; margin-top: 0; }
+.tk-chip.is-empty { color: var(--muted); border-style: dashed; }
 .tk-title { margin: 0; font: 500 28px/1.15 'Oswald', sans-serif; letter-spacing: .02em; }
 .tk-title-input { display: block; width: 100%; margin: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; color: var(--text); background: transparent; font: 500 28px/1.15 'Oswald', sans-serif; letter-spacing: .02em; outline: 0; }
 .tk-title-input:focus { border-bottom-color: var(--green); }
-.tk-release { display: inline-block; max-width: 100%; margin-top: 4px; padding: 0; border: 0; color: var(--muted); background: transparent; font: inherit; font-size: 13px; cursor: pointer; appearance: none; -webkit-appearance: none; }
-.tk-release:hover { color: var(--green); }
-.tk-release-date { margin-left: 6px; color: var(--muted); font-size: 13px; }
-.tk-release-date::before { content: '· '; }
 .tk-done { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--muted); font-size: 13px; white-space: nowrap; cursor: pointer; }
 .tk-done.is-blocked { color: var(--amber); white-space: normal; text-align: right; cursor: default; }
 .tk-done input { width: 18px; height: 18px; margin: 0; accent-color: var(--green); flex: none; }
 .tk-note { margin: 12px 0 0; color: var(--muted); font-size: 13px; }
-.tk-desc { display: block; width: 100%; margin: 14px 0 0; padding: 0; border: 0; color: var(--text); background: transparent; font: inherit; font-size: 15px; line-height: 1.55; resize: none; overflow: hidden; outline: 0; }
+.tk-desc { display: block; width: 100%; min-height: 84px; margin: 16px 0 0; padding: 10px 12px; border: 1px solid var(--line); color: var(--text); background: rgba(0,0,0,.22); box-shadow: inset 0 2px 8px rgba(0,0,0,.35); font: inherit; font-size: 15px; line-height: 1.55; resize: none; overflow: hidden; outline: 0; }
+.tk-desc:focus { border-color: var(--green); }
+html[data-theme="light"] .tk-desc { border-color: #c6c1b6; background: #f7f4ec; box-shadow: inset 0 2px 7px rgba(70,62,49,.12); }
 .tk-desc::placeholder { color: var(--muted); }
-.tk-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.tk-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 14px; }
 .tk-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; border: 1px solid var(--line-hi); border-radius: 999px; padding: 4px 12px; color: var(--text); background: transparent; font: inherit; font-size: 13px; cursor: pointer; }
 .tk-chip:hover { border-color: var(--green); }
 .tk-chip svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
 .tk-chip.is-late { border-color: rgba(212,85,73,.6); color: var(--red); }
 .tk-chip .tk-ava { width: 18px; height: 18px; font-size: 10px; }
-.tk-add { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 12px; color: var(--muted); font-size: 13px; }
+.tk-add { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; color: var(--muted); font-size: 13px; }
 .tk-add button { padding: 0; border: 0; color: var(--muted); background: transparent; font: inherit; font-size: 13px; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
 .tk-add button:hover { color: var(--green); }
 /* окошко под плашкой */
