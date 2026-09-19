@@ -1302,6 +1302,39 @@
   // Одна и та же ось рисуется и на дашборде, и в карточке трека, чтобы они
   // не разъезжались. Без дат этапы всё равно стоят на линии — план виден
   // до того, как назначен день Х.
+  // Где на линии «сейчас»: по текущему времени, а не по началу дня, поэтому
+  // метка и заливка ползут в течение суток между соседними этапами.
+  function rolloutNowPct(times) {
+    const count = times.length;
+    const centerPct = (index) => ((index + 0.5) / count) * 100;
+    const now = Date.now();
+    if (!count || now <= times[0]) return 0;
+    if (now >= times[count - 1]) return 100;
+    for (let index = 1; index < count; index += 1) {
+      if (now <= times[index]) {
+        const before = times[index - 1];
+        const after = times[index];
+        const frac = after === before ? 0 : (now - before) / (after - before);
+        return centerPct(index - 1) + frac * (centerPct(index) - centerPct(index - 1));
+      }
+    }
+    return 100;
+  }
+
+  // Раз в десять минут подвигаем «сейчас» на всех барах без перерисовки:
+  // экран может висеть открытым весь день.
+  function refreshRolloutClock() {
+    $$('.rollout-axis[data-times]').forEach((axis) => {
+      const times = axis.dataset.times.split(',').map(Number);
+      const pct = rolloutNowPct(times);
+      const fill = $('.rollout-bar > i', axis);
+      const tick = $('.rollout-today', axis);
+      if (fill) fill.style.width = pct + '%';
+      if (tick) tick.style.left = pct + '%';
+    });
+  }
+  setInterval(refreshRolloutClock, 10 * 60 * 1000);
+
   function rolloutAxis(stages, options = {}) {
     const readonly = !!options.readonly;
     // Режим шаблона: дат нет, есть только «за N дней до дня Х» — считаем
@@ -1313,19 +1346,7 @@
     const count = stages.length;
     const centerPct = (index) => ((index + 0.5) / count) * 100;
 
-    const todayPct = (!dated || template) ? 0 : (() => {
-      if (today <= times[0]) return 0;
-      if (today >= times[count - 1]) return 100;
-      for (let index = 1; index < count; index += 1) {
-        if (today <= times[index]) {
-          const before = times[index - 1];
-          const after = times[index];
-          const frac = after === before ? 0 : (today - before) / (after - before);
-          return centerPct(index - 1) + frac * (centerPct(index) - centerPct(index - 1));
-        }
-      }
-      return 100;
-    })();
+    const todayPct = (!dated || template) ? 0 : rolloutNowPct(times);
 
     const stageClass = (stage) => {
       if (stage.is_done) return 'is-done';
@@ -1380,7 +1401,7 @@
         + escapeHTML(REPEAT_LABEL[stage.repeat_rule] || '') + (owned.length ? ' · ' + closed + ' из ' + owned.length : '') + '">'
         + (share ? '<i style="width:' + share + '%"></i>' : '') + '</span>';
     }).join('');
-    return '<div class="rollout-axis" style="--rollout-count:' + count + '">'
+    return '<div class="rollout-axis" style="--rollout-count:' + count + '"' + (dated && !template ? ' data-times="' + times.join(',') + '"' : '') + '>'
       + '<div class="rollout-row">' + caps + '</div>'
       + '<div class="rollout-noderow"><span class="rollout-bar">' + (template ? '' : '<i style="width:' + todayPct + '%"></i>') + bands + '</span>'
       + '<div class="rollout-row rollout-nodes">' + nodeCells + '</div>'
