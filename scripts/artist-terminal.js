@@ -1161,6 +1161,20 @@
   const projectTemplate = (project) => templateById(project && project.template_id) || defaultTemplate();
   // Сколько дней просит шаблон: столько артист заложил на релиз.
   const templateNeedOf = (template) => (template && template.total_days) || 35;
+
+  // Дата этапа — его начало. Время на выполнение — до начала следующего
+  // этапа (у последнего перед днём Х — до дня Х, у самого дня Х — он сам).
+  // Этап просрочен, только когда это окно закрылось, а он не отмечен.
+  function stageWindowEnd(stage, stages) {
+    if (!stage || !stage.stage_date) return null;
+    if (stage.day_offset === 0) return dayStart(stage.stage_date).getTime();
+    const start = dayStart(stage.stage_date).getTime();
+    const later = (stages || []).filter((row) => row.id !== stage.id && row.stage_date && dayStart(row.stage_date).getTime() > start)
+      .map((row) => dayStart(row.stage_date).getTime());
+    return later.length ? Math.min.apply(null, later) : start;
+  }
+  const stageIsLate = (stage, stages, today) => !stage.is_done && stage.day_offset !== 0 && stage.stage_date
+    && stageWindowEnd(stage, stages) < today;
   const REPEAT_LABEL = { once: 'один раз', every_2_days: 'раз в 2 дня до дня Х', weekly: 'раз в неделю' };
   const STAGE_HINTS = {
     'права и фиты': 'Договориться с фитующими и владельцем бита. До этого выпускать нечего — всё остальное упрётся в права.',
@@ -1316,7 +1330,7 @@
     const stageClass = (stage) => {
       if (stage.is_done) return 'is-done';
       if (stage.day_offset === 0) return 'is-release';
-      return dated && !template && dayStart(stage.stage_date).getTime() < today ? 'is-late' : '';
+      return dated && !template && stageIsLate(stage, stages, today) ? 'is-late' : '';
     };
     const capDate = (stage) => {
       if (template) return stage.day_offset === 0 ? 'день Х' : 'за ' + Math.abs(stage.day_offset) + ' ' + plural(Math.abs(stage.day_offset), 'день', 'дня', 'дней');
@@ -1325,7 +1339,7 @@
 
     const caps = stages.map((stage, index) => '<span class="rollout-cap ' + stageClass(stage) + '" data-col="' + index + '">'
       + (template
-        ? '<input class="rollout-cap-input" data-tcap="' + stage.id + '" value="' + escapeHTML(stage.title) + '" placeholder="' + (stage.day_offset === 0 ? 'День Х' : 'Этап ' + (index + 1)) + '" aria-label="Название этапа">'
+        ? '<button class="rollout-cap-btn' + (stage.title ? '' : ' is-empty') + '" type="button" data-template-stage="' + stage.id + '">' + escapeHTML(stage.title || (stage.day_offset === 0 ? 'День Х' : 'Этап ' + (index + 1))) + '</button>'
         : '<b>' + escapeHTML(stage.title) + '</b>')
       + '<span class="rollout-cap-date">' + capDate(stage) + '</span></span>').join('');
 
@@ -1350,10 +1364,7 @@
       if (!index || !dated) return '<span></span>';
       const days = Math.round((times[index] - times[index - 1]) / 86400000);
       const label = days + ' ' + plural(days, 'день', 'дня', 'дней');
-      // В шаблоне промежуток — кнопка: нажал — задал дни.
-      return template
-        ? '<span><button class="rollout-gap-btn" type="button" data-tgap="' + index + '" title="Задать промежуток">' + label + '</button></span>'
-        : '<span><i>' + label + '</i></span>';
+      return '<span><i>' + label + '</i></span>';
     }).join('');
 
     // Этап с повтором — это период, а не точка: тизеры идут раз в два дня
@@ -1425,8 +1436,7 @@
 
     const today = dayStart(new Date()).getTime();
     const left = project.release_at ? daysUntil(project.release_at) : null;
-    const lateList = stages.filter((stage) => !stage.is_done && stage.day_offset !== 0
-      && stage.stage_date && dayStart(stage.stage_date).getTime() < today);
+    const lateList = stages.filter((stage) => stageIsLate(stage, stages, today));
 
     const doneCount = stages.filter((stage) => stage.is_done).length;
     // Просроченное больше не выносит приговор, а спрашивает: этап мог быть
@@ -1437,9 +1447,10 @@
         + ' ' + plural(lateList.length, 'прошёл', 'прошли', 'прошли') + ', но не ' + plural(lateList.length, 'отмечен', 'отмечены', 'отмечены')
         + ' — система не решает за вас</span></div>'
         + lateList.map((stage) => {
-          const ago = Math.abs(daysUntil(stage.stage_date));
+          const end = stageWindowEnd(stage, stages);
+          const ago = Math.abs(daysUntil(end));
           return '<div class="rollout-ask-row"><div><strong>' + escapeHTML(stage.title) + '</strong>'
-            + '<small>было ' + shortDate(stage.stage_date) + ' · ' + ago + ' ' + plural(ago, 'день', 'дня', 'дней') + ' назад</small></div>'
+            + '<small>' + shortDate(stage.stage_date) + ' — ' + shortDate(end) + ' · окно закрылось ' + ago + ' ' + plural(ago, 'день', 'дня', 'дней') + ' назад</small></div>'
             + '<div class="rollout-ask-pair">'
             + '<button class="rollout-mini is-go" type="button" data-stage-done="' + stage.id + '">сделал</button>'
             + '<button class="rollout-mini" type="button" data-stage-move="' + stage.id + '">перенести</button>'
@@ -2816,7 +2827,7 @@
         : '<input class="tpl-title" data-tpl-title value="' + escapeHTML(template.title) + '" placeholder="Название шаблона" aria-label="Название шаблона" title="Нажмите, чтобы переименовать">')
       + '<label class="tpl-total">На релиз закладываю <input type="number" min="1" max="365" data-tpl-total value="' + (template.total_days || 35) + '"> дн.</label>'
       + '</div>'
-      + '<p class="tpl-hint">Имена этапов — над кружками. Промежуток — клик по дням. Кружок — задачи этапа. Уже созданные релизы не меняются.</p>'
+      + '<p class="tpl-hint">Нажмите на этап: имя, за сколько дней он начинается, его задачи. Время на этап — до начала следующего. Уже созданные релизы не меняются.</p>'
       + '<div class="rollout-stage-wrap tpl-bar">' + rolloutAxis(stages.map((stage) => ({ ...stage, stage_date: null, is_done: false, is_pinned: false })), { readonly: true, template: true, totalDays: template.total_days || 35 }) + '</div>'
       + '<div class="tpl-pop-host" data-tpl-pop></div>'
       + '</section>';
@@ -2853,20 +2864,19 @@
       });
       titleInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); titleInput.blur(); } });
     }
-    // Срок релиза: этапы должны помещаться. Срок стал меньше — ужимаем их
-    // пропорционально и говорим об этом.
+    // Срок релиза изменился — этапы масштабируются пропорционально в обе
+    // стороны: 35 → 20 ужимает, 20 → 35 растягивает обратно. Не ближе
+    // одного дня к дню Х и без слипания соседей.
     $('[data-tpl-total]', host).addEventListener('change', async (event) => {
       const total = Math.round(Number(event.target.value));
       if (!total || total < 1) { event.target.value = template.total_days || 35; return toast('Сколько дней закладываете на релиз?', 'error'); }
-      const draft = stages.map((stage) => ({ id: stage.id, offset: stage.day_offset }));
-      const squeezed = fitOffsets(draft, total);
-      if (squeezed) {
-        const changed = draft.filter((row, index) => row.offset !== stages[index].day_offset);
-        const results = await Promise.all(changed.map((row) => db.from('template_stages').update({ day_offset: row.offset }).eq('id', row.id).eq('artist_id', state.artist.id)));
-        if (results.some((result) => result.error)) return toast('Не удалось ужать этапы.', 'error');
-      }
+      const previous = template.total_days || 35;
+      const scaled = scaleTemplateOffsets(stages, previous, total);
+      const results = await Promise.all(scaled.filter((row) => row.offset !== row.stage.day_offset)
+        .map((row) => db.from('template_stages').update({ day_offset: row.offset }).eq('id', row.stage.id).eq('artist_id', state.artist.id)));
+      if (results.some((result) => result.error)) return toast('Не удалось пересчитать этапы.', 'error');
       if (await templateWrite(db.from('release_templates').update({ total_days: total, updated_at: new Date().toISOString() }).eq('id', template.id).eq('artist_id', state.artist.id),
-        squeezed ? 'Срок ' + total + ' дн.: этапы ужаты пропорционально.' : '')) reload();
+        total !== previous ? 'Срок ' + total + ' дн.: этапы пересчитаны пропорционально.' : '')) reload();
     });
     $('[data-tpl-default]', host).addEventListener('change', async (event) => {
       if (!event.target.checked) { event.target.checked = true; return toast('Основной шаблон должен быть один — выберите другой основным.'); }
@@ -2883,22 +2893,35 @@
       reload();
     });
 
-    // Имена этапов — прямо над кружками.
-    $$('[data-tcap]', host).forEach((input) => {
-      const stage = stages.find((row) => row.id === input.dataset.tcap);
-      const commit = async () => {
-        const next = input.value.trim();
-        if (next === (stage.title || '')) return;
-        if (await templateWrite(stageWhere(stage.id, db.from('template_stages').update({ title: next })))) reload();
-      };
-      input.addEventListener('change', commit);
-      input.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); input.blur(); } });
-    });
-    // Кружок — задачи этапа; промежуток — дни; «+» — новый этап.
+    // Кружок или подпись — окошко этапа; «+» — новый этап.
     $$('[data-template-stage]', host).forEach((node) => node.addEventListener('click', () => { state.templatePop = { kind: 'stage', id: node.dataset.templateStage }; renderTasksView(); }));
-    $$('[data-tgap]', host).forEach((button) => button.addEventListener('click', () => { state.templatePop = { kind: 'gap', index: Number(button.dataset.tgap) }; renderTasksView(); }));
     $('[data-tpl-add-node]', host)?.addEventListener('click', () => { state.templatePop = { kind: 'add' }; renderTasksView(); });
     renderTemplatePop(host, template, stages, reload);
+  }
+
+  // Пересчёт «за N дней» при смене срока: пропорция от старого срока к новому.
+  // Порядок этапов сохраняется, соседи не слипаются, ближе дня к дню Х не встают.
+  function scaleTemplateOffsets(stages, previous, total) {
+    const ordered = stages.slice().sort((a, b) => a.day_offset - b.day_offset || a.sort_order - b.sort_order); // самый ранний первым
+    // День Х один — последний из стоящих на нуле. Остальные «нули» — этапы,
+    // случайно ужатые до дня Х; они снова становятся этапами.
+    const dayX = ordered.filter((stage) => stage.day_offset === 0).slice(-1)[0] || null;
+    const scale = previous > 0 ? total / previous : 1;
+    const out = [];
+    let ceiling = 0; // ближе этого (к дню Х) вставать нельзя — идём с конца
+    for (let index = ordered.length - 1; index >= 0; index -= 1) {
+      const stage = ordered[index];
+      let offset;
+      if (stage === dayX) offset = 0;
+      else {
+        offset = -Math.max(1, Math.round(Math.abs(stage.day_offset) * scale));
+        if (offset >= ceiling) offset = ceiling - 1;
+        if (offset < -total) offset = -total;
+      }
+      out.unshift({ stage, offset });
+      ceiling = offset;
+    }
+    return out;
   }
 
   function renderTemplatePop(host, template, stages, reload) {
@@ -2928,44 +2951,6 @@
       return;
     }
 
-    if (pop.kind === 'gap') {
-      const index = pop.index;
-      const prev = stages[index - 1];
-      const next = stages[index];
-      if (!prev || !next) { state.templatePop = null; hostEl.innerHTML = ''; return; }
-      const gap = next.day_offset - prev.day_offset;
-      hostEl.innerHTML = '<form class="tpl-pop"><div class="tpl-pop-head"><strong>Между «' + escapeHTML(stageLabel(prev, index - 1)) + '» и «' + escapeHTML(stageLabel(next, index)) + '»</strong><button class="icon-button" type="button" data-pop-close aria-label="Закрыть">×</button></div>'
-        + '<div class="tpl-pop-row"><label class="tpl-offset"><input name="days" type="number" min="1" max="365" value="' + gap + '"> дн.</label>'
-        + '<span class="tpl-pop-note">Этапы до «' + escapeHTML(stageLabel(next, index)) + '» сдвинутся, промежутки между ними останутся.</span>'
-        + '<button class="text-button" type="button" data-gap-insert>+ этап между</button><button class="button button-primary" type="submit">Готово</button></div></form>';
-      $('[data-pop-close]', hostEl).addEventListener('click', close);
-      $('form', hostEl).addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const days = Math.round(Number(new FormData(event.currentTarget).get('days')));
-        if (!days || days < 1) return toast('Промежуток — хотя бы один день.', 'error');
-        const delta = days - gap;
-        if (!delta) return close();
-        // Раздвигаем: всё, что раньше «next», уезжает назад на delta.
-        const earlier = stages.slice(0, index);
-        const earliest = Math.min.apply(null, earlier.map((stage) => stage.day_offset)) - delta;
-        if (-earliest > (template.total_days || 35)) return toast('Не помещается в срок релиза (' + (template.total_days || 35) + ' дн.). Увеличьте срок вверху.', 'error');
-        const results = await Promise.all(earlier.map((stage) => stageWhere(stage.id, db.from('template_stages').update({ day_offset: stage.day_offset - delta }))));
-        if (results.some((result) => result.error)) return toast('Не удалось сдвинуть этапы.', 'error');
-        state.templatePop = null;
-        reload();
-      });
-      $('[data-gap-insert]', hostEl).addEventListener('click', async () => {
-        if (gap < 2) return toast('Между ними один день — сначала раздвиньте.', 'error');
-        const offset = prev.day_offset + Math.floor(gap / 2);
-        const { data: row, error } = await db.from('template_stages').insert({ artist_id: state.artist.id, template_id: template.id, title: '', day_offset: offset, repeat_rule: 'once', sort_order: stages.length }).select().single();
-        if (error) return toast(error.message || 'Не удалось добавить этап.', 'error');
-        state.templatePop = { kind: 'stage', id: row.id };
-        reload();
-      });
-      $('input[name="days"]', hostEl).focus();
-      return;
-    }
-
     // Этап: срок, повтор, задачи, удаление.
     const index = stages.findIndex((row) => row.id === pop.id);
     const stage = stages[index];
@@ -2982,8 +2967,9 @@
         + '<button class="icon-button" type="button" data-tt-delete aria-label="Удалить задачу">×</button>'
         + '<div data-tt-needs-host></div></div>';
     };
-    hostEl.innerHTML = '<div class="tpl-pop"><div class="tpl-pop-head"><strong>' + escapeHTML(stageLabel(stage, index)) + '</strong>'
-      + (dayX ? '<span class="tpl-offset is-x">день Х</span>' : '<label class="tpl-offset">за <input type="number" min="1" max="365" data-ts-offset value="' + Math.abs(stage.day_offset) + '"> дн. до дня Х</label>')
+    hostEl.innerHTML = '<div class="tpl-pop"><div class="tpl-pop-head">'
+      + '<input class="tpl-pop-title" data-ts-title value="' + escapeHTML(stage.title) + '" placeholder="' + escapeHTML(stageLabel(stage, index)) + '" aria-label="Название этапа" title="Название этапа">'
+      + (dayX ? '<span class="tpl-offset is-x">день Х</span>' : '<label class="tpl-offset">начинается за <input type="number" min="1" max="365" data-ts-offset value="' + Math.abs(stage.day_offset) + '"> дн. до дня Х</label>')
       + '<select class="tpl-stage-repeat" data-ts-repeat aria-label="Повтор">' + Object.entries(TEMPLATE_REPEAT).map(([value, label]) => '<option value="' + value + '"' + (value === stage.repeat_rule ? ' selected' : '') + '>' + label + '</option>').join('') + '</select>'
       + (dayX ? '' : '<button class="text-button" type="button" data-ts-delete>удалить этап</button>')
       + '<button class="icon-button" type="button" data-pop-close aria-label="Закрыть">×</button></div>'
@@ -2991,6 +2977,14 @@
       + '<button class="text-button tpl-add-task" type="button" data-ts-add-task>+ задача</button></div></div>';
 
     $('[data-pop-close]', hostEl).addEventListener('click', close);
+    const nameInput = $('[data-ts-title]', hostEl);
+    nameInput.addEventListener('change', async () => {
+      const next = nameInput.value.trim();
+      if (next === (stage.title || '')) return;
+      if (await templateWrite(stageWhere(stage.id, db.from('template_stages').update({ title: next })))) reload();
+    });
+    nameInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); nameInput.blur(); } });
+    if (!stage.title) nameInput.focus();
     $('[data-ts-offset]', hostEl)?.addEventListener('change', async (event) => {
       const days = Math.round(Number(event.target.value));
       if (!days || days < 1) { event.target.value = Math.abs(stage.day_offset); return toast('Укажите, за сколько дней до дня Х.', 'error'); }
