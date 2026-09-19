@@ -616,68 +616,75 @@ html[data-theme="light"] .pipeline-board .pipeline-column.is-dragover, html[data
 .dashboard-tasks-panel .text-button:hover,
 .dashboard-pipeline-panel .text-button:hover { border-color: #5b705a; color: var(--green); }
 
-/* «Автоматизировать задачи»: шаблон плана прямо на баре, одно окошко под ним. */
+/* «Автоматизировать задачи»: шаблон прямо на баре, задачи — колонками под кружками. */
 .section-toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .tk-layout:has(.tpl) { grid-template-columns: 1fr; }
-.tpl { padding: 16px 24px 20px; }
+.tpl { position: relative; padding: 16px 24px 20px; }
 .tpl-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
 .tpl-head .text-button { font-size: 14px; }
 .tpl-head-right { display: inline-flex; align-items: center; gap: 16px; margin-left: auto; }
 .tpl-pick { min-height: 34px; border: 1px solid var(--line-hi); padding: 0 10px; color: var(--text); background: var(--panel-2); font: inherit; font-size: 13px; }
 .tpl-title-row { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; margin-bottom: 4px; }
-.tpl-title { flex: 0 1 320px; min-width: 0; padding: 0 2px; border: 0; border-bottom: 1px dashed var(--line-hi); color: var(--text); background: transparent; font: 500 26px/1.2 'Oswald', sans-serif; letter-spacing: .02em; outline: 0; }
-.tpl-title:focus { border-bottom: 1px solid var(--green); }
+.tpl-title { flex: 0 1 320px; min-width: 0; padding: 4px 8px; border: 1px solid var(--line); color: var(--text); background: rgba(0,0,0,.18); font: 500 24px/1.2 'Oswald', sans-serif; letter-spacing: .02em; outline: 0; }
+.tpl-title:focus { border-color: var(--green); }
+html[data-theme="light"] .tpl-title { border-color: #c6c1b6; background: #f7f4ec; }
 .tpl-title-static { margin: 0; font: 500 26px/1.2 'Oswald', sans-serif; letter-spacing: .02em; }
 .tpl-title-static small { margin-left: 10px; color: var(--muted); font: 400 12px 'IBM Plex Mono', monospace; letter-spacing: .08em; text-transform: uppercase; }
-.tpl-total { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; color: var(--muted); font-size: 13px; white-space: nowrap; }
-.tpl-total input { width: 64px; min-height: 34px; border: 1px solid var(--line-hi); padding: 0 6px; color: var(--text); background: var(--panel-2); font: inherit; font-size: 15px; text-align: center; }
-.rollout-gap-lead { color: var(--muted); opacity: .8; }
 .tpl-default { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; cursor: pointer; }
 .tpl-default input { width: 16px; height: 16px; margin: 0; accent-color: var(--green); }
+.tpl-total { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.tpl-total input { width: 64px; min-height: 34px; border: 1px solid var(--line-hi); padding: 0 6px; color: var(--text); background: var(--panel-2); font: inherit; font-size: 15px; text-align: center; }
 .tpl-hint { margin: 4px 0 6px; color: var(--muted); font-size: 12px; }
 .tpl-bar { margin: 0 -24px; border-top: 0; }
-.tpl-bar .rollout-node { cursor: pointer; }
-/* имя этапа в шаблоне — подпись-кнопка: нажал — открылось окошко этапа */
-.rollout-cap-btn { display: block; width: 100%; padding: 0; border: 0; color: var(--text); background: transparent; font: inherit; font-size: 13px; line-height: 1.3; text-align: center; overflow-wrap: anywhere; cursor: pointer; }
-.rollout-cap-btn.is-empty { color: var(--muted); }
-.rollout-cap-btn:hover { color: var(--green); }
-.rollout-cap.is-release .rollout-cap-btn { color: var(--amber); font-weight: 500; }
-.tpl-pop-title { flex: 1 1 220px; min-width: 0; min-height: 36px; border: 1px solid var(--line-hi); padding: 0 10px; color: var(--text); background: var(--panel); font: 500 16px 'Oswald', sans-serif; letter-spacing: .02em; outline: 0; }
-.tpl-pop-title:focus { border-color: var(--green); }
-/* окошко под баром */
-.tpl-pop-host:empty { display: none; }
-.tpl-pop { margin-top: 6px; border: 1px solid var(--line-hi); background: var(--panel-2); padding: 14px 16px; }
-.tpl-pop-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.tpl-pop-head strong { font: 500 18px 'Oswald', sans-serif; letter-spacing: .02em; }
-.tpl-pop-head .icon-button { margin-left: auto; }
-.tpl-pop-head .text-button { font-size: 13px; }
-.tpl-pop-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
-.tpl-pop-row input[name="title"] { flex: 1 1 220px; min-height: 36px; border: 1px solid var(--line-hi); padding: 0 10px; color: var(--text); background: var(--panel); font: inherit; font-size: 14px; }
-.tpl-pop-row .button { min-height: 36px; padding: 6px 14px; font-size: 11px; }
-.tpl-pop-note { color: var(--muted); font-size: 12px; }
-.tpl-offset { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; white-space: nowrap; }
-.tpl-offset input { width: 58px; min-height: 32px; border: 1px solid var(--line-hi); padding: 0 6px; color: var(--text); background: var(--panel); font: inherit; font-size: 14px; text-align: center; }
-.tpl-offset.is-x { color: var(--amber); }
-.tpl-stage-repeat { min-height: 32px; border: 1px solid var(--line-hi); padding: 0 8px; color: var(--muted); background: var(--panel); font: inherit; font-size: 12px; }
-.tpl-tasks { display: grid; gap: 2px; margin-top: 10px; }
-.tpl-task { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(0, 1.2fr) auto; gap: 8px 12px; align-items: center; padding: 3px 0; }
-.tpl-task-title { min-width: 0; padding: 4px 0; border: 0; border-bottom: 1px solid transparent; color: var(--text); background: transparent; font: inherit; font-size: 15px; outline: 0; }
-.tpl-task-title:focus { border-bottom-color: var(--green); }
-.tpl-needs { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; color: var(--muted); font-size: 12px; }
-.tpl-needs i { font-style: normal; color: var(--amber); }
-.tpl-needs .text-button { font-size: 12px; }
-.tpl-task [data-tt-needs-host] { grid-column: 1 / -1; }
-.tpl-task [data-tt-needs-host]:empty { display: none; }
-.tpl-needs-pop { max-width: 520px; }
-.tpl-need { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 14px; cursor: pointer; }
-.tpl-need input { width: 16px; height: 16px; margin: 0; accent-color: var(--green); }
-.tpl-add-task { justify-self: start; margin-top: 4px; font-size: 13px; }
+.tpl-bar .rollout-axis, .tpl-grid { min-width: 900px; }
+.tpl-bar .rollout-cap { align-self: end; padding: 0 5px; }
+/* имя этапа — маленькое утопленное поле над кружком, срок — под ним */
+.rollout-cap-field { display: block; width: 100%; padding: 4px 6px; border: 1px solid var(--line); color: var(--text); background: rgba(0,0,0,.18); font: inherit; font-size: 13px; line-height: 1.3; text-align: center; outline: 0; }
+.rollout-cap-field::placeholder { color: var(--muted); }
+.rollout-cap-field:focus { border-color: var(--green); }
+html[data-theme="light"] .rollout-cap-field { border-color: #c6c1b6; background: #f7f4ec; }
+.rollout-cap.is-release .rollout-cap-field { color: var(--amber); }
+.rollout-cap-days { display: inline-flex; align-items: center; justify-content: center; gap: 4px; margin-top: 3px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.rollout-cap-days input { width: 44px; min-height: 24px; border: 1px solid var(--line); padding: 0 2px; color: var(--text); background: rgba(0,0,0,.18); font: inherit; font-size: 12px; text-align: center; outline: 0; }
+.rollout-cap-days input:focus { border-color: var(--green); }
+html[data-theme="light"] .rollout-cap-days input { border-color: #c6c1b6; background: #f7f4ec; }
+.rollout-gap-lead { color: var(--muted); opacity: .8; }
+/* колонки задач под кружками — та же сетка, что у кружков */
+.tpl-grid { display: grid; grid-template-columns: repeat(var(--rollout-count, 6), minmax(0, 1fr)); gap: 0; padding: 4px 36px 12px 0; } /* правый отступ — как у оси, под «+»: колонки ровно под кружками */
+.tpl-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 0 4px; border-left: 1px solid var(--line); }
+.tpl-col:first-child { border-left: 0; }
+.tpl-task { display: grid; gap: 2px; }
+.tpl-task-line { display: flex; align-items: center; gap: 4px; }
+.tpl-task-title { flex: 1; min-width: 0; padding: 3px 6px; border: 1px solid var(--line); color: var(--text); background: rgba(0,0,0,.18); font: inherit; font-size: 13px; outline: 0; }
+.tpl-task-title::placeholder { color: var(--muted); }
+.tpl-task-title:focus { border-color: var(--green); }
+html[data-theme="light"] .tpl-task-title { border-color: #c6c1b6; background: #f7f4ec; }
+.tpl-task-del { width: 24px; min-height: 24px; height: 24px; padding: 0; font-size: 13px; opacity: .5; }
+.tpl-task-del:hover { opacity: 1; }
+.tpl-needs { padding: 0; border: 0; color: var(--muted); background: transparent; font: inherit; font-size: 11px; line-height: 1.3; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.tpl-needs.is-on { color: var(--amber); }
+.tpl-needs:hover { color: var(--green); }
+.tpl-add-task { align-self: flex-start; font-size: 12px; }
+.tpl-col-foot { display: flex; flex-direction: column; gap: 4px; margin-top: auto; padding-top: 8px; }
+.tpl-stage-repeat { min-height: 26px; max-width: 100%; border: 1px solid transparent; padding: 0 4px; color: var(--muted); background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
+.tpl-stage-repeat:hover { border-color: var(--line-hi); }
+.tpl-stage-del { align-self: flex-start; font-size: 11px; color: var(--muted); }
+.tpl-stage-del:hover { color: var(--red); }
+/* окошко «ждёт»: плашки задач, включаются кликом */
+.tpl-needs-pop { position: absolute; z-index: 12; width: 360px; max-width: calc(100% - 16px); border: 1px solid var(--line-hi); background: var(--panel-2); box-shadow: var(--shadow); padding: 12px 14px; }
+.tpl-needs-pop strong { display: block; margin-bottom: 8px; font: 500 15px 'Oswald', sans-serif; letter-spacing: .02em; }
+.tpl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tpl-chip { border: 1px solid var(--line-hi); border-radius: 999px; padding: 4px 10px; color: var(--muted); background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
+.tpl-chip:hover { border-color: var(--green); color: var(--text); }
+.tpl-chip.is-on { border-color: var(--amber); color: var(--amber); }
+.tpl-pop-note { margin: 0; color: var(--muted); font-size: 12px; }
 .tpl-back { display: inline-block; }
-@media (max-width: 720px) {
-  .tpl-task { grid-template-columns: minmax(0, 1fr) auto; }
-  .tpl-needs { grid-column: 1 / -1; }
-  .tpl-head-right { margin-left: 0; }
-}
+@media (max-width: 720px) { .tpl-head-right { margin-left: 0; } .tpl-total { margin-left: 0; } }
+/* Заливка «до сейчас» мягко пульсирует слева направо — видно, что план живой. */
+.rollout-bar > i { position: relative; overflow: hidden; }
+.rollout-bar > i::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 45%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); transform: translateX(-120%); animation: rollout-pulse 3.2s ease-in-out infinite; }
+@keyframes rollout-pulse { 0% { transform: translateX(-120%); } 60%, 100% { transform: translateX(260%); } }
+@media (prefers-reduced-motion: reduce) { .rollout-bar > i::after { animation: none; } }
 /* Вкладка «Задачи»: слева карточка-заметка, справа список по релизам. */
 .tk-layout { display: grid; grid-template-columns: minmax(360px, 1.6fr) minmax(280px, .85fr); gap: 16px; align-items: start; }
 .tk-list { padding: 0 0 8px; }
