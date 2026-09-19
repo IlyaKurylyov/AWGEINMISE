@@ -208,6 +208,7 @@
     tasksCardOpen: false,       // на телефоне: показан список или карточка
     tasksMode: 'list',          // list — задачи, template — «Автоматизировать задачи»
     templateEditId: null,       // какой шаблон открыт в редакторе
+    templatePop: null,          // открытое окошко под баром шаблона: { kind: stage|gap|add }
     templates: [], templateStages: [], templateTasks: [],
     taskMaterials: [],          // ссылки, заметки, файлы задач
     activeLyricsId: null,
@@ -1209,7 +1210,7 @@
       if (existing) matched.add(existing.id);
       if (existing && existing.is_pinned) return; // закреплённый стоит на месте
       const row = {
-        title: existing ? existing.title : tStage.title,
+        title: existing ? existing.title : stageLabel(tStage, index),
         stage_date: isoDate(addDays(project.release_at, draft[index].offset)),
         day_offset: draft[index].offset,
         repeat_rule: tStage.repeat_rule,
@@ -1326,7 +1327,9 @@
     };
 
     const caps = stages.map((stage, index) => '<span class="rollout-cap ' + stageClass(stage) + '" data-col="' + index + '">'
-      + '<b>' + escapeHTML(stage.title) + '</b>'
+      + (template
+        ? '<input class="rollout-cap-input" data-tcap="' + stage.id + '" value="' + escapeHTML(stage.title) + '" placeholder="' + (stage.day_offset === 0 ? 'День Х' : 'Этап ' + (index + 1)) + '" aria-label="Название этапа">'
+        : '<b>' + escapeHTML(stage.title) + '</b>')
       + '<span class="rollout-cap-date">' + capDate(stage) + '</span></span>').join('');
 
     const nodeTag = readonly && !template ? 'span' : 'button';
@@ -1344,7 +1347,11 @@
     const gapCells = stages.map((stage, index) => {
       if (!index || !dated) return '<span></span>';
       const days = Math.round((times[index] - times[index - 1]) / 86400000);
-      return '<span><i>' + days + ' ' + plural(days, 'день', 'дня', 'дней') + '</i></span>';
+      const label = days + ' ' + plural(days, 'день', 'дня', 'дней');
+      // В шаблоне промежуток — кнопка: нажал — задал дни.
+      return template
+        ? '<span><button class="rollout-gap-btn" type="button" data-tgap="' + index + '" title="Задать промежуток">' + label + '</button></span>'
+        : '<span><i>' + label + '</i></span>';
     }).join('');
 
     // Этап с повтором — это период, а не точка: тизеры идут раз в два дня
@@ -1365,7 +1372,8 @@
       + '<div class="rollout-noderow"><span class="rollout-bar">' + (template ? '' : '<i style="width:' + todayPct + '%"></i>') + bands + '</span>'
       + '<div class="rollout-row rollout-nodes">' + nodeCells + '</div>'
       + (dated && !template ? '<span class="rollout-today" style="left:' + todayPct + '%" title="сегодня · ' + shortDate(new Date()) + '"></span>' : '')
-      + (readonly || template ? '' : '<button class="rollout-add" type="button" data-rollout-add title="Добавить этап" aria-label="Добавить этап">+</button>')
+      + (template ? '<button class="rollout-add" type="button" data-tpl-add-node title="Добавить этап" aria-label="Добавить этап">+</button>'
+        : (readonly ? '' : '<button class="rollout-add" type="button" data-rollout-add title="Добавить этап" aria-label="Добавить этап">+</button>'))
       + '</div>'
       + '<div class="rollout-row rollout-gaps">' + gapCells + '</div>'
       + '</div>';
@@ -2628,6 +2636,8 @@
     if (!host) return;
     const automate = $('#tasks-automate');
     if (automate) automate.hidden = state.tasksMode === 'template';
+    const newTask = $('#new-task');
+    if (newTask) newTask.hidden = state.tasksMode === 'template';
     if (state.tasksMode === 'template') { renderTemplateEditor(host); return; }
     const showDone = !!state.tasksShowDone;
     const filter = state.tasksProjectFilter || 'all';
@@ -2746,64 +2756,57 @@
       + '<div class="tk-foot"><button class="text-button" type="button" data-task-delete>Удалить задачу</button></div>';
   }
 
-  // ===== «Автоматизировать задачи»: шаблон плана, всё редактируется на месте =====
-  // Шаблон — для новых релизов. Уже созданные релизы не трогаются.
+  // ===== «Автоматизировать задачи»: шаблон плана прямо на баре =====
+  // Экран — один бар и одно окошко под ним. Имена этапов вводятся над
+  // кружками, промежутки задаются кликом по дням, кружок открывает задачи
+  // этапа, «+» добавляет этап. Уже созданные релизы шаблон не трогает.
   const TEMPLATE_REPEAT = { once: 'один раз', every_2_days: 'раз в 2 дня', weekly: 'раз в неделю' };
+  const stageLabel = (stage, index) => stage.title || (stage.day_offset === 0 ? 'День Х' : 'Этап ' + (index + 1));
+
+  // Кнопка «Автоматизировать задачи»: открывает свой (не основной) шаблон;
+  // его ещё нет — создаём пустой: шесть кружков как в нашем, без имён и задач.
+  async function openTemplateEditor() {
+    const custom = (state.templates || []).filter((row) => !row.is_default);
+    if (custom.length) {
+      state.templateEditId = custom[custom.length - 1].id;
+    } else {
+      const { data: created, error } = await db.from('release_templates').insert({ artist_id: state.artist.id, title: 'Мой шаблон', is_default: false }).select().single();
+      if (error) return toast(error.message || 'Не удалось создать шаблон.', 'error');
+      await db.from('template_stages').insert(ROLLOUT_TEMPLATES.single.stages.map((stage, index) => ({
+        artist_id: state.artist.id, template_id: created.id, title: '', day_offset: stage.day, repeat_rule: 'once', sort_order: index,
+      })));
+      await loadTemplates();
+      state.templateEditId = created.id;
+    }
+    state.templatePop = null;
+    state.tasksMode = 'template';
+    renderTasksView();
+  }
 
   function renderTemplateEditor(host) {
-    if (!templateById(state.templateEditId)) state.templateEditId = (defaultTemplate() || {}).id || null;
+    if (!templateById(state.templateEditId)) state.templateEditId = ((state.templates || []).find((row) => !row.is_default) || defaultTemplate() || {}).id || null;
     const template = templateById(state.templateEditId);
     host.classList.remove('is-card');
     if (!template) {
-      host.innerHTML = '<section class="panel tpl"><button class="text-button tpl-back" type="button" data-tpl-back>← к задачам</button><p class="tk-empty">Шаблонов пока нет.</p><div class="tpl-actions"><button class="button" type="button" data-tpl-new>Создать шаблон</button></div></section>';
-      bindTemplateEditor(host, null);
+      host.innerHTML = '<section class="panel tpl"><button class="text-button tpl-back" type="button" data-tpl-back>← к задачам</button><p class="tk-empty">Шаблонов пока нет.</p></section>';
+      $('[data-tpl-back]', host).addEventListener('click', () => { state.tasksMode = 'list'; renderTasksView(); });
       return;
     }
     const stages = templateStagesOf(template.id);
-    const tasks = templateTasksOf(template.id);
-    const taskTitle = (id) => (tasks.find((row) => row.id === id) || {}).title || '';
-    const pick = state.templates.length > 1
+    const pick = (state.templates || []).length > 1
       ? '<select class="tpl-pick" data-tpl-pick aria-label="Шаблон">' + state.templates.map((row) => '<option value="' + row.id + '"' + (row.id === template.id ? ' selected' : '') + '>' + escapeHTML(row.title) + (row.is_default ? ' · основной' : '') + '</option>').join('') + '</select>'
       : '';
-    const stageOptions = (current) => stages.map((stage) => '<option value="' + stage.id + '"' + (stage.id === current ? ' selected' : '') + '>' + escapeHTML(stage.title) + '</option>').join('');
-    const taskRow = (task) => {
-      const needs = (task.needs || []).filter((id) => tasks.some((row) => row.id === id));
-      return '<div class="tpl-task" data-tt="' + task.id + '">'
-        + '<input class="tpl-task-title" data-tt-title value="' + escapeHTML(task.title) + '" placeholder="Название задачи" aria-label="Задача">'
-        + '<select class="tpl-task-stage" data-tt-stage aria-label="Этап">' + stageOptions(task.stage_id) + '</select>'
-        + '<span class="tpl-needs">' + (needs.length ? 'ждёт: ' + needs.map((id) => '<i>' + escapeHTML(taskTitle(id)) + '</i>').join(', ') : '') + '<button class="text-button" type="button" data-tt-needs>' + (needs.length ? 'изменить' : '+ ждёт') + '</button></span>'
-        + '<button class="icon-button" type="button" data-tt-delete aria-label="Удалить задачу">×</button>'
-        + '<div data-tt-needs-host></div></div>';
-    };
-    const stageBlock = (stage) => {
-      const own = tasks.filter((task) => task.stage_id === stage.id);
-      const dayX = stage.day_offset === 0;
-      return '<section class="tpl-stage" data-ts="' + stage.id + '">'
-        + '<div class="tpl-stage-row">'
-        + '<input class="tpl-stage-title" data-ts-title value="' + escapeHTML(stage.title) + '" placeholder="Название этапа" aria-label="Этап">'
-        + (dayX ? '<span class="tpl-offset is-x">день Х</span>'
-          : '<span class="tpl-offset">за <input type="number" min="1" max="365" data-ts-offset value="' + Math.abs(stage.day_offset) + '" aria-label="Дней до дня Х"> дн. до дня Х</span>')
-        + '<select class="tpl-stage-repeat" data-ts-repeat aria-label="Повтор">' + Object.entries(TEMPLATE_REPEAT).map(([value, label]) => '<option value="' + value + '"' + (value === stage.repeat_rule ? ' selected' : '') + '>' + label + '</option>').join('') + '</select>'
-        + (dayX ? '' : '<button class="icon-button" type="button" data-ts-delete aria-label="Удалить этап">×</button>')
-        + '</div>'
-        + '<div class="tpl-tasks">' + own.map(taskRow).join('') + '<button class="text-button tpl-add-task" type="button" data-ts-add-task>+ задача</button></div>'
-        + '</section>';
-    };
-    const orphans = tasks.filter((task) => !stages.some((stage) => stage.id === task.stage_id));
     host.innerHTML = '<section class="panel tpl">'
       + '<div class="tpl-head"><button class="text-button tpl-back" type="button" data-tpl-back>← к задачам</button>' + pick
-      + '<button class="text-button" type="button" data-tpl-new>+ новый шаблон</button></div>'
+      + '<button class="text-button" type="button" data-tpl-new>+ новый шаблон</button>'
+      + '<span class="tpl-head-right"><label class="tpl-default"><input type="checkbox" data-tpl-default' + (template.is_default ? ' checked' : '') + '> основной для новых релизов</label>'
+      + ((state.templates || []).length > 1 ? '<button class="text-button" type="button" data-tpl-delete>удалить шаблон</button>' : '') + '</span></div>'
       + '<div class="tpl-title-row"><input class="tpl-title" data-tpl-title value="' + escapeHTML(template.title) + '" aria-label="Название шаблона">'
-      + '<label class="tpl-default"><input type="checkbox" data-tpl-default' + (template.is_default ? ' checked' : '') + '> основной для новых релизов</label>'
-      + (state.templates.length > 1 ? '<button class="text-button" type="button" data-tpl-delete>удалить шаблон</button>' : '') + '</div>'
-      + '<p class="tpl-hint">Шаблон применяется к новым релизам. Уже созданные не меняются. Этапы считаются от дня Х назад.</p>'
-      // Живой бар: то, что получится у нового релиза. Клик по кружку ведёт к этапу ниже.
-      + (stages.length ? '<div class="rollout-stage-wrap tpl-bar">' + rolloutAxis(stages.map((stage) => ({ ...stage, stage_date: null, is_done: false, is_pinned: false })), { readonly: true, template: true }) + '</div>' : '')
-      + '<div class="tpl-stages">' + stages.map(stageBlock).join('') + '</div>'
-      + (orphans.length ? '<section class="tpl-stage is-orphans"><div class="tpl-stage-row"><span class="tpl-stage-title is-static">Без этапа</span></div><div class="tpl-tasks">' + orphans.map(taskRow).join('') + '</div></section>' : '')
-      + '<div class="tpl-actions"><button class="button" type="button" data-tpl-add-stage>+ этап</button></div>'
+      + '<span class="tpl-hint">Имена этапов — над кружками. Промежуток — клик по дням. Кружок — задачи этапа. Уже созданные релизы не меняются.</span></div>'
+      + '<div class="rollout-stage-wrap tpl-bar">' + rolloutAxis(stages.map((stage) => ({ ...stage, stage_date: null, is_done: false, is_pinned: false })), { readonly: true, template: true }) + '</div>'
+      + '<div class="tpl-pop-host" data-tpl-pop></div>'
       + '</section>';
-    bindTemplateEditor(host, template);
+    bindTemplateEditor(host, template, stages);
   }
 
   async function templateWrite(query, okMessage = '') {
@@ -2813,35 +2816,29 @@
     return true;
   }
 
-  function bindTemplateEditor(host, template) {
+  function bindTemplateEditor(host, template, stages) {
     const reload = async () => { await loadTemplates(); renderTasksView(); };
-    $('[data-tpl-back]', host)?.addEventListener('click', () => { state.tasksMode = 'list'; renderTasksView(); });
-    $('[data-tpl-pick]', host)?.addEventListener('change', (event) => { state.templateEditId = event.target.value; renderTasksView(); });
-    $('[data-tpl-new]', host)?.addEventListener('click', async () => {
+    const stageWhere = (id, query) => query.eq('id', id).eq('artist_id', state.artist.id);
+    $('[data-tpl-back]', host).addEventListener('click', () => { state.tasksMode = 'list'; state.templatePop = null; renderTasksView(); });
+    $('[data-tpl-pick]', host)?.addEventListener('change', (event) => { state.templateEditId = event.target.value; state.templatePop = null; renderTasksView(); });
+    $('[data-tpl-new]', host).addEventListener('click', async () => {
       // Новый шаблон — копия текущего: проще убрать лишнее, чем собирать с нуля.
-      const title = template ? 'Копия: ' + template.title : ROLLOUT_TEMPLATES.single.label;
-      const { data: created, error } = await db.from('release_templates').insert({ artist_id: state.artist.id, title, is_default: !state.templates.length }).select().single();
+      const { data: created, error } = await db.from('release_templates').insert({ artist_id: state.artist.id, title: 'Копия: ' + template.title, is_default: false }).select().single();
       if (error) return toast(error.message || 'Не удалось создать шаблон.', 'error');
-      if (template) {
-        const stages = templateStagesOf(template.id);
-        const { data: newStages } = await db.from('template_stages').insert(stages.map((stage) => ({ artist_id: state.artist.id, template_id: created.id, title: stage.title, day_offset: stage.day_offset, repeat_rule: stage.repeat_rule, sort_order: stage.sort_order }))).select();
-        const stageMap = {};
-        stages.forEach((stage, index) => { if (newStages && newStages[index]) stageMap[stage.id] = newStages[index].id; });
-        const tasks = templateTasksOf(template.id);
-        const { data: newTasks } = await db.from('template_tasks').insert(tasks.map((task) => ({ artist_id: state.artist.id, template_id: created.id, stage_id: stageMap[task.stage_id] || null, title: task.title, sort_order: task.sort_order }))).select();
-        const taskMap = {};
-        tasks.forEach((task, index) => { if (newTasks && newTasks[index]) taskMap[task.id] = newTasks[index].id; });
-        await Promise.all(tasks.filter((task) => (task.needs || []).length).map((task) => db.from('template_tasks')
-          .update({ needs: task.needs.map((id) => taskMap[id]).filter(Boolean) }).eq('id', taskMap[task.id]).eq('artist_id', state.artist.id)));
-      } else {
-        await db.from('template_stages').insert({ artist_id: state.artist.id, template_id: created.id, title: 'День Х — во все площадки', day_offset: 0, repeat_rule: 'once', sort_order: 0 });
-      }
+      const { data: newStages } = await db.from('template_stages').insert(stages.map((stage) => ({ artist_id: state.artist.id, template_id: created.id, title: stage.title, day_offset: stage.day_offset, repeat_rule: stage.repeat_rule, sort_order: stage.sort_order }))).select();
+      const stageMap = {};
+      stages.forEach((stage, index) => { if (newStages && newStages[index]) stageMap[stage.id] = newStages[index].id; });
+      const tasks = templateTasksOf(template.id);
+      const { data: newTasks } = await db.from('template_tasks').insert(tasks.map((task) => ({ artist_id: state.artist.id, template_id: created.id, stage_id: stageMap[task.stage_id] || null, title: task.title, sort_order: task.sort_order }))).select();
+      const taskMap = {};
+      tasks.forEach((task, index) => { if (newTasks && newTasks[index]) taskMap[task.id] = newTasks[index].id; });
+      await Promise.all(tasks.filter((task) => (task.needs || []).length).map((task) => db.from('template_tasks')
+        .update({ needs: task.needs.map((id) => taskMap[id]).filter(Boolean) }).eq('id', taskMap[task.id]).eq('artist_id', state.artist.id)));
       state.templateEditId = created.id;
+      state.templatePop = null;
       await reload();
-      toast('Шаблон создан. Переименуйте его и поправьте этапы.');
+      toast('Шаблон создан — копия. Переименуйте и поправьте.');
     });
-    if (!template) return;
-
     const titleInput = $('[data-tpl-title]', host);
     titleInput.addEventListener('change', async () => {
       const next = titleInput.value.trim();
@@ -2858,80 +2855,152 @@
       if (!(await templateWrite(db.from('release_templates').delete().eq('id', template.id).eq('artist_id', state.artist.id)))) return;
       const rest = state.templates.filter((row) => row.id !== template.id);
       if (template.is_default && rest[0]) await db.from('release_templates').update({ is_default: true }).eq('id', rest[0].id).eq('artist_id', state.artist.id);
-      state.templateEditId = null;
+      state.templateEditId = null; state.templatePop = null;
       reload();
     });
-    $$('[data-template-stage]', host).forEach((node) => node.addEventListener('click', () => {
-      const block = host.querySelector('[data-ts="' + node.dataset.templateStage + '"]');
-      if (!block) return;
-      block.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      block.classList.remove('is-spotlit');
-      void block.offsetWidth;
-      block.classList.add('is-spotlit');
-      block.addEventListener('animationend', () => block.classList.remove('is-spotlit'), { once: true });
-    }));
-    $('[data-tpl-add-stage]', host).addEventListener('click', async () => {
-      const stages = templateStagesOf(template.id);
-      // Новый этап встаёт за неделю до самого раннего: чаще всего план растёт назад.
-      const earliest = stages.length ? Math.min.apply(null, stages.map((stage) => stage.day_offset)) : 0;
-      const offset = earliest === 0 ? -7 : earliest - 7;
-      if (await templateWrite(db.from('template_stages').insert({ artist_id: state.artist.id, template_id: template.id, title: 'Новый этап', day_offset: offset, repeat_rule: 'once', sort_order: stages.length }))) reload();
-    });
 
-    $$('[data-ts]', host).forEach((block) => {
-      const stageId = block.dataset.ts;
-      const stage = (state.templateStages || []).find((row) => row.id === stageId);
-      if (!stage) return;
-      const where = (query) => query.eq('id', stageId).eq('artist_id', state.artist.id);
-      $('[data-ts-title]', block)?.addEventListener('change', async (event) => {
-        const next = event.target.value.trim();
-        if (!next) { event.target.value = stage.title; return; }
-        if (await templateWrite(where(db.from('template_stages').update({ title: next })))) reload();
-      });
-      $('[data-ts-offset]', block)?.addEventListener('change', async (event) => {
-        const days = Math.round(Number(event.target.value));
-        if (!days || days < 1) { event.target.value = Math.abs(stage.day_offset); return toast('Укажите, за сколько дней до дня Х.', 'error'); }
-        if (await templateWrite(where(db.from('template_stages').update({ day_offset: -days })))) reload();
-      });
-      $('[data-ts-repeat]', block)?.addEventListener('change', async (event) => {
-        if (await templateWrite(where(db.from('template_stages').update({ repeat_rule: event.target.value })))) reload();
-      });
-      $('[data-ts-delete]', block)?.addEventListener('click', async () => {
-        const own = templateTasksOf(template.id).filter((task) => task.stage_id === stageId);
-        const text = own.length ? 'Вместе с ним уйдут ' + own.length + ' ' + plural(own.length, 'задача', 'задачи', 'задач') + ': ' + own.map((task) => '«' + task.title + '»').join(', ') + '.' : '';
-        if (!(await askYesNo('Удалить этап «' + stage.title + '»?', text, 'Удалить', true))) return;
-        if (own.length) await db.from('template_tasks').delete().in('id', own.map((task) => task.id)).eq('artist_id', state.artist.id);
-        if (await templateWrite(where(db.from('template_stages').delete()))) reload();
-      });
-      $('[data-ts-add-task]', block)?.addEventListener('click', async () => {
-        const count = templateTasksOf(template.id).length;
-        if (await templateWrite(db.from('template_tasks').insert({ artist_id: state.artist.id, template_id: template.id, stage_id: stageId, title: 'Новая задача', sort_order: count }))) reload();
-      });
+    // Имена этапов — прямо над кружками.
+    $$('[data-tcap]', host).forEach((input) => {
+      const stage = stages.find((row) => row.id === input.dataset.tcap);
+      const commit = async () => {
+        const next = input.value.trim();
+        if (next === (stage.title || '')) return;
+        if (await templateWrite(stageWhere(stage.id, db.from('template_stages').update({ title: next })))) reload();
+      };
+      input.addEventListener('change', commit);
+      input.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); input.blur(); } });
     });
+    // Кружок — задачи этапа; промежуток — дни; «+» — новый этап.
+    $$('[data-template-stage]', host).forEach((node) => node.addEventListener('click', () => { state.templatePop = { kind: 'stage', id: node.dataset.templateStage }; renderTasksView(); }));
+    $$('[data-tgap]', host).forEach((button) => button.addEventListener('click', () => { state.templatePop = { kind: 'gap', index: Number(button.dataset.tgap) }; renderTasksView(); }));
+    $('[data-tpl-add-node]', host)?.addEventListener('click', () => { state.templatePop = { kind: 'add' }; renderTasksView(); });
+    renderTemplatePop(host, template, stages, reload);
+  }
 
-    $$('[data-tt]', host).forEach((row) => {
+  function renderTemplatePop(host, template, stages, reload) {
+    const pop = state.templatePop;
+    const hostEl = $('[data-tpl-pop]', host);
+    if (!pop) { hostEl.innerHTML = ''; return; }
+    const close = () => { state.templatePop = null; renderTasksView(); };
+    const stageWhere = (id, query) => query.eq('id', id).eq('artist_id', state.artist.id);
+    const daysWord = (n) => n + ' ' + plural(n, 'день', 'дня', 'дней');
+
+    if (pop.kind === 'add') {
+      hostEl.innerHTML = '<form class="tpl-pop"><div class="tpl-pop-head"><strong>Новый этап</strong><button class="icon-button" type="button" data-pop-close aria-label="Закрыть">×</button></div>'
+        + '<div class="tpl-pop-row"><input name="title" placeholder="Название этапа" aria-label="Название"><label class="tpl-offset">за <input name="days" type="number" min="1" max="365" value="7"> дн. до дня Х</label><button class="button button-primary" type="submit">Добавить</button></div></form>';
+      $('[data-pop-close]', hostEl).addEventListener('click', close);
+      $('form', hostEl).addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        const days = Math.round(Number(data.get('days')));
+        if (!days || days < 1) return toast('За сколько дней до дня Х?', 'error');
+        const { data: row, error } = await db.from('template_stages').insert({ artist_id: state.artist.id, template_id: template.id, title: String(data.get('title') || '').trim(), day_offset: -days, repeat_rule: 'once', sort_order: stages.length }).select().single();
+        if (error) return toast(error.message || 'Не удалось добавить этап.', 'error');
+        state.templatePop = { kind: 'stage', id: row.id };
+        reload();
+      });
+      $('input[name="title"]', hostEl).focus();
+      return;
+    }
+
+    if (pop.kind === 'gap') {
+      const index = pop.index;
+      const prev = stages[index - 1];
+      const next = stages[index];
+      if (!prev || !next) { state.templatePop = null; hostEl.innerHTML = ''; return; }
+      const gap = next.day_offset - prev.day_offset;
+      hostEl.innerHTML = '<form class="tpl-pop"><div class="tpl-pop-head"><strong>Между «' + escapeHTML(stageLabel(prev, index - 1)) + '» и «' + escapeHTML(stageLabel(next, index)) + '»</strong><button class="icon-button" type="button" data-pop-close aria-label="Закрыть">×</button></div>'
+        + '<div class="tpl-pop-row"><label class="tpl-offset"><input name="days" type="number" min="1" max="365" value="' + gap + '"> дн.</label>'
+        + '<span class="tpl-pop-note">Этапы до «' + escapeHTML(stageLabel(next, index)) + '» сдвинутся, промежутки между ними останутся.</span>'
+        + '<button class="text-button" type="button" data-gap-insert>+ этап между</button><button class="button button-primary" type="submit">Готово</button></div></form>';
+      $('[data-pop-close]', hostEl).addEventListener('click', close);
+      $('form', hostEl).addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const days = Math.round(Number(new FormData(event.currentTarget).get('days')));
+        if (!days || days < 1) return toast('Промежуток — хотя бы один день.', 'error');
+        const delta = days - gap;
+        if (!delta) return close();
+        // Раздвигаем: всё, что раньше «next», уезжает назад на delta.
+        const earlier = stages.slice(0, index);
+        const results = await Promise.all(earlier.map((stage) => stageWhere(stage.id, db.from('template_stages').update({ day_offset: stage.day_offset - delta }))));
+        if (results.some((result) => result.error)) return toast('Не удалось сдвинуть этапы.', 'error');
+        state.templatePop = null;
+        reload();
+      });
+      $('[data-gap-insert]', hostEl).addEventListener('click', async () => {
+        if (gap < 2) return toast('Между ними один день — сначала раздвиньте.', 'error');
+        const offset = prev.day_offset + Math.floor(gap / 2);
+        const { data: row, error } = await db.from('template_stages').insert({ artist_id: state.artist.id, template_id: template.id, title: '', day_offset: offset, repeat_rule: 'once', sort_order: stages.length }).select().single();
+        if (error) return toast(error.message || 'Не удалось добавить этап.', 'error');
+        state.templatePop = { kind: 'stage', id: row.id };
+        reload();
+      });
+      $('input[name="days"]', hostEl).focus();
+      return;
+    }
+
+    // Этап: срок, повтор, задачи, удаление.
+    const index = stages.findIndex((row) => row.id === pop.id);
+    const stage = stages[index];
+    if (!stage) { state.templatePop = null; hostEl.innerHTML = ''; return; }
+    const tasks = templateTasksOf(template.id);
+    const own = tasks.filter((task) => task.stage_id === stage.id);
+    const taskTitle = (id) => (tasks.find((row) => row.id === id) || {}).title || '';
+    const dayX = stage.day_offset === 0;
+    const taskRow = (task) => {
+      const needs = (task.needs || []).filter((id) => tasks.some((row) => row.id === id));
+      return '<div class="tpl-task" data-tt="' + task.id + '">'
+        + '<input class="tpl-task-title" data-tt-title value="' + escapeHTML(task.title) + '" placeholder="Название задачи" aria-label="Задача">'
+        + '<span class="tpl-needs">' + (needs.length ? 'ждёт: ' + needs.map((id) => '<i>' + escapeHTML(taskTitle(id)) + '</i>').join(', ') + ' ' : '') + '<button class="text-button" type="button" data-tt-needs>' + (needs.length ? 'изменить' : '+ ждёт') + '</button></span>'
+        + '<button class="icon-button" type="button" data-tt-delete aria-label="Удалить задачу">×</button>'
+        + '<div data-tt-needs-host></div></div>';
+    };
+    hostEl.innerHTML = '<div class="tpl-pop"><div class="tpl-pop-head"><strong>' + escapeHTML(stageLabel(stage, index)) + '</strong>'
+      + (dayX ? '<span class="tpl-offset is-x">день Х</span>' : '<label class="tpl-offset">за <input type="number" min="1" max="365" data-ts-offset value="' + Math.abs(stage.day_offset) + '"> дн. до дня Х</label>')
+      + '<select class="tpl-stage-repeat" data-ts-repeat aria-label="Повтор">' + Object.entries(TEMPLATE_REPEAT).map(([value, label]) => '<option value="' + value + '"' + (value === stage.repeat_rule ? ' selected' : '') + '>' + label + '</option>').join('') + '</select>'
+      + (dayX ? '' : '<button class="text-button" type="button" data-ts-delete>удалить этап</button>')
+      + '<button class="icon-button" type="button" data-pop-close aria-label="Закрыть">×</button></div>'
+      + '<div class="tpl-tasks">' + (own.length ? own.map(taskRow).join('') : '<p class="tpl-pop-note">Задач у этапа пока нет. Этап без задач закрывается вручную на баре.</p>')
+      + '<button class="text-button tpl-add-task" type="button" data-ts-add-task>+ задача</button></div></div>';
+
+    $('[data-pop-close]', hostEl).addEventListener('click', close);
+    $('[data-ts-offset]', hostEl)?.addEventListener('change', async (event) => {
+      const days = Math.round(Number(event.target.value));
+      if (!days || days < 1) { event.target.value = Math.abs(stage.day_offset); return toast('Укажите, за сколько дней до дня Х.', 'error'); }
+      if (await templateWrite(stageWhere(stage.id, db.from('template_stages').update({ day_offset: -days })))) reload();
+    });
+    $('[data-ts-repeat]', hostEl).addEventListener('change', async (event) => {
+      if (await templateWrite(stageWhere(stage.id, db.from('template_stages').update({ repeat_rule: event.target.value })))) reload();
+    });
+    $('[data-ts-delete]', hostEl)?.addEventListener('click', async () => {
+      const text = own.length ? 'Вместе с ним уйдут ' + own.length + ' ' + plural(own.length, 'задача', 'задачи', 'задач') + ': ' + own.map((task) => '«' + task.title + '»').join(', ') + '.' : '';
+      if (!(await askYesNo('Удалить этап «' + stageLabel(stage, index) + '»?', text, 'Удалить', true))) return;
+      if (own.length) await db.from('template_tasks').delete().in('id', own.map((task) => task.id)).eq('artist_id', state.artist.id);
+      if (await templateWrite(stageWhere(stage.id, db.from('template_stages').delete()))) { state.templatePop = null; reload(); }
+    });
+    $('[data-ts-add-task]', hostEl).addEventListener('click', async () => {
+      if (await templateWrite(db.from('template_tasks').insert({ artist_id: state.artist.id, template_id: template.id, stage_id: stage.id, title: 'Новая задача', sort_order: tasks.length }))) reload();
+    });
+    $$('[data-tt]', hostEl).forEach((row) => {
       const taskId = row.dataset.tt;
-      const task = (state.templateTasks || []).find((item) => item.id === taskId);
-      if (!task) return;
+      const task = tasks.find((item) => item.id === taskId);
       const where = (query) => query.eq('id', taskId).eq('artist_id', state.artist.id);
-      $('[data-tt-title]', row).addEventListener('change', async (event) => {
-        const next = event.target.value.trim();
-        if (!next) { event.target.value = task.title; return; }
+      const titleInput = $('[data-tt-title]', row);
+      titleInput.addEventListener('change', async () => {
+        const next = titleInput.value.trim();
+        if (!next) { titleInput.value = task.title; return; }
         if (await templateWrite(where(db.from('template_tasks').update({ title: next })))) reload();
       });
-      $('[data-tt-stage]', row).addEventListener('change', async (event) => {
-        if (await templateWrite(where(db.from('template_tasks').update({ stage_id: event.target.value || null })))) reload();
-      });
+      titleInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); titleInput.blur(); } });
       $('[data-tt-delete]', row).addEventListener('click', async () => {
         if (!(await askYesNo('Удалить задачу «' + task.title + '» из шаблона?', '', 'Удалить', true))) return;
-        // Другие задачи шаблона могли её ждать.
-        const waiting = templateTasksOf(template.id).filter((item) => (item.needs || []).includes(taskId));
+        const waiting = tasks.filter((item) => (item.needs || []).includes(taskId));
         await Promise.all(waiting.map((item) => db.from('template_tasks').update({ needs: item.needs.filter((id) => id !== taskId) }).eq('id', item.id).eq('artist_id', state.artist.id)));
         if (await templateWrite(where(db.from('template_tasks').delete()))) reload();
       });
       $('[data-tt-needs]', row).addEventListener('click', () => {
         const needsHost = $('[data-tt-needs-host]', row);
-        const others = templateTasksOf(template.id).filter((item) => item.id !== taskId);
+        const others = tasks.filter((item) => item.id !== taskId);
         needsHost.innerHTML = '<form class="tk-pop tpl-needs-pop"><strong>Что должно быть сделано до «' + escapeHTML(task.title) + '»</strong>'
           + (others.length ? others.map((item) => '<label class="tpl-need"><input type="checkbox" name="need" value="' + item.id + '"' + ((task.needs || []).includes(item.id) ? ' checked' : '') + '> ' + escapeHTML(item.title) + '</label>').join('') : '<p>Других задач в шаблоне нет.</p>')
           + '<div class="tk-pop-actions"><span><button class="text-button" type="button" data-needs-cancel>Отмена</button></span><button class="button button-primary" type="submit">Готово</button></div></form>';
@@ -3671,7 +3740,7 @@
     const tStages = template ? templateStagesOf(template.id) : [];
     const tTasks = template ? templateTasksOf(template.id) : [];
     const { data: stages, error: stageError } = await db.from('release_stages').insert(tStages.map((stage, index) => ({
-      artist_id: state.artist.id, project_id: saved.id, title: stage.title, template_stage_id: stage.id,
+      artist_id: state.artist.id, project_id: saved.id, title: stageLabel(stage, index), template_stage_id: stage.id,
       stage_date: null, day_offset: stage.day_offset, repeat_rule: stage.repeat_rule, sort_order: index,
     }))).select();
     if (stageError) console.error('Failed to seed release stages for draft project', stageError);
@@ -5715,7 +5784,7 @@
     $('#open-beat-form').addEventListener('click', () => openBeatEditor());
     $('#new-project').addEventListener('click', () => openProjectEditor());
     $('#new-task').addEventListener('click', () => openTaskEditor());
-    $('#tasks-automate').addEventListener('click', () => { state.tasksMode = 'template'; renderTasksView(); });
+    $('#tasks-automate').addEventListener('click', openTemplateEditor);
     const dashboardStart = $('#dashboard-start');
     const dashboardStartMenu = $('#dashboard-start-menu');
     const closeDashboardStart = () => {

@@ -616,40 +616,49 @@ html[data-theme="light"] .pipeline-board .pipeline-column.is-dragover, html[data
 .dashboard-tasks-panel .text-button:hover,
 .dashboard-pipeline-panel .text-button:hover { border-color: #5b705a; color: var(--green); }
 
-/* «Автоматизировать задачи»: шаблон плана, правится на месте. */
+/* «Автоматизировать задачи»: шаблон плана прямо на баре, одно окошко под ним. */
 .section-toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .tk-layout:has(.tpl) { grid-template-columns: 1fr; }
-.tpl { padding: 18px 24px 24px; }
-.tpl-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.tpl { padding: 16px 24px 20px; }
+.tpl-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
 .tpl-head .text-button { font-size: 14px; }
-.tpl-pick { min-height: 36px; border: 1px solid var(--line-hi); padding: 0 10px; color: var(--text); background: var(--panel-2); font: inherit; font-size: 13px; }
-.tpl-title-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.tpl-title { flex: 1 1 240px; min-width: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; color: var(--text); background: transparent; font: 500 26px/1.2 'Oswald', sans-serif; letter-spacing: .02em; outline: 0; }
+.tpl-head-right { display: inline-flex; align-items: center; gap: 16px; margin-left: auto; }
+.tpl-pick { min-height: 34px; border: 1px solid var(--line-hi); padding: 0 10px; color: var(--text); background: var(--panel-2); font: inherit; font-size: 13px; }
+.tpl-title-row { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; margin-bottom: 4px; }
+.tpl-title { flex: 0 1 320px; min-width: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; color: var(--text); background: transparent; font: 500 26px/1.2 'Oswald', sans-serif; letter-spacing: .02em; outline: 0; }
 .tpl-title:focus { border-bottom-color: var(--green); }
 .tpl-default { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; cursor: pointer; }
 .tpl-default input { width: 16px; height: 16px; margin: 0; accent-color: var(--green); }
-.tpl-title-row .text-button { font-size: 13px; }
-.tpl-hint { margin: 8px 0 18px; color: var(--muted); font-size: 13px; }
-.tpl-bar { margin: 6px -24px 8px; border-top: 0; }
+.tpl-hint { color: var(--muted); font-size: 12px; }
+.tpl-bar { margin: 0 -24px; border-top: 0; }
 .tpl-bar .rollout-node { cursor: pointer; }
-.tpl-stage { padding: 14px 0 8px; }
-.tpl-stage.is-spotlit { animation: tpl-spot 1.8s ease-out; }
-@keyframes tpl-spot { 0% { background: rgba(112,238,121,.14); } 100% { background: transparent; } }
-.tpl-stage + .tpl-stage { border-top: 1px solid var(--line); }
-.tpl-stage-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.tpl-stage-title { flex: 1 1 220px; min-width: 0; padding: 4px 0; border: 0; border-bottom: 1px solid transparent; color: var(--text); background: transparent; font: 500 19px 'Oswald', sans-serif; letter-spacing: .02em; outline: 0; }
-.tpl-stage-title:focus { border-bottom-color: var(--green); }
-.tpl-stage-title.is-static { color: var(--muted); }
+/* имя этапа — поле прямо над кружком */
+.rollout-cap-input { display: block; width: 100%; padding: 2px 4px; border: 0; border-bottom: 1px dashed var(--line-hi); color: var(--text); background: transparent; font: inherit; font-size: 13px; text-align: center; outline: 0; }
+.rollout-cap-input::placeholder { color: var(--muted); }
+.rollout-cap-input:focus { border-bottom-color: var(--green); border-bottom-style: solid; }
+.rollout-cap.is-release .rollout-cap-input { color: var(--amber); }
+/* промежуток — кнопка */
+.rollout-gap-btn { padding: 2px 6px; border: 0; border-bottom: 1px dashed var(--line-hi); color: var(--muted); background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
+.rollout-gap-btn:hover { color: var(--green); border-bottom-color: var(--green); }
+/* окошко под баром */
+.tpl-pop-host:empty { display: none; }
+.tpl-pop { margin-top: 6px; border: 1px solid var(--line-hi); background: var(--panel-2); padding: 14px 16px; }
+.tpl-pop-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.tpl-pop-head strong { font: 500 18px 'Oswald', sans-serif; letter-spacing: .02em; }
+.tpl-pop-head .icon-button { margin-left: auto; }
+.tpl-pop-head .text-button { font-size: 13px; }
+.tpl-pop-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+.tpl-pop-row input[name="title"] { flex: 1 1 220px; min-height: 36px; border: 1px solid var(--line-hi); padding: 0 10px; color: var(--text); background: var(--panel); font: inherit; font-size: 14px; }
+.tpl-pop-row .button { min-height: 36px; padding: 6px 14px; font-size: 11px; }
+.tpl-pop-note { color: var(--muted); font-size: 12px; }
 .tpl-offset { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; white-space: nowrap; }
-.tpl-offset input { width: 58px; min-height: 32px; border: 1px solid var(--line-hi); padding: 0 6px; color: var(--text); background: var(--panel-2); font: inherit; font-size: 14px; text-align: center; }
+.tpl-offset input { width: 58px; min-height: 32px; border: 1px solid var(--line-hi); padding: 0 6px; color: var(--text); background: var(--panel); font: inherit; font-size: 14px; text-align: center; }
 .tpl-offset.is-x { color: var(--amber); }
-.tpl-stage-repeat { min-height: 32px; border: 1px solid var(--line-hi); padding: 0 8px; color: var(--muted); background: var(--panel-2); font: inherit; font-size: 12px; }
-.tpl-tasks { display: grid; gap: 2px; margin: 8px 0 0 18px; }
-.tpl-task { display: grid; grid-template-columns: minmax(180px, 1.3fr) minmax(150px, .8fr) minmax(0, 1.2fr) auto; gap: 8px 12px; align-items: center; padding: 4px 0; }
+.tpl-stage-repeat { min-height: 32px; border: 1px solid var(--line-hi); padding: 0 8px; color: var(--muted); background: var(--panel); font: inherit; font-size: 12px; }
+.tpl-tasks { display: grid; gap: 2px; margin-top: 10px; }
+.tpl-task { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(0, 1.2fr) auto; gap: 8px 12px; align-items: center; padding: 3px 0; }
 .tpl-task-title { min-width: 0; padding: 4px 0; border: 0; border-bottom: 1px solid transparent; color: var(--text); background: transparent; font: inherit; font-size: 15px; outline: 0; }
 .tpl-task-title:focus { border-bottom-color: var(--green); }
-.tpl-task-stage { min-height: 30px; border: 1px solid transparent; padding: 0 6px; color: var(--muted); background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
-.tpl-task-stage:hover { border-color: var(--line-hi); }
 .tpl-needs { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; color: var(--muted); font-size: 12px; }
 .tpl-needs i { font-style: normal; color: var(--amber); }
 .tpl-needs .text-button { font-size: 12px; }
@@ -659,11 +668,11 @@ html[data-theme="light"] .pipeline-board .pipeline-column.is-dragover, html[data
 .tpl-need { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 14px; cursor: pointer; }
 .tpl-need input { width: 16px; height: 16px; margin: 0; accent-color: var(--green); }
 .tpl-add-task { justify-self: start; margin-top: 4px; font-size: 13px; }
-.tpl-actions { margin-top: 18px; }
 .tpl-back { display: inline-block; }
 @media (max-width: 720px) {
   .tpl-task { grid-template-columns: minmax(0, 1fr) auto; }
-  .tpl-task-stage, .tpl-needs { grid-column: 1 / -1; }
+  .tpl-needs { grid-column: 1 / -1; }
+  .tpl-head-right { margin-left: 0; }
 }
 /* Вкладка «Задачи»: слева карточка-заметка, справа список по релизам. */
 .tk-layout { display: grid; grid-template-columns: minmax(360px, 1.6fr) minmax(280px, .85fr); gap: 16px; align-items: start; }
