@@ -1710,9 +1710,15 @@ html[data-theme="light"] .secretary-note { background: rgba(169,111,36,.12); }
 .lyrics-tool { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; cursor: pointer; user-select: none; }
 .lyrics-tool input { width: 18px; height: 18px; margin: 0; accent-color: var(--green); cursor: pointer; }
 .lyrics-tool:has(input:checked) { color: var(--green); }
-/* Знак вопроса: пояснение по наведению, на телефоне — по клику. */
+/* Знак вопроса: пояснение всплывает рядом с ним — по наведению, на телефоне по клику. */
+.lyrics-help-wrap { position: relative; display: inline-flex; }
 .lyrics-help { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 1px solid var(--line-hi); border-radius: 50%; color: var(--muted); background: transparent; font: 600 12px/1 'IBM Plex Mono', monospace; cursor: help; }
-.lyrics-help:hover { color: var(--green); border-color: var(--green); }
+.lyrics-help:hover, .lyrics-help-wrap.is-open .lyrics-help { color: var(--green); border-color: var(--green); }
+.lyrics-help-box { display: none; position: absolute; top: calc(100% + 8px); right: -8px; z-index: 12; width: 300px; max-width: 80vw; border: 1px solid var(--line-hi); background: var(--panel-2); box-shadow: var(--shadow, 0 14px 34px rgba(0,0,0,.4)); padding: 12px 14px; text-align: left; cursor: default; }
+.lyrics-help-wrap:hover .lyrics-help-box, .lyrics-help-wrap.is-open .lyrics-help-box { display: block; }
+.lyrics-help-box p { margin: 0 0 8px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.lyrics-help-box p:last-child { margin-bottom: 0; }
+.lyrics-help-box b { color: var(--text); font-weight: 500; }
 .lyrics-wrap { --lyrics-bg: #080b08; position: relative; display: flex; min-height: 0; }
 html[data-theme="light"] .lyrics-wrap { --lyrics-bg: #f8f6ef; }
 .lyrics-wrap textarea { position: relative; z-index: 1; flex: 1 1 auto; min-width: 0; }

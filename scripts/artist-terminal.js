@@ -1867,7 +1867,6 @@
   //   2. словарь ударений (assets/stress, грузится при первом включении);
   //   3. слово неизвестно — пробуем два последних слога, красим бледнее.
   const LYRICS_TOOLS_KEY = 'inmise-lyrics-tools';
-  const LYRICS_HELP = 'Рифма считается от ударной гласной. Ударения берутся из словаря; поправить можно заглавной буквой: нЕльзя.\n«Рифмы в конце» — созвучие концов слов: сейчас / глаз / масс.\n«Все рифмы» — по ударной гласной в любом месте слова, цвет = гласная.\nБледнее — слова нет в словаре, ударение угадано.';
   const RHYME_WINDOW = 4; // пару ищем в пределах четырёх строк вверх и вниз
   const RHYME_COLORS = ['rgba(112,238,121,.45)', 'rgba(213,154,77,.5)', 'rgba(125,149,200,.55)', 'rgba(212,85,73,.45)', 'rgba(197,138,217,.5)', 'rgba(95,196,196,.5)', 'rgba(224,179,76,.5)', 'rgba(155,212,90,.45)', 'rgba(232,120,160,.45)', 'rgba(240,140,60,.45)', 'rgba(140,120,230,.5)', 'rgba(180,140,90,.5)'];
   // В режиме «все рифмы» цвет привязан к гласной, чтобы его можно было выучить.
@@ -2128,8 +2127,33 @@
         $$('[data-lyrics-tools]', root).forEach(paintLyrics);
       });
     });
+    // Пояснение всплывает у самого знака «?»: по наведению через CSS,
+    // по клику — для телефона; закрывается кликом мимо или Escape.
     const help = $('[data-lyrics-help]', root);
-    if (help) help.addEventListener('click', () => toast(LYRICS_HELP));
+    if (help) {
+      const wrap = help.parentElement;
+      const box = $('.lyrics-help-box', wrap);
+      // Окошко висит под знаком; если вылезает за край экрана —
+      // сдвигаем ровно настолько, чтобы влезло.
+      const place = () => {
+        box.style.transform = '';
+        const rect = box.getBoundingClientRect();
+        const shift = rect.left < 8 ? 8 - rect.left : (rect.right > innerWidth - 8 ? innerWidth - 8 - rect.right : 0);
+        if (shift) box.style.transform = 'translateX(' + Math.round(shift) + 'px)';
+      };
+      wrap.addEventListener('mouseenter', place);
+      const setOpen = (open) => { wrap.classList.toggle('is-open', open); help.setAttribute('aria-expanded', String(open)); if (open) place(); };
+      help.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const open = !wrap.classList.contains('is-open');
+        setOpen(open);
+        if (open) {
+          const onAway = (e) => { if (!wrap.contains(e.target)) { setOpen(false); document.removeEventListener('click', onAway); } };
+          setTimeout(() => document.addEventListener('click', onAway), 0);
+          document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); }, { once: true });
+        }
+      });
+    }
     $$('[data-lyrics-tools]', root).forEach((textarea) => {
       const repaint = () => paintLyrics(textarea);
       textarea.addEventListener('input', repaint);
@@ -3266,7 +3290,12 @@
                 <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="syllables"><span>слоги</span></label>
                 <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="rhymes" value="ends"><span>рифмы в конце</span></label>
                 <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="rhymes" value="all"><span>все рифмы</span></label>
-                <button class="lyrics-help" type="button" data-lyrics-help aria-label="Как это работает" title="${escapeHTML(LYRICS_HELP)}">?</button>
+                <span class="lyrics-help-wrap"><button class="lyrics-help" type="button" data-lyrics-help aria-label="Как это работает" aria-expanded="false">?</button>
+                  <div class="lyrics-help-box" role="tooltip">
+                    <p><b>Рифмы в конце</b> — рифма от ударной гласной до конца слова.</p>
+                    <p><b>Все рифмы</b> — созвучие по ударной гласной в любом месте слова.</p>
+                    <p>Ударение можно поставить самому заглавной буквой: <b>нЕльзя</b>.</p>
+                  </div></span>
                 <button class="lyrics-beat" type="button" data-lyrics-beat hidden title="Включить бит трека"><span>▶</span> бит</button>
                 <span class="lyrics-beat-counter" data-lyrics-beat-counter hidden><b data-beat-bar></b><span data-beat-time></span><button class="text-button" type="button" data-beat-bpm hidden>указать BPM</button></span>
                 ${project ? '<button class="text-button" id="track-add-lyrics" type="button">+ Добавить</button>' : ''}
