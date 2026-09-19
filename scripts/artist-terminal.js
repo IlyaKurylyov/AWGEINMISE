@@ -1292,13 +1292,16 @@
   // до того, как назначен день Х.
   function rolloutAxis(stages, options = {}) {
     const readonly = !!options.readonly;
+    // Режим шаблона: дат нет, есть только «за N дней до дня Х» — считаем
+    // промежутки из смещений, а «сегодня» не рисуем.
+    const template = !!options.template;
     const today = dayStart(new Date()).getTime();
-    const dated = stages.every((stage) => stage.stage_date);
-    const times = dated ? stages.map((stage) => dayStart(stage.stage_date).getTime()) : [];
+    const dated = template || stages.every((stage) => stage.stage_date);
+    const times = template ? stages.map((stage) => stage.day_offset * 86400000) : (dated ? stages.map((stage) => dayStart(stage.stage_date).getTime()) : []);
     const count = stages.length;
     const centerPct = (index) => ((index + 0.5) / count) * 100;
 
-    const todayPct = !dated ? 0 : (() => {
+    const todayPct = (!dated || template) ? 0 : (() => {
       if (today <= times[0]) return 0;
       if (today >= times[count - 1]) return 100;
       for (let index = 1; index < count; index += 1) {
@@ -1315,21 +1318,28 @@
     const stageClass = (stage) => {
       if (stage.is_done) return 'is-done';
       if (stage.day_offset === 0) return 'is-release';
-      return dated && dayStart(stage.stage_date).getTime() < today ? 'is-late' : '';
+      return dated && !template && dayStart(stage.stage_date).getTime() < today ? 'is-late' : '';
+    };
+    const capDate = (stage) => {
+      if (template) return stage.day_offset === 0 ? 'день Х' : 'за ' + Math.abs(stage.day_offset) + ' ' + plural(Math.abs(stage.day_offset), 'день', 'дня', 'дней');
+      return stage.stage_date ? shortDate(stage.stage_date) : '—';
     };
 
     const caps = stages.map((stage, index) => '<span class="rollout-cap ' + stageClass(stage) + '" data-col="' + index + '">'
       + '<b>' + escapeHTML(stage.title) + '</b>'
-      + '<span class="rollout-cap-date">' + (stage.stage_date ? shortDate(stage.stage_date) : '—') + '</span></span>').join('');
+      + '<span class="rollout-cap-date">' + capDate(stage) + '</span></span>').join('');
 
-    const nodeCells = stages.map((stage, index) => '<span data-col="' + index + '">'
-      + (stage.is_pinned && !readonly ? '<button class="rollout-lock" type="button" data-stage-pin="' + stage.id
-        + '" title="Закреплён: не сдвигается при переносе дня Х. Нажмите, чтобы снять"></button>' : '')
-      + '<' + (readonly ? 'span' : 'button') + ' class="rollout-node ' + stageClass(stage) + '"'
-      + (readonly ? '' : ' type="button" data-stage="' + stage.id + '"')
-      + ' title="' + escapeHTML(stage.title) + (stage.stage_date ? ' · ' + shortDate(stage.stage_date) : ' · даты нет')
-      + (stage.repeat_rule !== 'once' ? ' · ' + REPEAT_LABEL[stage.repeat_rule] : '') + '">'
-      + '</' + (readonly ? 'span' : 'button') + '></span>').join('');
+    const nodeTag = readonly && !template ? 'span' : 'button';
+    const nodeCells = stages.map((stage, index) => {
+      const attr = template ? ' type="button" data-template-stage="' + stage.id + '"' : (readonly ? '' : ' type="button" data-stage="' + stage.id + '"');
+      return '<span data-col="' + index + '">'
+        + (stage.is_pinned && !readonly ? '<button class="rollout-lock" type="button" data-stage-pin="' + stage.id
+          + '" title="Закреплён: не сдвигается при переносе дня Х. Нажмите, чтобы снять"></button>' : '')
+        + '<' + nodeTag + ' class="rollout-node ' + stageClass(stage) + '"' + attr
+        + ' title="' + escapeHTML(stage.title) + ' · ' + capDate(stage)
+        + (stage.repeat_rule !== 'once' ? ' · ' + REPEAT_LABEL[stage.repeat_rule] : '') + '">'
+        + '</' + nodeTag + '></span>';
+    }).join('');
 
     const gapCells = stages.map((stage, index) => {
       if (!index || !dated) return '<span></span>';
@@ -1352,10 +1362,10 @@
     }).join('');
     return '<div class="rollout-axis" style="--rollout-count:' + count + '">'
       + '<div class="rollout-row">' + caps + '</div>'
-      + '<div class="rollout-noderow"><span class="rollout-bar"><i style="width:' + todayPct + '%"></i>' + bands + '</span>'
+      + '<div class="rollout-noderow"><span class="rollout-bar">' + (template ? '' : '<i style="width:' + todayPct + '%"></i>') + bands + '</span>'
       + '<div class="rollout-row rollout-nodes">' + nodeCells + '</div>'
-      + (dated ? '<span class="rollout-today" style="left:' + todayPct + '%" title="сегодня · ' + shortDate(new Date()) + '"></span>' : '')
-      + (readonly ? '' : '<button class="rollout-add" type="button" data-rollout-add title="Добавить этап" aria-label="Добавить этап">+</button>')
+      + (dated && !template ? '<span class="rollout-today" style="left:' + todayPct + '%" title="сегодня · ' + shortDate(new Date()) + '"></span>' : '')
+      + (readonly || template ? '' : '<button class="rollout-add" type="button" data-rollout-add title="Добавить этап" aria-label="Добавить этап">+</button>')
       + '</div>'
       + '<div class="rollout-row rollout-gaps">' + gapCells + '</div>'
       + '</div>';
@@ -2787,6 +2797,8 @@
       + '<label class="tpl-default"><input type="checkbox" data-tpl-default' + (template.is_default ? ' checked' : '') + '> основной для новых релизов</label>'
       + (state.templates.length > 1 ? '<button class="text-button" type="button" data-tpl-delete>удалить шаблон</button>' : '') + '</div>'
       + '<p class="tpl-hint">Шаблон применяется к новым релизам. Уже созданные не меняются. Этапы считаются от дня Х назад.</p>'
+      // Живой бар: то, что получится у нового релиза. Клик по кружку ведёт к этапу ниже.
+      + (stages.length ? '<div class="rollout-stage-wrap tpl-bar">' + rolloutAxis(stages.map((stage) => ({ ...stage, stage_date: null, is_done: false, is_pinned: false })), { readonly: true, template: true }) + '</div>' : '')
       + '<div class="tpl-stages">' + stages.map(stageBlock).join('') + '</div>'
       + (orphans.length ? '<section class="tpl-stage is-orphans"><div class="tpl-stage-row"><span class="tpl-stage-title is-static">Без этапа</span></div><div class="tpl-tasks">' + orphans.map(taskRow).join('') + '</div></section>' : '')
       + '<div class="tpl-actions"><button class="button" type="button" data-tpl-add-stage>+ этап</button></div>'
@@ -2849,6 +2861,15 @@
       state.templateEditId = null;
       reload();
     });
+    $$('[data-template-stage]', host).forEach((node) => node.addEventListener('click', () => {
+      const block = host.querySelector('[data-ts="' + node.dataset.templateStage + '"]');
+      if (!block) return;
+      block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      block.classList.remove('is-spotlit');
+      void block.offsetWidth;
+      block.classList.add('is-spotlit');
+      block.addEventListener('animationend', () => block.classList.remove('is-spotlit'), { once: true });
+    }));
     $('[data-tpl-add-stage]', host).addEventListener('click', async () => {
       const stages = templateStagesOf(template.id);
       // Новый этап встаёт за неделю до самого раннего: чаще всего план растёт назад.

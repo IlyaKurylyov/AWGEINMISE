@@ -630,7 +630,11 @@ html[data-theme="light"] .pipeline-board .pipeline-column.is-dragover, html[data
 .tpl-default input { width: 16px; height: 16px; margin: 0; accent-color: var(--green); }
 .tpl-title-row .text-button { font-size: 13px; }
 .tpl-hint { margin: 8px 0 18px; color: var(--muted); font-size: 13px; }
+.tpl-bar { margin: 6px -24px 8px; border-top: 0; }
+.tpl-bar .rollout-node { cursor: pointer; }
 .tpl-stage { padding: 14px 0 8px; }
+.tpl-stage.is-spotlit { animation: tpl-spot 1.8s ease-out; }
+@keyframes tpl-spot { 0% { background: rgba(112,238,121,.14); } 100% { background: transparent; } }
 .tpl-stage + .tpl-stage { border-top: 1px solid var(--line); }
 .tpl-stage-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .tpl-stage-title { flex: 1 1 220px; min-width: 0; padding: 4px 0; border: 0; border-bottom: 1px solid transparent; color: var(--text); background: transparent; font: 500 19px 'Oswald', sans-serif; letter-spacing: .02em; outline: 0; }
