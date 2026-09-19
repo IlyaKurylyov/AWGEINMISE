@@ -616,49 +616,97 @@ html[data-theme="light"] .pipeline-board .pipeline-column.is-dragover, html[data
 .dashboard-tasks-panel .text-button:hover,
 .dashboard-pipeline-panel .text-button:hover { border-color: #5b705a; color: var(--green); }
 
-/* Вкладка «Задачи»: список по релизам вместо трёх колонок. */
-.tasks-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 12px 18px; }
-.tasks-tabs { display: flex; gap: 4px; }
-.tasks-tabs button { border: 1px solid var(--line-hi); padding: 8px 14px; color: var(--muted); background: transparent; font: inherit; font-size: 14px; cursor: pointer; }
-.tasks-tabs button b { margin-left: 6px; color: var(--text); font-weight: 500; }
-.tasks-tabs button[aria-selected="true"] { color: var(--green); border-color: var(--green); }
-.tasks-release-filter { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
-.tasks-release-filter select { min-height: 38px; border: 1px solid var(--line-hi); padding: 0 10px; color: var(--text); background: var(--panel-2); font: inherit; font-size: 14px; }
-.task-group > header { display: flex; align-items: baseline; gap: 12px; padding: 18px 18px 6px; }
-.task-group > header strong { font: 500 18px 'Oswald', sans-serif; letter-spacing: .02em; }
-.task-group > header span { color: var(--muted); font-size: 13px; }
-.task-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; padding: 10px 18px; }
-.task-row label { padding-top: 2px; }
-.task-row input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: var(--green); cursor: pointer; }
-.task-row-main { display: block; width: 100%; padding: 0; border: 0; color: inherit; background: transparent; text-align: left; font: inherit; cursor: pointer; }
-.task-row-main strong { display: block; font-size: 16px; font-weight: 500; }
-.task-row-main small { display: block; margin-top: 2px; color: var(--muted); font-size: 13px; }
-.task-row-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; color: var(--muted); font-size: 12px; }
-.task-row-meta em { font-style: normal; }
-.task-row-meta em.is-late { color: var(--red); }
-.task-row-meta em.is-wait { color: var(--amber); }
-.task-row.is-done .task-row-main strong { color: var(--muted); text-decoration: line-through; }
-.task-row.is-blocked .task-row-main strong { color: var(--muted); }
-.task-row-main:hover strong { color: var(--green); }
-/* Редактор задачи: разделы без рамок, заголовок раздела — как eyebrow. */
-.task-section { margin: 18px 0 0; padding: 0; border: 0; min-width: 0; }
-.task-section legend { padding: 0; margin-bottom: 10px; color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
-.task-section .drawer-note { margin-top: 8px; }
-.task-materials { margin-top: 26px; }
-.task-materials > header { margin-bottom: 10px; }
-.task-materials > header h3 { margin: 2px 0 0; font: 500 18px 'Oswald', sans-serif; letter-spacing: .02em; }
-.task-material { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 8px 0; }
-.task-material-kind { color: var(--muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; padding-top: 3px; }
-.task-material p { margin: 0; white-space: pre-wrap; font-size: 14px; }
-.task-material a { color: var(--green); word-break: break-all; }
-.task-material small { display: block; color: var(--muted); font-size: 12px; }
-.task-material .text-button { font-size: 14px; text-align: left; }
-.task-materials-add { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 10px; }
-.task-materials-add .text-button { font-size: 14px; cursor: pointer; }
-.task-material-form { display: grid; gap: 8px; margin-top: 12px; }
-.task-material-form input, .task-material-form textarea { width: 100%; min-height: 40px; border: 1px solid var(--line-hi); padding: 8px 10px; color: var(--text); background: var(--panel-2); font: inherit; font-size: 14px; }
-.task-material-form-actions { display: flex; justify-content: flex-end; align-items: center; gap: 14px; }
-@media (max-width: 720px) { .task-material { grid-template-columns: minmax(0, 1fr) auto; } .task-material-kind { grid-column: 1 / -1; } }
+/* Вкладка «Задачи»: слева карточка-заметка, справа список по релизам. */
+.tk-layout { display: grid; grid-template-columns: minmax(360px, 1.15fr) minmax(300px, 1fr); gap: 16px; align-items: start; }
+.tk-list { padding: 0 0 8px; }
+.tk-tabs { display: flex; align-items: center; gap: 4px; padding: 14px 18px 6px; flex-wrap: wrap; }
+.tk-tabs button { border: 1px solid transparent; padding: 7px 12px; color: var(--muted); background: transparent; font: inherit; font-size: 14px; cursor: pointer; }
+.tk-tabs button b { margin-left: 6px; font-weight: 500; color: var(--text); }
+.tk-tabs button[aria-selected="true"] { color: var(--green); border-color: var(--line-hi); }
+.tk-tabs select { margin-left: auto; min-height: 36px; border: 1px solid var(--line-hi); padding: 0 10px; color: var(--text); background: var(--panel-2); font: inherit; font-size: 13px; }
+.tk-group { padding: 14px 0 4px; }
+.tk-group > header { display: flex; align-items: baseline; gap: 10px; padding: 0 18px 4px; }
+.tk-group > header strong { font: 500 17px 'Oswald', sans-serif; letter-spacing: .03em; }
+.tk-group > header span { color: var(--muted); font-size: 12px; }
+.tk-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; padding: 10px 18px; cursor: pointer; }
+.tk-row:hover { background: rgba(255,255,255,.03); }
+html[data-theme="light"] .tk-row:hover { background: rgba(73,82,71,.06); }
+.tk-row.is-active { background: rgba(112,238,121,.07); box-shadow: inset 3px 0 var(--green); }
+html[data-theme="light"] .tk-row.is-active { background: rgba(35,139,53,.09); }
+.tk-row input { width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--green); cursor: pointer; }
+.tk-row strong { display: block; font-size: 16px; font-weight: 500; }
+.tk-row.is-done strong { color: var(--muted); text-decoration: line-through; }
+.tk-row.is-blocked strong { color: var(--muted); }
+.tk-tags { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 3px; color: var(--muted); font-size: 12px; }
+.tk-tags i { font-style: normal; display: inline-flex; align-items: center; gap: 4px; }
+.tk-tags i.is-late { color: var(--red); }
+.tk-tags i.is-wait { color: var(--amber); }
+.tk-tags svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tk-ava { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--line-hi); color: var(--text); font-size: 9px; font-weight: 600; }
+/* карточка */
+.tk-card { padding: 22px 24px 24px; position: sticky; top: 18px; }
+.tk-back { display: none; margin-bottom: 12px; font-size: 14px; }
+.tk-empty { padding: 30px 6px; color: var(--muted); font-size: 14px; }
+.tk-empty p { margin: 0; }
+.tk-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.tk-card-head > div { min-width: 0; flex: 1; }
+.tk-title { margin: 0; font: 500 28px/1.15 'Oswald', sans-serif; letter-spacing: .02em; }
+.tk-title-input { display: block; width: 100%; margin: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; color: var(--text); background: transparent; font: 500 28px/1.15 'Oswald', sans-serif; letter-spacing: .02em; outline: 0; }
+.tk-title-input:focus { border-bottom-color: var(--green); }
+.tk-release { display: inline-block; max-width: 100%; margin-top: 4px; padding: 0; border: 0; color: var(--muted); background: transparent; font: inherit; font-size: 13px; cursor: pointer; appearance: none; -webkit-appearance: none; }
+.tk-release:hover { color: var(--green); }
+.tk-release-date { margin-left: 6px; color: var(--muted); font-size: 13px; }
+.tk-release-date::before { content: '· '; }
+.tk-done { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--muted); font-size: 13px; white-space: nowrap; cursor: pointer; }
+.tk-done.is-blocked { color: var(--amber); white-space: normal; text-align: right; cursor: default; }
+.tk-done input { width: 18px; height: 18px; margin: 0; accent-color: var(--green); flex: none; }
+.tk-note { margin: 12px 0 0; color: var(--muted); font-size: 13px; }
+.tk-desc { display: block; width: 100%; margin: 14px 0 0; padding: 0; border: 0; color: var(--text); background: transparent; font: inherit; font-size: 15px; line-height: 1.55; resize: none; overflow: hidden; outline: 0; }
+.tk-desc::placeholder { color: var(--muted); }
+.tk-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.tk-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; border: 1px solid var(--line-hi); border-radius: 999px; padding: 4px 12px; color: var(--text); background: transparent; font: inherit; font-size: 13px; cursor: pointer; }
+.tk-chip:hover { border-color: var(--green); }
+.tk-chip svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
+.tk-chip.is-late { border-color: rgba(212,85,73,.6); color: var(--red); }
+.tk-chip .tk-ava { width: 18px; height: 18px; font-size: 10px; }
+.tk-add { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 12px; color: var(--muted); font-size: 13px; }
+.tk-add button { padding: 0; border: 0; color: var(--muted); background: transparent; font: inherit; font-size: 13px; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
+.tk-add button:hover { color: var(--green); }
+/* окошко под плашкой */
+.tk-pop-host:empty { display: none; }
+.tk-pop { display: grid; gap: 8px; width: 340px; max-width: 100%; margin-top: 12px; border: 1px solid var(--line-hi); background: var(--panel-2); box-shadow: var(--shadow); padding: 14px; }
+.tk-pop strong { font: 500 15px 'Oswald', sans-serif; letter-spacing: .03em; }
+.tk-pop label { display: grid; gap: 4px; color: var(--muted); font-size: 12px; }
+.tk-pop input, .tk-pop select, .tk-pop textarea { width: 100%; min-height: 38px; border: 1px solid var(--line-hi); padding: 6px 10px; color: var(--text); background: var(--panel); font: inherit; font-size: 14px; }
+.tk-pop p { margin: 0; color: var(--muted); font-size: 12px; }
+.tk-pop-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 2px; }
+.tk-pop-actions span { display: flex; gap: 14px; }
+.tk-pop-actions .text-button { font-size: 13px; }
+.tk-pop-actions .button { min-height: 34px; padding: 6px 14px; font-size: 11px; }
+/* материалы */
+.tk-mats { margin-top: 26px; }
+.tk-mats > .eyebrow { display: block; margin-bottom: 8px; }
+.tk-mat { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 8px 0; }
+.tk-mat > svg { width: 16px; height: 16px; margin-top: 3px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tk-mat a, .tk-file { padding: 0; border: 0; color: var(--green); background: transparent; font: inherit; font-size: 15px; text-align: left; text-decoration: none; cursor: pointer; }
+.tk-mat a:hover, .tk-file:hover { text-decoration: underline; }
+.tk-mat small { display: block; color: var(--muted); font-size: 12px; word-break: break-all; }
+.tk-mat p { margin: 0; white-space: pre-wrap; font-size: 14px; }
+.tk-mat .icon-button { opacity: .35; }
+.tk-mat:hover .icon-button { opacity: 1; }
+.tk-mats-add { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; }
+.tk-mats-add button, .tk-mats-add label { padding: 0; border: 0; color: var(--muted); background: transparent; font: inherit; font-size: 13px; cursor: pointer; }
+.tk-mats-add button:hover, .tk-mats-add label:hover { color: var(--green); }
+.tk-foot { margin-top: 26px; }
+.tk-foot .text-button { font-size: 13px; color: var(--muted); }
+.tk-foot .text-button:hover { color: var(--red); }
+@media (max-width: 900px) {
+  .tk-layout { grid-template-columns: 1fr; }
+  .tk-card { position: static; }
+  .tk-back { display: inline-block; }
+  .tk-layout:not(.is-card) .tk-card { display: none; }
+  .tk-layout.is-card .tk-list { display: none; }
+}
 .task-pipeline-board { display: grid; grid-template-columns: repeat(3,minmax(190px,1fr)); gap: 8px; padding: 9px; overflow-x: auto; }
 .task-pipeline-board-full { min-height: calc(100vh - 235px); }
 .view[data-view-panel="tasks"] > .panel { border: 0; background: transparent; box-shadow: none; }

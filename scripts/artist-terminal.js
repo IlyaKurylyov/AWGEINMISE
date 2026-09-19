@@ -203,6 +203,8 @@
     dashboardTaskFilter: 'all', // какие задачи показывает список на дашборде: all / overdue / blocked / undated
     tasksShowDone: false,       // вкладка «Задачи»: открытые или сделанные
     tasksProjectFilter: 'all',  // вкладка «Задачи»: релиз
+    tasksSelectedId: null,      // вкладка «Задачи»: какая карточка открыта слева
+    tasksCardOpen: false,       // на телефоне: показан список или карточка
     taskMaterials: [],          // ссылки, заметки, файлы задач
     activeLyricsId: null,
     lyricsReturnProjectId: '',
@@ -2535,16 +2537,27 @@
   const TASK_REPEAT_LABEL = { none: 'нет', daily: 'каждый день', every2: 'раз в 2 дня', every3: 'раз в 3 дня', weekly: 'раз в неделю' };
   const TASK_REPEAT_DAYS = { daily: 1, every2: 2, every3: 3, weekly: 7 };
   const TASK_REMIND_LABEL = { none: 'нет', day_before: 'за день', on_day: 'утром в срок' };
+  // Значки для плашек: линии без заливки, цвет — от текста.
+  const TASK_ICON = {
+    date: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+    repeat: '<svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
+    bell: '<svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
+    clip: '<svg viewBox="0 0 24 24"><path d="M21.4 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>',
+    link: '<svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>',
+    note: '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>',
+  };
 
   const taskMaterialsOf = (taskId) => (state.taskMaterials || []).filter((row) => row.task_id === taskId);
+  const taskById = (id) => state.tasks.find((task) => task.id === id) || null;
+  const initialOf = (name) => String(name || '').trim().charAt(0).toUpperCase() || '?';
 
-  // Вкладка «Задачи» — список по релизам с тем, чего нет на дашборде:
-  // кто делает, повтор, напоминание, материалы. Три колонки «придумал /
-  // делаю / загружено» убраны — они дублировали галочку «сделано».
+  // Вкладка «Задачи»: слева карточка выбранной задачи, справа список
+  // по релизам. Карточка — как заметка: показывает только то, что задано,
+  // остальное добавляется одной строкой «+ добавить».
   function renderTasksView() {
     $('#nav-tasks-count').textContent = state.tasks.filter((task) => !task.is_done).length;
-    const container = $('#tasks-board');
-    if (!container) return;
+    const host = $('#tasks-board');
+    if (!host) return;
     const showDone = !!state.tasksShowDone;
     const filter = state.tasksProjectFilter || 'all';
     const today = dayStart(new Date()).getTime();
@@ -2558,6 +2571,8 @@
       if (da || dbb) return da ? -1 : 1;
       return (a.sort_order || 0) - (b.sort_order || 0);
     });
+    if (!taskById(state.tasksSelectedId)) state.tasksSelectedId = tasks[0] ? tasks[0].id : null;
+    const selected = taskById(state.tasksSelectedId);
 
     const byProject = {};
     tasks.forEach((task) => { const key = task.project_id || ''; (byProject[key] = byProject[key] || []).push(task); });
@@ -2578,145 +2593,190 @@
     const row = (task) => {
       const blockers = task.is_done ? [] : taskBlockers(task);
       const overdue = !task.is_done && task.due_at && dayStart(task.due_at).getTime() < today;
-      const meta = [];
-      meta.push(task.due_at ? '<em class="' + (overdue ? 'is-late' : '') + '">' + (overdue ? 'просрочено · ' : 'срок ') + formatDate(task.due_at, { year: undefined }) + '</em>' : '<em>без даты</em>');
-      if (task.assignee_name) meta.push('<em>делает ' + escapeHTML(task.assignee_name) + (task.promised_at ? ' · обещал к ' + shortDate(task.promised_at) : '') + '</em>');
-      if (task.repeat_rule && task.repeat_rule !== 'none') meta.push('<em>повтор: ' + TASK_REPEAT_LABEL[task.repeat_rule] + '</em>');
-      if (task.remind_rule && task.remind_rule !== 'none') meta.push('<em>напомнить ' + TASK_REMIND_LABEL[task.remind_rule] + '</em>');
+      const tags = [];
+      tags.push(task.due_at ? '<i class="' + (overdue ? 'is-late' : '') + '">' + TASK_ICON.date + formatDate(task.due_at, { year: undefined }) + '</i>' : '<i>без даты</i>');
+      if (task.assignee_name) tags.push('<i><span class="tk-ava">' + escapeHTML(initialOf(task.assignee_name)) + '</span>' + escapeHTML(task.assignee_name) + '</i>');
+      if (task.repeat_rule && task.repeat_rule !== 'none') tags.push('<i>' + TASK_ICON.repeat + TASK_REPEAT_LABEL[task.repeat_rule] + '</i>');
+      if (task.remind_rule && task.remind_rule !== 'none') tags.push('<i>' + TASK_ICON.bell + TASK_REMIND_LABEL[task.remind_rule] + '</i>');
       const materials = taskMaterialsOf(task.id).length;
-      if (materials) meta.push('<em>материалы: ' + materials + '</em>');
-      if (blockers.length) meta.push('<em class="is-wait">ждёт: ' + escapeHTML(blockers.join(', ')) + '</em>');
-      const description = String(task.description || '').trim();
-      return '<article class="task-row' + (task.is_done ? ' is-done' : '') + (blockers.length ? ' is-blocked' : '') + '">'
-        + '<label><input type="checkbox" data-task-check="' + task.id + '"' + (task.is_done ? ' checked' : '') + (blockers.length ? ' disabled' : '') + '><span></span></label>'
-        + '<button class="task-row-main" type="button" data-open-task="' + task.id + '"><strong>' + escapeHTML(task.title) + '</strong>'
-        + (description ? '<small>' + escapeHTML(description.length > 120 ? description.slice(0, 119) + '…' : description) + '</small>' : '')
-        + '<span class="task-row-meta">' + meta.join('') + '</span></button></article>';
+      if (materials) tags.push('<i>' + TASK_ICON.clip + materials + '</i>');
+      if (blockers.length) tags.push('<i class="is-wait">ждёт: ' + escapeHTML(blockers.join(', ')) + '</i>');
+      return '<div class="tk-row' + (task.is_done ? ' is-done' : '') + (blockers.length ? ' is-blocked' : '') + (task.id === state.tasksSelectedId ? ' is-active' : '') + '" data-task-pick="' + task.id + '">'
+        + '<input type="checkbox" aria-label="сделано" data-task-check="' + task.id + '"' + (task.is_done ? ' checked' : '') + (blockers.length ? ' disabled' : '') + '>'
+        + '<div><strong>' + escapeHTML(task.title) + '</strong><div class="tk-tags">' + tags.join('') + '</div></div></div>';
     };
 
-    container.innerHTML = '<div class="tasks-toolbar">'
-      + '<div class="tasks-tabs" role="tablist">'
+    host.classList.toggle('is-card', !!state.tasksCardOpen);
+    host.innerHTML = '<section class="panel tk-card" data-task-card>' + taskCardMarkup(selected) + '</section>'
+      + '<section class="panel tk-list"><div class="tk-tabs" role="tablist">'
       + '<button type="button" role="tab" data-tasks-done="0" aria-selected="' + !showDone + '">Открытые <b>' + openCount + '</b></button>'
-      + '<button type="button" role="tab" data-tasks-done="1" aria-selected="' + showDone + '">Сделанные <b>' + doneCount + '</b></button></div>'
-      + '<label class="tasks-release-filter"><span>Релиз</span><select data-tasks-project>' + projectOptions + '</select></label></div>'
-      + (groups.length ? groups.map((group) => '<section class="task-group"><header><strong>' + escapeHTML(group.title) + '</strong>'
-        + (group.sub ? '<span>' + escapeHTML(group.sub) + '</span>' : '') + '</header>' + group.tasks.map(row).join('') + '</section>').join('')
-        : '<div class="empty-list">' + (showDone ? 'Сделанных задач пока нет.' : 'Открытых задач нет.') + '</div>');
+      + '<button type="button" role="tab" data-tasks-done="1" aria-selected="' + showDone + '">Сделанные <b>' + doneCount + '</b></button>'
+      + '<select aria-label="Релиз" data-tasks-project>' + projectOptions + '</select></div>'
+      + (groups.length ? groups.map((group) => '<div class="tk-group"><header><strong>' + escapeHTML(group.title) + '</strong>'
+        + (group.sub ? '<span>' + escapeHTML(group.sub) + '</span>' : '') + '</header>' + group.tasks.map(row).join('') + '</div>').join('')
+        : '<div class="empty-list">' + (showDone ? 'Сделанных задач пока нет.' : 'Открытых задач нет.') + '</div>')
+      + '</section>';
 
-    $$('[data-tasks-done]', container).forEach((button) => button.addEventListener('click', () => { state.tasksShowDone = button.dataset.tasksDone === '1'; renderTasksView(); }));
-    $('[data-tasks-project]', container).addEventListener('change', (event) => { state.tasksProjectFilter = event.target.value; renderTasksView(); });
-    $$('[data-task-check]', container).forEach((input) => input.addEventListener('change', () => toggleTask(input.dataset.taskCheck, input.checked)));
-    bindTaskButtons(container);
+    $$('[data-tasks-done]', host).forEach((button) => button.addEventListener('click', () => { state.tasksShowDone = button.dataset.tasksDone === '1'; state.tasksSelectedId = null; renderTasksView(); }));
+    $('[data-tasks-project]', host).addEventListener('change', (event) => { state.tasksProjectFilter = event.target.value; state.tasksSelectedId = null; renderTasksView(); });
+    $$('[data-task-check]', host).forEach((input) => {
+      input.addEventListener('click', (event) => event.stopPropagation());
+      input.addEventListener('change', () => toggleTask(input.dataset.taskCheck, input.checked));
+    });
+    $$('[data-task-pick]', host).forEach((rowNode) => rowNode.addEventListener('click', () => {
+      state.tasksSelectedId = rowNode.dataset.taskPick;
+      state.tasksCardOpen = true; // на телефоне это открывает карточку
+      renderTasksView();
+    }));
+    if (selected) bindTaskCard(selected);
   }
 
-  function formatFileSize(value) {
-    const bytes = Number(value || 0);
-    if (!bytes) return '—';
-    if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} КБ`;
-    return `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
-  }
-
-  function openTaskEditor(initialStatus = 'idea', initialProjectId = '', taskId = null) {
-    if (!state.artist) return toast(ARTIST_NOT_READY, 'error');
-    const task = state.tasks.find((item) => item.id === taskId) || null;
-    const selectedProjectId = task?.project_id || initialProjectId;
-    const projectOptions = ['<option value="">Без привязки к релизу</option>', ...state.projects.map((project) => `<option value="${project.id}" ${project.id === selectedProjectId ? 'selected' : ''}>${escapeHTML(project.title)}</option>`)].join('');
-    const option = (map, current) => Object.entries(map).map(([value, label]) => `<option value="${value}" ${value === (current || 'none') ? 'selected' : ''}>${label}</option>`).join('');
-    // Автоматическую задачу нельзя переименовать, удалить и зациклить:
-    // по названию держится вся связь с этапом плана.
+  function taskCardMarkup(task) {
+    if (!task) {
+      return '<div class="tk-empty"><p>Выберите задачу в списке — здесь откроется её карточка.</p></div>';
+    }
+    const today = dayStart(new Date()).getTime();
     const auto = isAutoTask(task);
-    openDrawer('TASK / PROJECT', task ? 'Задача' : 'Новая задача', `<form id="task-form">
-      <label class="field"><span>Задача</span><input name="title" value="${escapeHTML(task?.title || '')}" required placeholder="Например: подготовить обложку" ${auto ? 'readonly' : ''}></label>
-      ${auto ? '<p class="drawer-note">Это шаг плана выпуска — название и удаление закрыты. Если шаг не нужен, просто отметьте его сделанным.</p>' : ''}
-      <label class="field"><span>Описание</span><textarea name="description" rows="3" placeholder="Что именно нужно сделать">${escapeHTML(task?.description || '')}</textarea></label>
-      <div class="form-grid two"><label class="field"><span>Связанный релиз</span><select name="project_id">${projectOptions}</select></label><label class="field"><span>Срок</span><input name="due_at" type="datetime-local" value="${toLocalInput(task?.due_at)}"></label></div>
-      <fieldset class="task-section"><legend>Кто делает</legend>
-        <div class="form-grid two"><label class="field"><span>Имя</span><input name="assignee_name" value="${escapeHTML(task?.assignee_name || '')}" placeholder="Вася, дизайнер"></label><label class="field"><span>Контакт</span><input name="assignee_contact" value="${escapeHTML(task?.assignee_contact || '')}" placeholder="@vasya или телефон"></label></div>
-        <label class="field"><span>Обещал сдать к</span><input name="promised_at" type="date" value="${escapeHTML(task?.promised_at || '')}"></label>
-        <p class="drawer-note">Пусто — значит делаете сами.</p>
-      </fieldset>
-      ${auto ? '' : `<fieldset class="task-section"><legend>Повтор</legend>
-        <div class="form-grid two"><label class="field"><span>Как часто</span><select name="repeat_rule">${option(TASK_REPEAT_LABEL, task?.repeat_rule)}</select></label><label class="field"><span>До какого дня</span><input name="repeat_until" type="date" value="${escapeHTML(task?.repeat_until || '')}"></label></div>
-        <p class="drawer-note">Закрыли задачу — следующая появится сама с новым сроком. Нужен срок у задачи.</p>
-      </fieldset>`}
-      <fieldset class="task-section"><legend>Напоминание</legend>
-        <label class="field"><span>Когда напомнить</span><select name="remind_rule">${option(TASK_REMIND_LABEL, task?.remind_rule)}</select></label>
-        <p class="drawer-note">Приходит через Секретаря — в Телеграм или на почту, в ваш час рассылки. Нужен срок у задачи.</p>
-      </fieldset>
-      <div class="drawer-actions">${task && !auto ? '<button class="button button-danger" id="delete-task" type="button">Удалить</button>' : '<span></span>'}<button class="button button-primary" type="submit">${task ? 'Сохранить' : 'Добавить задачу'}</button></div>
-    </form>
-    ${task ? `<section class="task-materials" data-task-materials="${task.id}"><header><span class="eyebrow">Материалы</span><h3>Ссылки, заметки, файлы</h3></header><div data-materials-list></div>
-      <div class="task-materials-add"><button class="text-button" type="button" data-material-add="link">+ Ссылка</button><button class="text-button" type="button" data-material-add="note">+ Заметка</button><label class="text-button">+ Файл<input type="file" multiple hidden data-material-file></label></div>
-      <div data-materials-form></div></section>` : '<p class="drawer-note">Ссылки, заметки и файлы можно прикрепить после того, как задача создана.</p>'}`);
-    $('#task-form').addEventListener('submit', (event) => saveTask(event, task));
-    $('#delete-task')?.addEventListener('click', () => deleteTask(task));
-    if (task) bindTaskMaterials(task);
-  }
+    const overdue = !task.is_done && task.due_at && dayStart(task.due_at).getTime() < today;
+    const project = projectById(task.project_id);
+    const blockers = task.is_done ? [] : taskBlockers(task);
+    const projectOptions = ['<option value="">Без релиза</option>'].concat(state.projects.map((row) => '<option value="' + row.id + '"' + (row.id === task.project_id ? ' selected' : '') + '>' + escapeHTML(row.title || 'Без названия') + '</option>')).join('');
 
-  async function saveTask(event, task = null) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const button = $('button[type="submit"]', form);
-    const data = new FormData(form);
-    const text = (name) => String(data.get(name) || '').trim() || null;
-    const payload = {
-      artist_id: state.artist.id,
-      project_id: data.get('project_id') || null,
-      title: String(data.get('title') || '').trim(),
-      description: text('description'),
-      due_at: data.get('due_at') ? new Date(data.get('due_at')).toISOString() : null,
-      assignee_name: text('assignee_name'),
-      assignee_contact: text('assignee_contact'),
-      promised_at: text('promised_at'),
-      repeat_rule: data.has('repeat_rule') ? String(data.get('repeat_rule') || 'none') : (task?.repeat_rule || 'none'),
-      repeat_until: data.has('repeat_until') ? text('repeat_until') : (task?.repeat_until || null),
-      remind_rule: String(data.get('remind_rule') || 'none'),
-    };
-    if (!task) { payload.workflow_status = 'idea'; payload.is_done = false; }
-    if (!payload.title) return toast('Введите задачу.', 'error');
-    if (payload.repeat_rule !== 'none' && !payload.due_at) return toast('Для повтора задаче нужен срок.', 'error');
-    if (payload.remind_rule !== 'none' && !payload.due_at) return toast('Для напоминания задаче нужен срок.', 'error');
-    setBusy(button, true, 'Сохраняем…');
-    try {
-      let savedId = task?.id || null;
-      if (task) {
-        const { error } = await db.from('project_tasks').update(payload).eq('id', task.id).eq('artist_id', state.artist.id);
-        if (error) throw error;
-      } else {
-        const { data: row, error } = await db.from('project_tasks').insert(payload).select().single();
-        if (error) throw error;
-        savedId = row.id;
-      }
-      state.tasks = await safeQuery(db.from('project_tasks').select('*').eq('artist_id', state.artist.id).order('is_done').order('sort_order').order('due_at'));
-      renderDashboard(); renderTasksView(); renderCalendar();
-      if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
-      logEvent('task', task ? 'Задача изменена' : 'Создана задача', payload.title, { view: 'tasks', project: payload.project_id });
-      if (task) { closeDrawer(true); toast('Задача обновлена.'); }
-      else {
-        // Новая задача остаётся открытой: теперь к ней можно прикрепить материалы.
-        openTaskEditor('idea', payload.project_id || '', savedId);
-        toast('Задача добавлена. Можно прикрепить ссылки и файлы.');
-      }
-    } catch (error) { toast(error.message || 'Не удалось сохранить задачу.', 'error'); }
-    finally { setBusy(button, false); }
-  }
+    const chips = [];
+    const missing = [];
+    if (task.due_at) chips.push('<button class="tk-chip' + (overdue ? ' is-late' : '') + '" type="button" data-task-pop="due">' + TASK_ICON.date + formatDate(task.due_at, { year: undefined }) + (overdue ? ' · просрочено' : '') + '</button>');
+    else missing.push('<button type="button" data-task-pop="due">срок</button>');
+    if (task.assignee_name) chips.push('<button class="tk-chip" type="button" data-task-pop="who"><span class="tk-ava">' + escapeHTML(initialOf(task.assignee_name)) + '</span>' + escapeHTML(task.assignee_name) + (task.promised_at ? ' · к ' + shortDate(task.promised_at) : '') + '</button>');
+    else missing.push('<button type="button" data-task-pop="who">кто делает</button>');
+    if (!auto) {
+      if (task.repeat_rule && task.repeat_rule !== 'none') chips.push('<button class="tk-chip" type="button" data-task-pop="repeat">' + TASK_ICON.repeat + TASK_REPEAT_LABEL[task.repeat_rule] + (task.repeat_until ? ' · до ' + shortDate(task.repeat_until) : '') + '</button>');
+      else missing.push('<button type="button" data-task-pop="repeat">повтор</button>');
+    }
+    if (task.remind_rule && task.remind_rule !== 'none') chips.push('<button class="tk-chip" type="button" data-task-pop="remind">' + TASK_ICON.bell + 'напомнить ' + TASK_REMIND_LABEL[task.remind_rule] + '</button>');
+    else missing.push('<button type="button" data-task-pop="remind">напоминание</button>');
 
-  // Материалы задачи: ссылки и заметки — строки в task_materials, файлы —
-  // в приватном бакете в папке артиста плюс строка с путём.
-  function renderTaskMaterials(task) {
-    const host = $('[data-materials-list]');
-    if (!host) return;
-    const rows = taskMaterialsOf(task.id);
-    host.innerHTML = rows.length ? rows.map((row) => {
+    const materials = taskMaterialsOf(task.id).map((row) => {
       const body = row.kind === 'link'
-        ? `<a href="${escapeHTML(row.url || '#')}" target="_blank" rel="noopener">${escapeHTML(row.title || row.url || 'ссылка')}</a>`
+        ? '<a href="' + escapeHTML(row.url || '#') + '" target="_blank" rel="noopener">' + escapeHTML(row.title || row.url || 'ссылка') + '</a>' + (row.title && row.url && row.title !== row.url ? '<small>' + escapeHTML(row.url.replace(/^https?:\/\//, '')) + '</small>' : '')
         : row.kind === 'note'
-          ? `<p>${escapeHTML(row.body || '')}</p>`
-          : `<button class="text-button" type="button" data-material-download="${row.id}">${escapeHTML(row.title || 'файл')}</button><small>${formatFileSize(row.size_bytes)}</small>`;
-      return `<div class="task-material is-${row.kind}"><span class="task-material-kind">${row.kind === 'link' ? 'ссылка' : row.kind === 'note' ? 'заметка' : 'файл'}</span><div>${body}</div><button class="icon-button" type="button" data-material-delete="${row.id}" aria-label="Удалить">×</button></div>`;
-    }).join('') : '<p class="drawer-note">Пока пусто.</p>';
-    $$('[data-material-delete]', host).forEach((button) => button.addEventListener('click', () => deleteTaskMaterial(button.dataset.materialDelete, task)));
-    $$('[data-material-download]', host).forEach((button) => button.addEventListener('click', async () => {
+          ? '<p>' + escapeHTML(row.body || '') + '</p>'
+          : '<button class="tk-file" type="button" data-material-download="' + row.id + '">' + escapeHTML(row.title || 'файл') + '</button><small>' + formatFileSize(row.size_bytes) + '</small>';
+      return '<div class="tk-mat">' + (row.kind === 'link' ? TASK_ICON.link : row.kind === 'note' ? TASK_ICON.note : TASK_ICON.clip) + '<div>' + body + '</div>'
+        + '<button class="icon-button" type="button" data-material-delete="' + row.id + '" aria-label="Убрать">×</button></div>';
+    }).join('');
+
+    return '<button class="text-button tk-back" type="button" data-task-back>← к списку</button>'
+      + '<div class="tk-card-head"><div>'
+      + (auto ? '<h2 class="tk-title">' + escapeHTML(task.title) + '</h2>'
+        : '<input class="tk-title-input" data-task-title value="' + escapeHTML(task.title) + '" placeholder="Название задачи" aria-label="Название">')
+      + '<select class="tk-release" data-task-project aria-label="Релиз">' + projectOptions + '</select>'
+      + (project && project.release_at ? '<span class="tk-release-date">релиз ' + shortDate(project.release_at) + '</span>' : '')
+      + '</div>'
+      + '<label class="tk-done' + (blockers.length ? ' is-blocked' : '') + '"><input type="checkbox" data-task-check-card="' + task.id + '"' + (task.is_done ? ' checked' : '') + (blockers.length ? ' disabled' : '') + '> ' + (blockers.length ? 'ждёт: ' + escapeHTML(blockers.join(', ')) : 'сделано') + '</label></div>'
+      + (auto ? '<p class="tk-note">Шаг плана выпуска: название и удаление закрыты, по нему держится связь с этапом.</p>' : '')
+      + '<textarea class="tk-desc" data-task-desc rows="1" placeholder="Что нужно сделать?">' + escapeHTML(task.description || '') + '</textarea>'
+      + (chips.length ? '<div class="tk-chips">' + chips.join('') + '</div>' : '')
+      + (missing.length ? '<div class="tk-add"><span>+ добавить:</span>' + missing.join('<span>·</span>') + '</div>' : '')
+      + '<div class="tk-pop-host" data-task-pop-host></div>'
+      + '<div class="tk-mats"><span class="eyebrow">Материалы</span>' + (materials || '')
+      + '<div class="tk-mats-add"><button type="button" data-material-add="link">+ ссылка</button><button type="button" data-material-add="note">+ заметка</button><label>+ файл<input type="file" multiple hidden data-material-file></label></div>'
+      + '<div data-materials-form></div></div>'
+      + (auto ? '' : '<div class="tk-foot"><button class="text-button" type="button" data-task-delete>Удалить задачу</button></div>');
+  }
+
+  // Точечное сохранение: одно поле — один запрос, без общей формы.
+  async function updateTask(task, patch, { quiet = false } = {}) {
+    const { data, error } = await db.from('project_tasks').update(patch).eq('id', task.id).eq('artist_id', state.artist.id).select().single();
+    if (error) { toast(error.message || 'Не удалось сохранить.', 'error'); return false; }
+    Object.assign(task, data);
+    state.tasks = state.tasks.map((row) => (row.id === task.id ? task : row));
+    if (!quiet) toast('Сохранено.');
+    return true;
+  }
+
+  function bindTaskCard(task) {
+    const card = $('[data-task-card]');
+    if (!card) return;
+    const rerenderAll = async () => { renderDashboard(); renderTasksView(); renderCalendar(); if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId); };
+
+    $('[data-task-back]', card)?.addEventListener('click', () => { state.tasksCardOpen = false; renderTasksView(); });
+    $('[data-task-check-card]', card)?.addEventListener('change', (event) => toggleTask(task.id, event.target.checked));
+    $('[data-task-delete]', card)?.addEventListener('click', () => deleteTask(task));
+
+    const title = $('[data-task-title]', card);
+    if (title) {
+      const commit = async () => {
+        const next = title.value.trim();
+        if (!next) { title.value = task.title; return; }
+        if (next === task.title) return;
+        if (await updateTask(task, { title: next }, { quiet: true })) rerenderAll();
+      };
+      title.addEventListener('blur', commit);
+      title.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); title.blur(); } });
+    }
+    $('[data-task-project]', card)?.addEventListener('change', async (event) => {
+      if (await updateTask(task, { project_id: event.target.value || null }, { quiet: true })) rerenderAll();
+    });
+
+    // Описание — обычный текст: растёт по содержимому, сохраняется, когда ушли из поля.
+    const desc = $('[data-task-desc]', card);
+    if (desc) {
+      const grow = () => { desc.style.height = 'auto'; desc.style.height = desc.scrollHeight + 'px'; };
+      grow();
+      desc.addEventListener('input', grow);
+      desc.addEventListener('blur', async () => {
+        const next = desc.value.trim() || null;
+        if (next === (task.description || null)) return;
+        await updateTask(task, { description: next }, { quiet: true });
+        renderTasksView();
+      });
+    }
+
+    // Плашки: нажал — под плашками окошко ровно под этот параметр.
+    const popHost = $('[data-task-pop-host]', card);
+    $$('[data-task-pop]', card).forEach((button) => button.addEventListener('click', () => openTaskPop(task, button.dataset.taskPop, popHost, rerenderAll)));
+
+    bindTaskMaterials(task, card);
+  }
+
+  function openTaskPop(task, kind, host, rerenderAll) {
+    const option = (map, current) => Object.entries(map).map(([value, label]) => '<option value="' + value + '"' + (value === (current || 'none') ? ' selected' : '') + '>' + label + '</option>').join('');
+    const forms = {
+      due: { title: 'Срок', clear: task.due_at ? 'Убрать срок' : '', body: '<input name="due_at" type="datetime-local" value="' + toLocalInput(task.due_at) + '">',
+        read: (data) => ({ due_at: data.get('due_at') ? new Date(data.get('due_at')).toISOString() : null }), empty: { due_at: null, repeat_rule: 'none', remind_rule: 'none' } },
+      who: { title: 'Кто делает', clear: task.assignee_name ? 'Делаю сам' : '', body: '<input name="assignee_name" value="' + escapeHTML(task.assignee_name || '') + '" placeholder="Имя"><input name="assignee_contact" value="' + escapeHTML(task.assignee_contact || '') + '" placeholder="Контакт: @телеграм или телефон"><label>Обещал сдать к<input name="promised_at" type="date" value="' + escapeHTML(task.promised_at || '') + '"></label>',
+        read: (data) => ({ assignee_name: String(data.get('assignee_name') || '').trim() || null, assignee_contact: String(data.get('assignee_contact') || '').trim() || null, promised_at: data.get('promised_at') || null }), empty: { assignee_name: null, assignee_contact: null, promised_at: null } },
+      repeat: { title: 'Повтор', clear: task.repeat_rule && task.repeat_rule !== 'none' ? 'Без повтора' : '', body: '<select name="repeat_rule">' + option(TASK_REPEAT_LABEL, task.repeat_rule) + '</select><label>До какого дня<input name="repeat_until" type="date" value="' + escapeHTML(task.repeat_until || '') + '"></label><p>Закрыли задачу — следующая появится сама с новым сроком.</p>',
+        read: (data) => ({ repeat_rule: String(data.get('repeat_rule') || 'none'), repeat_until: data.get('repeat_until') || null }), empty: { repeat_rule: 'none', repeat_until: null }, needsDue: true },
+      remind: { title: 'Напоминание', clear: task.remind_rule && task.remind_rule !== 'none' ? 'Не напоминать' : '', body: '<select name="remind_rule">' + option(TASK_REMIND_LABEL, task.remind_rule) + '</select><p>Придёт через Секретаря — в Телеграм или на почту, в ваш час рассылки.</p>',
+        read: (data) => ({ remind_rule: String(data.get('remind_rule') || 'none') }), empty: { remind_rule: 'none' }, needsDue: true },
+    };
+    const spec = forms[kind];
+    if (!spec) return;
+    host.innerHTML = '<form class="tk-pop"><strong>' + spec.title + '</strong>' + spec.body
+      + '<div class="tk-pop-actions"><span>' + (spec.clear ? '<button class="text-button" type="button" data-pop-clear>' + spec.clear + '</button>' : '')
+      + '<button class="text-button" type="button" data-pop-cancel>Отмена</button></span><button class="button button-primary" type="submit">Готово</button></div></form>';
+    const form = $('form', host);
+    $('input, select', form)?.focus();
+    $('[data-pop-cancel]', form).addEventListener('click', () => { host.innerHTML = ''; });
+    $('[data-pop-clear]', form)?.addEventListener('click', async () => {
+      if (await updateTask(task, spec.empty, { quiet: true })) rerenderAll();
+    });
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const patch = spec.read(new FormData(form));
+      const active = kind === 'repeat' ? patch.repeat_rule !== 'none' : kind === 'remind' ? patch.remind_rule !== 'none' : false;
+      if (spec.needsDue && active && !task.due_at) return toast('Сначала поставьте задаче срок.', 'error');
+      if (await updateTask(task, patch, { quiet: true })) rerenderAll();
+    });
+  }
+
+  // Ссылки и заметки — строки в task_materials, файлы — в приватном бакете
+  // в папке артиста плюс строка с путём.
+  function bindTaskMaterials(task, card) {
+    const formHost = $('[data-materials-form]', card);
+    $$('[data-material-delete]', card).forEach((button) => button.addEventListener('click', () => deleteTaskMaterial(button.dataset.materialDelete, task)));
+    $$('[data-material-download]', card).forEach((button) => button.addEventListener('click', async () => {
       const row = (state.taskMaterials || []).find((item) => item.id === button.dataset.materialDownload);
       if (!row || !row.storage_path) return;
       setPending(button, true);
@@ -2727,16 +2787,11 @@
       anchor.href = url; anchor.download = row.title || 'file'; anchor.rel = 'noopener';
       document.body.appendChild(anchor); anchor.click(); anchor.remove();
     }));
-  }
-
-  function bindTaskMaterials(task) {
-    renderTaskMaterials(task);
-    const formHost = $('[data-materials-form]');
-    $$('[data-material-add]').forEach((button) => button.addEventListener('click', () => {
+    $$('[data-material-add]', card).forEach((button) => button.addEventListener('click', () => {
       const kind = button.dataset.materialAdd;
       formHost.innerHTML = kind === 'link'
-        ? `<form class="task-material-form" data-material-kind="link"><input name="title" placeholder="Название (необязательно)"><input name="url" type="url" required placeholder="https://…"><div class="task-material-form-actions"><button class="text-button" type="button" data-material-cancel>Отмена</button><button class="button button-primary" type="submit">Добавить</button></div></form>`
-        : `<form class="task-material-form" data-material-kind="note"><textarea name="body" rows="3" required placeholder="Заметка"></textarea><div class="task-material-form-actions"><button class="text-button" type="button" data-material-cancel>Отмена</button><button class="button button-primary" type="submit">Добавить</button></div></form>`;
+        ? '<form class="tk-pop"><strong>Ссылка</strong><input name="url" type="url" required placeholder="https://…"><input name="title" placeholder="Как назвать (необязательно)"><div class="tk-pop-actions"><span><button class="text-button" type="button" data-material-cancel>Отмена</button></span><button class="button button-primary" type="submit">Добавить</button></div></form>'
+        : '<form class="tk-pop"><strong>Заметка</strong><textarea name="body" rows="3" required placeholder="Текст заметки"></textarea><div class="tk-pop-actions"><span><button class="text-button" type="button" data-material-cancel>Отмена</button></span><button class="button button-primary" type="submit">Добавить</button></div></form>';
       $('[data-material-cancel]', formHost).addEventListener('click', () => { formHost.innerHTML = ''; });
       $('form', formHost).addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -2747,26 +2802,22 @@
         const { data: row, error } = await db.from('task_materials').insert(payload).select().single();
         if (error) return toast(error.message || 'Не удалось сохранить.', 'error');
         state.taskMaterials = [...(state.taskMaterials || []), row];
-        formHost.innerHTML = '';
-        renderTaskMaterials(task);
         renderTasksView();
       });
       $('input, textarea', formHost)?.focus();
     }));
-    $('[data-material-file]')?.addEventListener('change', async (event) => {
+    $('[data-material-file]', card)?.addEventListener('change', async (event) => {
       const files = Array.from(event.target.files || []);
       if (!files.length) return;
-      toast(`Загружаем: ${files.length}…`);
+      toast('Загружаем: ' + files.length + '…');
       for (const file of files) {
-        const path = `${state.artist.id}/tasks/${task.id}/${Date.now()}-${safeFileName(file.name)}`;
+        const path = state.artist.id + '/tasks/' + task.id + '/' + Date.now() + '-' + safeFileName(file.name);
         const { error: uploadError } = await db.storage.from('artist-private').upload(path, file, { contentType: file.type || 'application/octet-stream' });
         if (uploadError) { toast(uploadError.message || 'Не удалось загрузить файл.', 'error'); continue; }
         const { data: row, error } = await db.from('task_materials').insert({ artist_id: state.artist.id, task_id: task.id, kind: 'file', title: file.name, storage_path: path, mime_type: file.type || null, size_bytes: file.size }).select().single();
         if (error) { await db.storage.from('artist-private').remove([path]); toast(error.message || 'Не удалось сохранить файл.', 'error'); continue; }
         state.taskMaterials = [...(state.taskMaterials || []), row];
       }
-      event.target.value = '';
-      renderTaskMaterials(task);
       renderTasksView();
       toast('Файлы прикреплены.');
     });
@@ -2780,8 +2831,54 @@
     if (error) return toast(error.message || 'Не удалось удалить.', 'error');
     if (row.storage_path) await db.storage.from('artist-private').remove([row.storage_path]);
     state.taskMaterials = (state.taskMaterials || []).filter((item) => item.id !== id);
-    renderTaskMaterials(task);
     renderTasksView();
+  }
+
+  // Открыть задачу = перейти на вкладку «Задачи» к её карточке. Новая задача —
+  // короткая шторка: название, релиз, срок; остальное настраивается в карточке.
+  function openTaskEditor(initialStatus = 'idea', initialProjectId = '', taskId = null) {
+    if (!state.artist) return toast(ARTIST_NOT_READY, 'error');
+    const task = taskById(taskId);
+    if (task) {
+      state.tasksShowDone = !!task.is_done;
+      if (state.tasksProjectFilter !== 'all' && state.tasksProjectFilter !== (task.project_id || 'none')) state.tasksProjectFilter = 'all';
+      state.tasksSelectedId = task.id;
+      state.tasksCardOpen = true;
+      renderTasksView();
+      goView('tasks');
+      return;
+    }
+    const projectOptions = ['<option value="">Без привязки к релизу</option>', ...state.projects.map((project) => `<option value="${project.id}" ${project.id === initialProjectId ? 'selected' : ''}>${escapeHTML(project.title)}</option>`)].join('');
+    openDrawer('TASK / PROJECT', 'Новая задача', `<form id="task-form"><label class="field"><span>Задача</span><input name="title" required placeholder="Например: подготовить обложку"></label><div class="form-grid two"><label class="field"><span>Связанный релиз</span><select name="project_id">${projectOptions}</select></label><label class="field"><span>Срок</span><input name="due_at" type="datetime-local"></label></div><p class="drawer-note">Описание, исполнителя, повтор, напоминание и материалы добавите в карточке — она откроется сразу.</p><div class="drawer-actions"><span></span><button class="button button-primary" type="submit">Добавить задачу</button></div></form>`);
+    $('#task-form').addEventListener('submit', saveTask);
+  }
+
+  async function saveTask(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = $('button[type="submit"]', form);
+    const data = new FormData(form);
+    const payload = {
+      artist_id: state.artist.id,
+      project_id: data.get('project_id') || null,
+      title: String(data.get('title') || '').trim(),
+      due_at: data.get('due_at') ? new Date(data.get('due_at')).toISOString() : null,
+      workflow_status: 'idea',
+      is_done: false,
+    };
+    if (!payload.title) return toast('Введите задачу.', 'error');
+    setBusy(button, true, 'Сохраняем…');
+    try {
+      const { data: row, error } = await db.from('project_tasks').insert(payload).select().single();
+      if (error) throw error;
+      state.tasks = await safeQuery(db.from('project_tasks').select('*').eq('artist_id', state.artist.id).order('is_done').order('sort_order').order('due_at'));
+      renderDashboard(); renderCalendar();
+      if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
+      logEvent('task', 'Создана задача', payload.title, { view: 'tasks', project: payload.project_id });
+      closeDrawer(true);
+      openTaskEditor('idea', payload.project_id || '', row.id);
+    } catch (error) { toast(error.message || 'Не удалось сохранить задачу.', 'error'); }
+    finally { setBusy(button, false); }
   }
 
   // Повтор: закрыли задачу со сроком — создаём следующую на новый срок,
@@ -2939,11 +3036,11 @@
       const { error } = await db.from('project_tasks').delete().eq('id', task.id).eq('artist_id', state.artist.id);
       if (error) throw error;
       state.tasks = state.tasks.filter((item) => item.id !== task.id);
+      if (state.tasksSelectedId === task.id) { state.tasksSelectedId = null; state.tasksCardOpen = false; }
       renderDashboard();
       renderTasksView();
       renderCalendar();
       if (state.activeProjectId) await renderTrackWorkspace(state.activeProjectId);
-      closeDrawer();
       toast('Задача удалена.');
     } catch (error) {
       toast(error.message || 'Не удалось удалить задачу.', 'error');
