@@ -625,11 +625,16 @@ html[data-theme="light"] .pipeline-board .pipeline-column.is-dragover, html[data
 .tpl-head-right { display: inline-flex; align-items: center; gap: 16px; margin-left: auto; }
 .tpl-pick { min-height: 34px; border: 1px solid var(--line-hi); padding: 0 10px; color: var(--text); background: var(--panel-2); font: inherit; font-size: 13px; }
 .tpl-title-row { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; margin-bottom: 4px; }
-.tpl-title { flex: 0 1 320px; min-width: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; color: var(--text); background: transparent; font: 500 26px/1.2 'Oswald', sans-serif; letter-spacing: .02em; outline: 0; }
-.tpl-title:focus { border-bottom-color: var(--green); }
+.tpl-title { flex: 0 1 320px; min-width: 0; padding: 0 2px; border: 0; border-bottom: 1px dashed var(--line-hi); color: var(--text); background: transparent; font: 500 26px/1.2 'Oswald', sans-serif; letter-spacing: .02em; outline: 0; }
+.tpl-title:focus { border-bottom: 1px solid var(--green); }
+.tpl-title-static { margin: 0; font: 500 26px/1.2 'Oswald', sans-serif; letter-spacing: .02em; }
+.tpl-title-static small { margin-left: 10px; color: var(--muted); font: 400 12px 'IBM Plex Mono', monospace; letter-spacing: .08em; text-transform: uppercase; }
+.tpl-total { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.tpl-total input { width: 64px; min-height: 34px; border: 1px solid var(--line-hi); padding: 0 6px; color: var(--text); background: var(--panel-2); font: inherit; font-size: 15px; text-align: center; }
+.rollout-gap-lead { color: var(--muted); opacity: .8; }
 .tpl-default { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; cursor: pointer; }
 .tpl-default input { width: 16px; height: 16px; margin: 0; accent-color: var(--green); }
-.tpl-hint { color: var(--muted); font-size: 12px; }
+.tpl-hint { margin: 4px 0 6px; color: var(--muted); font-size: 12px; }
 .tpl-bar { margin: 0 -24px; border-top: 0; }
 .tpl-bar .rollout-node { cursor: pointer; }
 /* имя этапа — поле прямо над кружком */
