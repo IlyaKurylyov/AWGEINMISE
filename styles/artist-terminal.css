@@ -1707,9 +1707,12 @@ html[data-theme="light"] .secretary-note { background: rgba(169,111,36,.12); }
    под прозрачным полем с теми же шрифтом и переносами, в ней крашены
    хвосты слов. Фон поля живёт в переменной, чтобы подложка взяла его же. */
 .lyrics-tools { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.lyrics-tool { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; cursor: pointer; user-select: none; }
-.lyrics-tool input { margin: 0; accent-color: var(--green); }
+.lyrics-tool { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; cursor: pointer; user-select: none; }
+.lyrics-tool input { width: 18px; height: 18px; margin: 0; accent-color: var(--green); cursor: pointer; }
 .lyrics-tool:has(input:checked) { color: var(--green); }
+/* Знак вопроса: пояснение по наведению, на телефоне — по клику. */
+.lyrics-help { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 1px solid var(--line-hi); border-radius: 50%; color: var(--muted); background: transparent; font: 600 12px/1 'IBM Plex Mono', monospace; cursor: help; }
+.lyrics-help:hover { color: var(--green); border-color: var(--green); }
 .lyrics-wrap { --lyrics-bg: #080b08; position: relative; display: flex; min-height: 0; }
 html[data-theme="light"] .lyrics-wrap { --lyrics-bg: #f8f6ef; }
 .lyrics-wrap textarea { position: relative; z-index: 1; flex: 1 1 auto; min-width: 0; }

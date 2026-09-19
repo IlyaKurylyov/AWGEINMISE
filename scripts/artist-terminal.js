@@ -1867,6 +1867,7 @@
   //   2. словарь ударений (assets/stress, грузится при первом включении);
   //   3. слово неизвестно — пробуем два последних слога, красим бледнее.
   const LYRICS_TOOLS_KEY = 'inmise-lyrics-tools';
+  const LYRICS_HELP = 'Рифма считается от ударной гласной. Ударения берутся из словаря; поправить можно заглавной буквой: нЕльзя.\n«Рифмы в конце» — созвучие концов слов: сейчас / глаз / масс.\n«Все рифмы» — по ударной гласной в любом месте слова, цвет = гласная.\nБледнее — слова нет в словаре, ударение угадано.';
   const RHYME_WINDOW = 4; // пару ищем в пределах четырёх строк вверх и вниз
   const RHYME_COLORS = ['rgba(112,238,121,.45)', 'rgba(213,154,77,.5)', 'rgba(125,149,200,.55)', 'rgba(212,85,73,.45)', 'rgba(197,138,217,.5)', 'rgba(95,196,196,.5)', 'rgba(224,179,76,.5)', 'rgba(155,212,90,.45)', 'rgba(232,120,160,.45)', 'rgba(240,140,60,.45)', 'rgba(140,120,230,.5)', 'rgba(180,140,90,.5)'];
   // В режиме «все рифмы» цвет привязан к гласной, чтобы его можно было выучить.
@@ -1970,18 +1971,22 @@
     return { positions: vowels.slice(-2), manual: false, guessed: true };
   }
 
-  // Хвост слова от ударной гласной «как слышится»: ё/э → е, ы → и; после
-  // ударения безударные о → а, е/я → и, ю → у; звонкая согласная на конце
-  // глохнет («год/рот» → «от»); «-тся/-ться» → «ца». Если слово кончается
-  // ударной гласной, берём и согласную перед ней («окно/давно» → «но»).
+  // Хвост слова «как слышится»: ударная гласная, гласные после неё
+  // (безударные о → а, е/я/ы → и, ю → у) и последний звук. Согласные
+  // в середине хвоста не считаем: «сейчас / глаз / масс / шанс» на слух
+  // одна рифма, хотя буквы разные. Звонкая на конце глохнет («год/рот»),
+  // «-тся/-ться» → «ца». Если слово кончается ударной гласной, берём
+  // и согласную перед ней («окно/давно» → «но»).
   function rhymeTail(word, at) {
     const head = VOWEL_CLASS[word[at]] || word[at];
-    let rest = word.slice(at + 1).replace(/ъ/g, '')
-      .replace(/ть?ся$/, 'ца')
-      .replace(/о/g, 'а').replace(/[еэёяы]/g, 'и').replace(/ю/g, 'у')
-      .replace(/([бвгдзж])(ь?)$/, (m, c, soft) => ({ 'б': 'п', 'в': 'ф', 'г': 'к', 'д': 'т', 'з': 'с', 'ж': 'ш' })[c] + soft);
+    const rest = word.slice(at + 1).replace(/ъ/g, '').replace(/ть?ся$/, 'ца');
+    const vowels = (rest.match(/[аеёиоуыэюя]/g) || []).map((v) => ({ 'о': 'а', 'е': 'и', 'э': 'и', 'ё': 'и', 'я': 'и', 'ы': 'и', 'ю': 'у' })[v] || v).join('');
+    let final = '';
+    const soft = rest.endsWith('ь') ? 'ь' : '';
+    const last = soft ? rest.slice(0, -1).slice(-1) : rest.slice(-1);
+    if (last && !VOWEL_RE.test(last)) final = ({ 'б': 'п', 'в': 'ф', 'г': 'к', 'д': 'т', 'з': 'с', 'ж': 'ш' })[last] || last;
     const support = at === word.length - 1 && at > 0 && !VOWEL_RE.test(word[at - 1]) ? word[at - 1] : '';
-    return { key: support + head + rest, from: support ? at - 1 : at };
+    return { key: support + head + vowels + final + soft, from: support ? at - 1 : at };
   }
 
   // Токены слова — куски, которые могут рифмоваться, по одному на каждое
@@ -2123,6 +2128,8 @@
         $$('[data-lyrics-tools]', root).forEach(paintLyrics);
       });
     });
+    const help = $('[data-lyrics-help]', root);
+    if (help) help.addEventListener('click', () => toast(LYRICS_HELP));
     $$('[data-lyrics-tools]', root).forEach((textarea) => {
       const repaint = () => paintLyrics(textarea);
       textarea.addEventListener('input', repaint);
@@ -3257,8 +3264,9 @@
             <header class="panel-header"><div><span class="eyebrow">Материал</span><h3>Текст</h3></div>
               <div class="lyrics-tools" role="group" aria-label="Помощники для текста">
                 <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="syllables"><span>слоги</span></label>
-                <label class="lyrics-tool" title="Рифма от ударной гласной до конца слова. Ударение можно поставить самому заглавной буквой: нЕльзя"><input type="checkbox" data-lyrics-tool="rhymes" value="ends"><span>рифмы в конце</span></label>
-                <label class="lyrics-tool" title="Созвучие по ударной гласной в любом месте слова. Ударение можно поставить самому заглавной буквой: нЕльзя"><input type="checkbox" data-lyrics-tool="rhymes" value="all"><span>все рифмы</span></label>
+                <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="rhymes" value="ends"><span>рифмы в конце</span></label>
+                <label class="lyrics-tool"><input type="checkbox" data-lyrics-tool="rhymes" value="all"><span>все рифмы</span></label>
+                <button class="lyrics-help" type="button" data-lyrics-help aria-label="Как это работает" title="${escapeHTML(LYRICS_HELP)}">?</button>
                 <button class="lyrics-beat" type="button" data-lyrics-beat hidden title="Включить бит трека"><span>▶</span> бит</button>
                 <span class="lyrics-beat-counter" data-lyrics-beat-counter hidden><b data-beat-bar></b><span data-beat-time></span><button class="text-button" type="button" data-beat-bpm hidden>указать BPM</button></span>
                 ${project ? '<button class="text-button" id="track-add-lyrics" type="button">+ Добавить</button>' : ''}
