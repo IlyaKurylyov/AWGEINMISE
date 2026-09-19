@@ -1740,8 +1740,6 @@ html[data-theme="light"] .lyrics-wrap.has-rhymes textarea { background: transpar
 .lyrics-beat-counter { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font: 500 12px/1.4 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
 .lyrics-beat-counter b { color: var(--green); font-weight: 600; }
 .lyrics-beat-counter b:empty { display: none; }
-.beat-bpm-row .field > span { align-items: flex-end; }
-.beat-bpm-row .button { width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Полоса-ручка под полем: широкая, с засечкой, тянет высоту вниз. Родной
    уголок отключён — он мелкий и обещает две оси там, где есть одна. */
 .resize-bar { height: 14px; margin: 2px 0 0; display: grid; place-items: center; cursor: ns-resize; touch-action: none; user-select: none; }

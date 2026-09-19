@@ -193,6 +193,7 @@
     secretaryFilter: 'all',
     secretaryProjectFilter: 'all',
     secretaryPrefs: null,
+    secretaryDismissed: null, // Set ключей убранных пунктов — из базы, а не из браузера
     stages: [],
     secretaryEvents: [],
     secretaryFailures: [],
@@ -399,15 +400,38 @@
     // Держим список коротким: старые ключи исчезают вместе с поводом.
     try { localStorage.setItem(SEEN_KEY, JSON.stringify(Array.from(seen).slice(-200))); } catch { /* приватный режим */ }
   };
+  // Убранные пункты хранятся в базе (notification_prefs.dismissed_keys):
+  // раньше лежали в localStorage, и с другого браузера или после чистки
+  // данных сайта «прочитанное» возвращалось. Старый локальный список
+  // один раз переносим в базу и стираем.
   const DISMISSED_KEY = 'inmise-secretary-dismissed';
-  const dismissedKeys = () => {
-    try { return new Set(JSON.parse(localStorage.getItem(DISMISSED_KEY) || '[]')); } catch { return new Set(); }
-  };
-  const dismissKey = (key) => {
-    const set = dismissedKeys();
-    set.add(key);
-    try { localStorage.setItem(DISMISSED_KEY, JSON.stringify(Array.from(set).slice(-300))); } catch { /* приватный режим */ }
-  };
+  const dismissedKeys = () => state.secretaryDismissed || new Set();
+  async function loadDismissedKeys() {
+    const rows = await safeQuery(db.from('notification_prefs').select('*').eq('artist_id', state.artist.id));
+    state.secretaryPrefs = rows[0] || null;
+    const set = new Set(Array.isArray(state.secretaryPrefs?.dismissed_keys) ? state.secretaryPrefs.dismissed_keys : []);
+    let legacy = [];
+    try { legacy = JSON.parse(localStorage.getItem(DISMISSED_KEY) || '[]'); } catch { legacy = []; }
+    const fresh = legacy.filter((key) => !set.has(key));
+    fresh.forEach((key) => set.add(key));
+    state.secretaryDismissed = set;
+    if (fresh.length) {
+      const { error } = await saveDismissedKeys();
+      if (!error) { try { localStorage.removeItem(DISMISSED_KEY); } catch { /* приватный режим */ } }
+    }
+  }
+  function saveDismissedKeys() {
+    const dismissed_keys = Array.from(dismissedKeys()).slice(-300);
+    return db.from('notification_prefs').upsert({
+      artist_id: state.artist.id, dismissed_keys, updated_at: new Date().toISOString(),
+    }, { onConflict: 'artist_id' });
+  }
+  async function dismissKey(key) {
+    if (!state.secretaryDismissed) state.secretaryDismissed = new Set();
+    state.secretaryDismissed.add(key);
+    const { error } = await saveDismissedKeys();
+    if (error) toast(error.message || 'Не удалось запомнить отметку.', 'error');
+  }
 
   const unseenCount = (items) => {
     const seen = seenKeys();
@@ -621,18 +645,17 @@
 
     if (!state.secretaryLoaded) {
       panel.innerHTML = '<p class="track-workspace-empty">Загружаем…</p>';
-      const [events, failures, channels, rules, prefs] = await Promise.all([
+      const [events, failures, channels, rules] = await Promise.all([
         safeQuery(db.from('artist_events').select('*').eq('artist_id', state.artist.id).order('created_at', { ascending: false }).limit(200)),
         safeQuery(db.from('social_post_targets').select('platform, status, error_message, created_at').eq('artist_id', state.artist.id).eq('status', 'failed').order('created_at', { ascending: false }).limit(10)),
         safeQuery(db.from('notification_channels').select('*').eq('artist_id', state.artist.id)),
         safeQuery(db.from('notification_rules').select('*').eq('artist_id', state.artist.id)),
-        safeQuery(db.from('notification_prefs').select('*').eq('artist_id', state.artist.id)),
       ]);
       state.secretaryEvents = events;
       state.secretaryFailures = failures;
       state.secretaryChannels = channels;
       state.secretaryRules = rules;
-      state.secretaryPrefs = prefs[0] || null;
+      if (!state.secretaryDismissed) await loadDismissedKeys();
       state.secretaryLoaded = true;
     }
 
@@ -681,6 +704,7 @@
       const hour = Number(event.target.value);
       const { error } = await db.from('notification_prefs').upsert({
         artist_id: state.artist.id, send_hour: hour, timezone: 'Europe/Moscow', updated_at: new Date().toISOString(),
+        dismissed_keys: Array.from(dismissedKeys()).slice(-300),
       }, { onConflict: 'artist_id' });
       if (error) return toast(error.message || 'Не удалось сохранить время.', 'error');
       state.secretaryPrefs = { ...(state.secretaryPrefs || {}), send_hour: hour };
@@ -813,6 +837,7 @@
         console.warn(`[artist-terminal] ${keys[index]}:`, result.reason);
       }
     });
+    await loadDismissedKeys();
     await reconcileReleased();
     for (const project of state.projects) await syncProjectStatus(project);
     renderEverything();
@@ -2255,26 +2280,6 @@
     bpmButton.addEventListener('click', () => { if (lyricsBeat) openBeatEditor(lyricsBeat.beatId); });
   }
 
-  // «Тап» в редакторе бита: нажимаете в ритм, темп считается по средней
-  // паузе между последними восемью нажатиями. Пауза дольше двух секунд —
-  // начинаем заново.
-  function bindTapTempo(form) {
-    const button = $('[data-tap-tempo]', form);
-    const input = $('[name="bpm"]', form);
-    if (!button || !input) return;
-    let taps = [];
-    button.addEventListener('click', () => {
-      const now = performance.now();
-      if (taps.length && now - taps[taps.length - 1] > 2000) taps = [];
-      taps.push(now);
-      if (taps.length > 8) taps.shift();
-      if (taps.length < 2) { button.textContent = 'Ещё… в ритм'; return; }
-      const bpm = Math.round(60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1)));
-      input.value = Math.min(300, Math.max(40, bpm));
-      button.textContent = `≈ ${input.value} BPM · ещё тап`;
-    });
-  }
-
   // Полоса-ручка под полем: тянет высоту соседа сверху. Только по вертикали —
   // ширину задаёт колонка, и тянуть вширь тут нечего. Работает и пальцем.
   function bindResizeBars(root) {
@@ -2993,7 +2998,7 @@
           <label class="field"><span>Название</span><input name="title" value="${escapeHTML(beat?.title || '')}" required></label>
           <div class="form-grid two"><label class="field"><span>Раздел</span><select name="publication_status"><option value="private" ${status === 'private' ? 'selected' : ''}>Личные биты</option><option value="draft" ${status === 'draft' ? 'selected' : ''}>На продажу — черновик</option><option value="published" ${status === 'published' ? 'selected' : ''}>На витрине</option><option value="sold" ${status === 'sold' ? 'selected' : ''}>Продан</option><option value="archived" ${status === 'archived' ? 'selected' : ''}>Архив</option></select></label><label class="field"><span>Цена, ₽</span><input name="price" type="number" min="0" step="100" value="${escapeHTML(beat?.price ?? '')}"></label></div>
           <label class="field"><span>Ссылка для покупки</span><input name="seller_link" type="url" value="${escapeHTML(beat?.seller_link || '')}" placeholder="https://t.me/..."></label>
-          <div class="form-grid two beat-bpm-row"><label class="field"><span>Темп, BPM</span><input name="bpm" type="number" min="40" max="300" inputmode="numeric" value="${escapeHTML(beat?.bpm ?? '')}" placeholder="например, 140"></label><div class="field"><span>Не знаете темп?</span><button class="button" type="button" data-tap-tempo>Тап — нажимайте в ритм</button></div></div>
+          <label class="field"><span>Темп, BPM</span><input name="bpm" type="number" min="40" max="300" inputmode="numeric" value="${escapeHTML(beat?.bpm ?? '')}" placeholder="например, 140"></label>
           <label class="field"><span>${beat ? 'Новый аудиофайл (необязательно)' : 'Аудиофайл'}</span><input name="audio" type="file" accept="audio/*" ${beat ? '' : 'required'}></label>
         </div>
         <div class="drawer-actions">${beat ? '<button class="button button-danger" id="delete-beat" type="button">Удалить</button>' : '<span></span>'}<button class="button button-primary" type="submit">${beat ? 'Сохранить' : 'Загрузить бит'}</button></div>
@@ -3006,7 +3011,6 @@
     const form = $('#beat-editor-form');
     form.addEventListener('submit', (event) => saveBeat(event, beat));
     $('#delete-beat')?.addEventListener('click', () => deleteBeat(beat));
-    bindTapTempo(form);
   }
 
   async function saveBeat(event, beat) {
